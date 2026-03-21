@@ -10,6 +10,10 @@ using Oaza.Domain.Interfaces;
 using Oaza.Infrastructure;
 using Oaza.Infrastructure.Auth;
 using Oaza.Functions.Middleware;
+using QuestPDF.Infrastructure;
+
+// QuestPDF community license (free for small projects)
+QuestPDF.Settings.License = LicenseType.Community;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication(workerApp =>
@@ -70,6 +74,11 @@ var host = new HostBuilder()
                 sp.GetRequiredService<ISupplierInvoiceRepository>(),
                 sp.GetRequiredService<IAdvancePaymentRepository>(),
                 sp.GetRequiredService<ILogger<CalculateSettlementUseCase>>()));
+
+        // Use cases: Settlement PDF generation
+        services.AddSingleton<GenerateSettlementPdfUseCase>(sp =>
+            new GenerateSettlementPdfUseCase(
+                sp.GetRequiredService<ILogger<GenerateSettlementPdfUseCase>>()));
 
         // Use cases: Meter readings import
         services.AddSingleton<ImportReadingsUseCase>(sp =>

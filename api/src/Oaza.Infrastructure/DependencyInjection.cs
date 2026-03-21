@@ -7,6 +7,7 @@ using Oaza.Domain.Interfaces;
 using Oaza.Infrastructure.Caching;
 using Oaza.Infrastructure.Email;
 using Oaza.Infrastructure.Persistence;
+using Oaza.Infrastructure.Storage;
 
 namespace Oaza.Infrastructure;
 
@@ -42,6 +43,9 @@ public static class DependencyInjection
 
         // Import session cache
         services.AddSingleton<IImportSessionCache, InMemoryImportSessionCache>();
+
+        // Blob Storage service
+        services.AddSingleton<IBlobStorageService, BlobStorageService>();
 
         // Email service
         services.Configure<SendGridSettings>(options =>

@@ -1,21 +1,70 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MsalProvider } from '@azure/msal-react';
+import { msalInstance } from './auth/msalConfig';
+import { AuthProvider } from './auth/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Layout } from './components/Layout';
+import { LoginPage } from './pages/LoginPage';
+import { MagicLinkVerifyPage } from './pages/MagicLinkVerifyPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { ReadingsOverviewPage } from './pages/ReadingsOverviewPage';
+import { ReadingsImportPage } from './pages/ReadingsImportPage';
+import { BillingPage } from './pages/BillingPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { FinancePage } from './pages/FinancePage';
+import { HousesPage } from './pages/admin/HousesPage';
+import { UsersPage } from './pages/admin/UsersPage';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<div>Login Page</div>} />
-        <Route path="/dashboard" element={<div>Dashboard</div>} />
-        <Route path="/readings" element={<div>Readings Overview</div>} />
-        <Route path="/readings/import" element={<div>Import Readings</div>} />
-        <Route path="/billing" element={<div>Billing</div>} />
-        <Route path="/documents" element={<div>Documents</div>} />
-        <Route path="/finance" element={<div>Finance</div>} />
-        <Route path="/admin/houses" element={<div>Houses Admin</div>} />
-        <Route path="/admin/users" element={<div>Users Admin</div>} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <MsalProvider instance={msalInstance}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth/verify" element={<MagicLinkVerifyPage />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/readings" element={<ReadingsOverviewPage />} />
+              <Route
+                path="/readings/import"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <ReadingsImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route
+                path="/admin/houses"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <HousesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </MsalProvider>
   );
 }
 
