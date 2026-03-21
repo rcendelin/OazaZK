@@ -34,13 +34,17 @@ jobs:
         run: dotnet test Oaza.sln --configuration Release --no-restore --verbosity normal
 
       - name: Publish
-        run: dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release
+        run: |
+          dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
+          cp -r src/Oaza.Functions/bin/Release/net8.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
+          ls -la ./publish/.azurefunctions/ 2>/dev/null || echo "No .azurefunctions found in bin, checking publish..."
+          ls -la ./publish/
 
       - name: Upload API artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-artifact
-          path: api/src/Oaza.Functions/bin/Release/net8.0/publish
+          path: api/publish
 
   build-web:
     name: Build Frontend
