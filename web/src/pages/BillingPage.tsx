@@ -533,7 +533,8 @@ function ClosedPeriodDetail({ period }: { period: BillingPeriodResponse }) {
     try {
       setDownloadError(null);
       const token = await getAccessToken();
-      const response = await fetch(`/api${path}`, {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+      const response = await fetch(`${baseUrl}${path}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error('Download selhalo');
@@ -988,7 +989,8 @@ function MemberSettlementDetail({
       const token = await getAccessToken();
       const pId = encodeURIComponent(periodId);
       const hId = encodeURIComponent(mySettlement.houseId);
-      const response = await fetch(`/api/billing-periods/${pId}/settlements/${hId}/pdf`, {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+      const response = await fetch(`${baseUrl}/billing-periods/${pId}/settlements/${hId}/pdf`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error('Download selhalo');

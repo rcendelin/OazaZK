@@ -222,28 +222,18 @@ echo "SWA Token: $SWA_TOKEN"
 
 > Zapiš si token — budeš ho potřebovat v kroku 7.
 
-### 5.3 Linked Backend (propojení s Functions)
+### 5.3 CORS na Functions App (místo Linked Backend)
 
-Získej resource ID Functions App:
+> **Proč ne Linked Backend?** SWA Linked Backend vyžaduje Standard SKU (~210 Kč/měsíc). S Free tier používáme přímé volání frontendu na Functions App přes CORS.
+
 ```bash
-FUNC_ID=$(az functionapp show \
+az functionapp cors add \
   --name func-oaza-dev \
   --resource-group rg-oaza-dev \
-  --query id -o tsv)
-
-echo "Functions ID: $FUNC_ID"
+  --allowed-origins "https://oaza-dev.cendelinovi.cz" "http://localhost:5173"
 ```
 
-Propoj:
-```bash
-az staticwebapp backends link \
-  --name swa-oaza-dev \
-  --resource-group rg-oaza-dev \
-  --backend-resource-id "$FUNC_ID" \
-  --backend-region westeurope
-```
-
-> Tím se volání `/api/*` ze SWA automaticky směrují na Functions App. Frontend nepotřebuje znát URL Functions App.
+Frontend bude volat Functions App přímo přes `VITE_API_BASE_URL` env proměnnou (viz krok 7).
 
 ---
 
@@ -291,6 +281,7 @@ Jdi na https://github.com/rcendelin/OazaZK/settings/secrets/actions a přidej:
 | `DEV_SWA_API_TOKEN` | Token z kroku 5.2 | |
 | `DEV_ENTRA_CLIENT_ID` | Application (client) ID z kroku 4.2 | |
 | `DEV_ENTRA_TENANT_ID` | Directory (tenant) ID z kroku 4.2 | |
+| `DEV_API_BASE_URL` | `https://func-oaza-dev.azurewebsites.net/api` | Functions App URL + /api |
 
 ### 7.3 Vytvoř DEV workflow
 
@@ -373,6 +364,7 @@ jobs:
         env:
           VITE_ENTRA_CLIENT_ID: ${{ secrets.DEV_ENTRA_CLIENT_ID }}
           VITE_ENTRA_TENANT_ID: ${{ secrets.DEV_ENTRA_TENANT_ID }}
+          VITE_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -503,10 +495,7 @@ Po úspěšném deployi zavolej seed endpoint:
 curl -X POST https://func-oaza-dev.azurewebsites.net/api/seed
 ```
 
-> **Pokud SWA proxy funguje**, můžeš volat i přes:
-> ```bash
-> curl -X POST https://oaza-dev.cendelinovi.cz/api/seed
-> ```
+> Voláme přímo Functions URL (ne přes SWA, protože nepoužíváme Linked Backend).
 
 Očekávaná odpověď:
 ```json
@@ -552,9 +541,10 @@ Otevři v prohlížeči: **https://oaza-dev.cendelinovi.cz**
 
 1. **Login nefunguje:** Zkontroluj Entra ID redirect URI (`https://oaza-dev.cendelinovi.cz`)
 2. **API vrací 500:** `az functionapp log tail --name func-oaza-dev --resource-group rg-oaza-dev`
-3. **API vrací 404:** Linked backend není propojený — ověř krok 5.3
-4. **CORS error:** Ověř krok 3.4
+3. **API vrací 404:** Zkontroluj, že `DEV_API_BASE_URL` secret je správně nastavený (`https://func-oaza-dev.azurewebsites.net/api`)
+4. **CORS error:** Ověř krok 5.3 (CORS na Functions App) — origin musí být `https://oaza-dev.cendelinovi.cz`
 5. **Seed selže:** Ověř, že `ENABLE_SEED=true` je v app settings
+6. **Network error v konzoli:** Otevři DevTools → Network tab, zkontroluj zda API volání jdou na správnou URL
 
 ---
 
@@ -568,8 +558,8 @@ rg-oaza-dev/
 ├── func-oaza-dev                # Azure Functions (Consumption, Linux)
 │   └── App Settings             # Connection strings, JWT, Entra ID, SendGrid
 └── swa-oaza-dev                 # Static Web Apps (Free)
-    ├── Custom domain            # oaza-dev.cendelinovi.cz
-    └── Linked backend           # → func-oaza-dev
+    └── Custom domain            # oaza-dev.cendelinovi.cz
+    # Frontend volá Functions přímo přes CORS (VITE_API_BASE_URL)
 ```
 
 ---
