@@ -39,3 +39,8 @@ public record CategorySummary(
     string Category,
     decimal Income,
     decimal Expenses);
+
+public record FinanceBalanceResponse(
+    decimal TotalIncome,
+    decimal TotalExpenses,
+    decimal Balance);

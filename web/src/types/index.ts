@@ -224,6 +224,12 @@ export interface CategorySummary {
   expenses: number;
 }
 
+export interface FinanceBalanceResponse {
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+}
+
 export interface CreateFinanceRequest {
   type: FinancialRecordType;
   category: string;

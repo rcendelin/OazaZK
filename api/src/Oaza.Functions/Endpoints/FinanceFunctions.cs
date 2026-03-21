@@ -140,6 +140,44 @@ public class FinanceFunctions
         }
     }
 
+    [Function("GetFinanceBalance")]
+    public async Task<HttpResponseData> GetFinanceBalanceAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "finance/balance")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+            if (user is null)
+                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+
+            var allRecords = await _financialRecordRepository.GetAllAsync();
+
+            var totalIncome = allRecords
+                .Where(r => r.Type == FinancialRecordType.Income)
+                .Sum(r => r.Amount);
+
+            var totalExpenses = allRecords
+                .Where(r => r.Type == FinancialRecordType.Expense)
+                .Sum(r => r.Amount);
+
+            var response = new FinanceBalanceResponse(
+                TotalIncome: totalIncome,
+                TotalExpenses: totalExpenses,
+                Balance: totalIncome - totalExpenses);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, response);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
     [Function("CreateFinancialRecord")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CreateFinancialRecordAsync(

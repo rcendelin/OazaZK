@@ -2,6 +2,7 @@ import { apiClient, ApiError } from './client.ts';
 import type {
   FinanceResponse,
   FinanceSummaryResponse,
+  FinanceBalanceResponse,
   CreateFinanceRequest,
   UpdateFinanceRequest,
 } from '../types/index.ts';
@@ -16,6 +17,9 @@ export const getFinanceRecords = (
   const qs = params.toString();
   return apiClient.get<FinanceResponse[]>(`/finance${qs ? `?${qs}` : ''}`);
 };
+
+export const getFinanceBalance = (): Promise<FinanceBalanceResponse> =>
+  apiClient.get<FinanceBalanceResponse>('/finance/balance');
 
 export const getFinanceSummary = (
   year: number,
