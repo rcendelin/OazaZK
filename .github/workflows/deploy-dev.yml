@@ -1,0 +1,117 @@
+name: Build and Deploy (DEV)
+
+on:
+  push:
+    branches: [develop]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+  AZURE_FUNCTIONAPP_NAME: func-oaza-dev
+
+jobs:
+  build-api:
+    name: Build & Test API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-restore --verbosity normal
+
+      - name: Publish
+        run: dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
+
+      - name: Upload API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-artifact
+          path: api/publish
+
+  build-web:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_ENTRA_CLIENT_ID: ${{ secrets.DEV_ENTRA_CLIENT_ID }}
+          VITE_ENTRA_TENANT_ID: ${{ secrets.DEV_ENTRA_TENANT_ID }}
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-artifact
+          path: web/dist
+
+  deploy-api:
+    name: Deploy API (DEV)
+    needs: [build-api, build-web]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-artifact
+          path: api-artifact
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: func-oaza-dev
+          package: api-artifact
+          publish-profile: ${{ secrets.DEV_FUNCTIONAPP_PUBLISH_PROFILE }}
+
+  deploy-web:
+    name: Deploy Frontend (DEV)
+    needs: [build-api, build-web]
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-artifact
+          path: web/dist
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.DEV_SWA_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: web/dist
+          skip_app_build: true
+          skip_api_build: true
