@@ -6,6 +6,7 @@ import { getHouses } from '../api/houses.ts';
 import { getReadings } from '../api/readings.ts';
 import { getBillingPeriods } from '../api/billing.ts';
 import { MetricCard } from '../components/MetricCard.tsx';
+import { ConsumptionChart } from '../components/ConsumptionChart.tsx';
 import { Spinner } from '../components/Spinner.tsx';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
@@ -281,6 +282,7 @@ function AdminDashboard() {
 }
 
 function MemberDashboard() {
+  const { user } = useAuth();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -364,11 +366,12 @@ function MemberDashboard() {
         />
       </div>
 
-      {/* Consumption chart placeholder */}
-      <div className="mt-8 rounded-lg bg-white p-8 text-center shadow-sm">
-        <p className="text-gray-400">
-          Graf spotřeby — připravujeme
-        </p>
+      {/* Consumption chart */}
+      <div className="mt-8">
+        <ConsumptionChart
+          fixedHouseId={user?.houseId ?? undefined}
+          defaultRange={12}
+        />
       </div>
 
       {/* Last settlement info */}

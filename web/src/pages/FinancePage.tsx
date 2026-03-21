@@ -5,6 +5,8 @@ import {
   getFinanceRecords,
   getFinanceSummary,
   createFinanceRecord,
+  exportFinancePdf,
+  exportFinanceExcel,
 } from '../api/finance';
 import { MetricCard } from '../components/MetricCard';
 import { Spinner } from '../components/Spinner';
@@ -64,12 +66,16 @@ const formatDate = (dateStr: string): string =>
   new Intl.DateTimeFormat('cs-CZ').format(new Date(dateStr));
 
 export function FinancePage() {
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const isAdmin = user?.role === 'Admin';
+  const canExport = user?.role === 'Admin' || user?.role === 'Accountant';
 
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Fetch summary
   const fetchSummary = useCallback(
@@ -103,20 +109,64 @@ export function FinancePage() {
     refetch();
   };
 
-  const error = summaryError ?? recordsError;
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    setExportError(null);
+    try {
+      await exportFinancePdf(selectedYear, getAccessToken);
+    } catch {
+      setExportError('Export PDF se nezdaril');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportingExcel(true);
+    setExportError(null);
+    try {
+      await exportFinanceExcel(selectedYear, getAccessToken);
+    } catch {
+      setExportError('Export Excel se nezdaril');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const error = summaryError ?? recordsError ?? exportError;
 
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Hospodaření</h1>
-        {isAdmin && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            {showForm ? 'Zavřít formulář' : 'Přidat záznam'}
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canExport && (
+            <>
+              <button
+                onClick={() => void handleExportPdf()}
+                disabled={exportingPdf}
+                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {exportingPdf ? 'Exportuji...' : 'Export PDF'}
+              </button>
+              <button
+                onClick={() => void handleExportExcel()}
+                disabled={exportingExcel}
+                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {exportingExcel ? 'Exportuji...' : 'Export Excel'}
+              </button>
+            </>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              {showForm ? 'Zavřít formulář' : 'Přidat záznam'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error */}

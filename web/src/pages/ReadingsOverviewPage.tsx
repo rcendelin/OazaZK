@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { getReadings } from '../api/readings';
 import { getHouses } from '../api/houses';
+import { ConsumptionChart } from '../components/ConsumptionChart.tsx';
 import type { House, ReadingResponse } from '../types';
 
 const formatNumber = (value: number, decimals = 1): string =>
@@ -56,6 +57,7 @@ export function ReadingsOverviewPage() {
   const [selectedHouseId, setSelectedHouseId] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('houseName');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [showChart, setShowChart] = useState(false);
 
   const monthOptions = useMemo(() => getMonthOptions(), []);
 
@@ -207,6 +209,24 @@ export function ReadingsOverviewPage() {
           </div>
         )}
       </div>
+
+      {/* Chart toggle */}
+      <div className="flex items-center">
+        <button
+          onClick={() => setShowChart((prev) => !prev)}
+          className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
+        >
+          {showChart ? 'Skrýt graf' : 'Zobrazit graf'}
+        </button>
+      </div>
+
+      {/* Consumption chart */}
+      {showChart && (
+        <ConsumptionChart
+          showHouseFilter={isAdmin}
+          fixedHouseId={!isAdmin ? user?.houseId ?? undefined : undefined}
+        />
+      )}
 
       {/* Loading */}
       {readingsLoading && (

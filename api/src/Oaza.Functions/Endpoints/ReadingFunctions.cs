@@ -461,6 +461,150 @@ public class ReadingFunctions
         }
     }
 
+    private static readonly string[] CzechMonthNames =
+    {
+        "leden", "únor", "březen", "duben", "květen", "červen",
+        "červenec", "srpen", "září", "říjen", "listopad", "prosinec"
+    };
+
+    [Function("GetChartData")]
+    public async Task<HttpResponseData> GetChartDataAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/chart")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var houseIdParam = query["houseId"];
+            var fromParam = query["from"];
+            var toParam = query["to"];
+
+            // Determine date range (default: last 12 months)
+            DateTime dateTo;
+            DateTime dateFrom;
+
+            if (!string.IsNullOrEmpty(toParam) && DateTime.TryParse(toParam, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedTo))
+            {
+                dateTo = DateTime.SpecifyKind(parsedTo, DateTimeKind.Utc);
+            }
+            else
+            {
+                dateTo = DateTime.UtcNow;
+            }
+
+            if (!string.IsNullOrEmpty(fromParam) && DateTime.TryParse(fromParam, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFrom))
+            {
+                dateFrom = DateTime.SpecifyKind(parsedFrom, DateTimeKind.Utc);
+            }
+            else
+            {
+                dateFrom = dateTo.AddMonths(-12);
+            }
+
+            // Determine which house to query
+            string? effectiveHouseId = null;
+            string? houseName = null;
+
+            if (!string.IsNullOrEmpty(houseIdParam))
+            {
+                effectiveHouseId = houseIdParam;
+                var house = await _houseRepository.GetAsync(PartitionKeys.House, houseIdParam);
+                houseName = house?.Name;
+            }
+            else if (user.Role != UserRole.Admin)
+            {
+                // Member: use their own house
+                effectiveHouseId = user.HouseId;
+                if (!string.IsNullOrEmpty(effectiveHouseId))
+                {
+                    var house = await _houseRepository.GetAsync(PartitionKeys.House, effectiveHouseId);
+                    houseName = house?.Name;
+                }
+            }
+            // If no houseId and admin: aggregate all houses
+
+            var allMeters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
+
+            IEnumerable<WaterMeter> metersToQuery;
+            if (!string.IsNullOrEmpty(effectiveHouseId))
+            {
+                metersToQuery = allMeters.Where(m => m.HouseId == effectiveHouseId);
+            }
+            else
+            {
+                // Admin: all individual meters (not main)
+                metersToQuery = allMeters.Where(m => m.Type == MeterType.Individual);
+            }
+
+            // Collect all readings for the relevant meters
+            var allReadings = new List<(string MeterId, MeterReading Reading)>();
+            foreach (var meter in metersToQuery)
+            {
+                var readings = await _readingRepository.GetByMeterIdAsync(meter.Id);
+                foreach (var r in readings)
+                {
+                    allReadings.Add((meter.Id, r));
+                }
+            }
+
+            // Group by meter, then compute monthly consumption
+            var monthlyConsumption = new Dictionary<(int Year, int Month), decimal>();
+
+            var readingsByMeter = allReadings.GroupBy(r => r.MeterId);
+            foreach (var group in readingsByMeter)
+            {
+                var sorted = group.Select(g => g.Reading).OrderBy(r => r.ReadingDate).ToList();
+                for (var i = 1; i < sorted.Count; i++)
+                {
+                    var current = sorted[i];
+                    var previous = sorted[i - 1];
+                    var consumption = current.Value - previous.Value;
+                    if (consumption < 0) continue; // Skip negative
+
+                    var key = (current.ReadingDate.Year, current.ReadingDate.Month);
+
+                    // Check if within date range
+                    if (current.ReadingDate < dateFrom || current.ReadingDate > dateTo) continue;
+
+                    if (monthlyConsumption.ContainsKey(key))
+                    {
+                        monthlyConsumption[key] += consumption;
+                    }
+                    else
+                    {
+                        monthlyConsumption[key] = consumption;
+                    }
+                }
+            }
+
+            // Build sorted data points
+            var dataPoints = monthlyConsumption
+                .OrderBy(kv => kv.Key.Year)
+                .ThenBy(kv => kv.Key.Month)
+                .Select(kv => new ChartDataPoint(
+                    kv.Key.Year,
+                    kv.Key.Month,
+                    $"{CzechMonthNames[kv.Key.Month - 1]} {kv.Key.Year}",
+                    kv.Value))
+                .ToList();
+
+            var response = new ChartResponse(effectiveHouseId, houseName, dataPoints);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, response);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error getting chart data.");
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
     private static User GetAuthenticatedUser(FunctionContext context)
     {
         if (context.Items.TryGetValue(AuthConstants.HttpContextUserKey, out var userObj) &&

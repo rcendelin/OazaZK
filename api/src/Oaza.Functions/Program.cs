@@ -80,6 +80,15 @@ var host = new HostBuilder()
             new GenerateSettlementPdfUseCase(
                 sp.GetRequiredService<ILogger<GenerateSettlementPdfUseCase>>()));
 
+        // Use cases: Finance report generation
+        services.AddSingleton<GenerateFinanceReportUseCase>(sp =>
+            new GenerateFinanceReportUseCase(
+                sp.GetRequiredService<ILogger<GenerateFinanceReportUseCase>>()));
+
+        services.AddSingleton<GenerateFinanceExcelUseCase>(sp =>
+            new GenerateFinanceExcelUseCase(
+                sp.GetRequiredService<ILogger<GenerateFinanceExcelUseCase>>()));
+
         // Use cases: Meter readings import
         services.AddSingleton<ImportReadingsUseCase>(sp =>
             new ImportReadingsUseCase(

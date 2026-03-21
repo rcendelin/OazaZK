@@ -12,4 +12,5 @@ public static class TableNames
     public const string Settlements = "Settlements";
     public const string Documents = "Documents";
     public const string FinancialRecords = "FinancialRecords";
+    public const string DocumentVersions = "DocumentVersions";
 }

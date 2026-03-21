@@ -7,6 +7,7 @@ using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
 using Oaza.Application.Mapping;
+using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
@@ -18,6 +19,8 @@ namespace Oaza.Functions.Endpoints;
 public class FinanceFunctions
 {
     private readonly IFinancialRecordRepository _financialRecordRepository;
+    private readonly GenerateFinanceReportUseCase _generatePdfUseCase;
+    private readonly GenerateFinanceExcelUseCase _generateExcelUseCase;
     private readonly ILogger<FinanceFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -28,9 +31,13 @@ public class FinanceFunctions
 
     public FinanceFunctions(
         IFinancialRecordRepository financialRecordRepository,
+        GenerateFinanceReportUseCase generatePdfUseCase,
+        GenerateFinanceExcelUseCase generateExcelUseCase,
         ILogger<FinanceFunctions> logger)
     {
         _financialRecordRepository = financialRecordRepository ?? throw new ArgumentNullException(nameof(financialRecordRepository));
+        _generatePdfUseCase = generatePdfUseCase ?? throw new ArgumentNullException(nameof(generatePdfUseCase));
+        _generateExcelUseCase = generateExcelUseCase ?? throw new ArgumentNullException(nameof(generateExcelUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -241,6 +248,80 @@ public class FinanceFunctions
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
                 EntityMapper.ToResponse(existing));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("ExportFinancePdf")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> ExportFinancePdfAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "finance/export/pdf")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+            if (user is null)
+                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+
+            var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var yearParam = queryParams["year"];
+
+            if (!int.TryParse(yearParam, out var year))
+                return await WriteErrorResponseAsync(req, 400, "Query parameter 'year' is required and must be a valid integer.");
+
+            var records = await _financialRecordRepository.GetByYearAsync(year);
+            var pdfBytes = _generatePdfUseCase.Generate(year, records);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", "application/pdf");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"hospodareni-{year}.pdf\"");
+            response.Body = new MemoryStream(pdfBytes);
+            return response;
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("ExportFinanceExcel")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> ExportFinanceExcelAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "finance/export/xlsx")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+            if (user is null)
+                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+
+            var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var yearParam = queryParams["year"];
+
+            if (!int.TryParse(yearParam, out var year))
+                return await WriteErrorResponseAsync(req, 400, "Query parameter 'year' is required and must be a valid integer.");
+
+            var records = await _financialRecordRepository.GetByYearAsync(year);
+            var excelBytes = _generateExcelUseCase.Generate(year, records);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"hospodareni-{year}.xlsx\"");
+            response.Body = new MemoryStream(excelBytes);
+            return response;
         }
         catch (AppException ex)
         {

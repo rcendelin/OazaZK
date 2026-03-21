@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddSingleton<IAdvancePaymentRepository, AdvancePaymentRepository>();
         services.AddSingleton<ISettlementRepository, SettlementRepository>();
         services.AddSingleton<IDocumentRepository, DocumentRepository>();
+        services.AddSingleton<IDocumentVersionRepository, DocumentVersionRepository>();
         services.AddSingleton<IFinancialRecordRepository, FinancialRecordRepository>();
 
         // Import session cache
@@ -55,6 +56,9 @@ public static class DependencyInjection
             options.FromName = configuration["SendGrid__FromName"] ?? string.Empty;
         });
         services.AddSingleton<IEmailService, SendGridEmailService>();
+
+        // Notification service
+        services.AddSingleton<INotificationService, NotificationService>();
 
         return services;
     }

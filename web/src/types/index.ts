@@ -189,6 +189,15 @@ export interface DocumentResponse {
   uploadedBy: string;
 }
 
+// Document version types
+export interface DocumentVersionResponse {
+  versionNumber: number;
+  fileSizeBytes: number;
+  contentType: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 // Financial record types
 export interface FinanceResponse {
   id: string;
@@ -224,3 +233,25 @@ export interface CreateFinanceRequest {
 }
 
 export type UpdateFinanceRequest = CreateFinanceRequest;
+
+// Chart types
+export interface ChartDataPoint {
+  year: number;
+  month: number;
+  label: string;
+  consumption: number;
+}
+
+export interface ChartResponse {
+  houseId: string | null;
+  houseName: string | null;
+  dataPoints: ChartDataPoint[];
+}
+
+// Notification types
+export interface SendNotificationRequest {
+  type: 'reading_reminder' | 'import_completed' | 'settlement_closed';
+  periodId?: string;
+  year?: number;
+  month?: number;
+}

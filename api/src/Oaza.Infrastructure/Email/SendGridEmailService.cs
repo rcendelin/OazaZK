@@ -92,4 +92,33 @@ public class SendGridEmailService : IEmailService
                 $"Failed to send magic link email. SendGrid status: {response.StatusCode}");
         }
     }
+
+    public async Task SendEmailAsync(string toEmail, string toName, string subject, string plainTextContent, string htmlContent)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+        {
+            _logger.LogWarning("SendGrid API key is not configured. Email will not be sent.");
+            return;
+        }
+
+        var client = new SendGridClient(_settings.ApiKey);
+        var from = new EmailAddress(_settings.FromEmail, _settings.FromName);
+        var to = new EmailAddress(toEmail, toName);
+
+        var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent, htmlContent);
+
+        var response = await client.SendEmailAsync(msg);
+
+        if (response.IsSuccessStatusCode)
+        {
+            _logger.LogInformation("Email sent successfully to {Email}. Subject: {Subject}", toEmail, subject);
+        }
+        else
+        {
+            var body = await response.Body.ReadAsStringAsync();
+            _logger.LogError(
+                "SendGrid returned {StatusCode} when sending email to {Email}. Subject: {Subject}. Response: {Body}",
+                response.StatusCode, toEmail, subject, body);
+        }
+    }
 }

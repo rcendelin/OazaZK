@@ -2,6 +2,7 @@ import { apiClient } from './client.ts';
 import type {
   MonthlyReadingsResponse,
   ImportPreviewResponse,
+  ChartResponse,
 } from '../types/index.ts';
 
 export const getReadings = (
@@ -23,3 +24,16 @@ export const confirmImport = (
   apiClient.post<{ count: number }>('/readings/import/confirm', {
     importSessionId: sessionId,
   });
+
+export const getChartData = (
+  houseId?: string,
+  from?: string,
+  to?: string,
+): Promise<ChartResponse> => {
+  const params = new URLSearchParams(
+    Object.entries({ houseId, from, to }).filter(
+      (entry): entry is [string, string] => entry[1] != null,
+    ),
+  );
+  return apiClient.get<ChartResponse>(`/readings/chart?${params.toString()}`);
+};

@@ -284,6 +284,36 @@ public static class TableEntityMapper
         };
     }
 
+    // ───────────────────── DocumentVersion ─────────────────────
+    // PK = documentId, RK = version number (zero-padded, e.g., "001")
+
+    public static TableEntity ToTableEntity(DocumentVersion version)
+    {
+        return new TableEntity(version.DocumentId, version.VersionNumber.ToString("D3"))
+        {
+            { "VersionNumber", version.VersionNumber },
+            { "BlobName", version.BlobName },
+            { "FileSizeBytes", version.FileSizeBytes },
+            { "ContentType", version.ContentType },
+            { "UploadedAt", version.UploadedAt },
+            { "UploadedBy", version.UploadedBy }
+        };
+    }
+
+    public static DocumentVersion ToDocumentVersion(TableEntity entity)
+    {
+        return new DocumentVersion
+        {
+            DocumentId = entity.PartitionKey,
+            VersionNumber = entity.GetInt32("VersionNumber") ?? int.Parse(entity.RowKey),
+            BlobName = entity.GetString("BlobName") ?? string.Empty,
+            FileSizeBytes = entity.GetInt64("FileSizeBytes") ?? 0,
+            ContentType = entity.GetString("ContentType") ?? string.Empty,
+            UploadedAt = entity.GetDateTimeOffset("UploadedAt")?.UtcDateTime ?? DateTime.MinValue,
+            UploadedBy = entity.GetString("UploadedBy") ?? string.Empty
+        };
+    }
+
     // ───────────────────── FinancialRecord ─────────────────────
     // PK = year (as string), RK = GUID
 

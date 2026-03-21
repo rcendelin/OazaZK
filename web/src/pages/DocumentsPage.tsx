@@ -6,25 +6,28 @@ import {
   uploadDocument,
   downloadDocument,
   deleteDocument,
+  getDocumentVersions,
+  uploadDocumentVersion,
+  downloadDocumentVersion,
 } from '../api/documents';
 import { FileUploadZone } from '../components/FileUploadZone';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
-import type { DocumentResponse } from '../types';
+import type { DocumentResponse, DocumentVersionResponse } from '../types';
 
 const CATEGORIES = [
-  { key: '', label: 'Vše' },
+  { key: '', label: 'Vse' },
   { key: 'stanovy', label: 'Stanovy' },
-  { key: 'zapisy', label: 'Zápisy' },
+  { key: 'zapisy', label: 'Zapisy' },
   { key: 'smlouvy', label: 'Smlouvy' },
-  { key: 'ostatni', label: 'Ostatní' },
+  { key: 'ostatni', label: 'Ostatni' },
 ] as const;
 
 const CATEGORY_LABELS: Record<string, string> = {
   stanovy: 'Stanovy',
-  zapisy: 'Zápisy',
+  zapisy: 'Zapisy',
   smlouvy: 'Smlouvy',
-  ostatni: 'Ostatní',
+  ostatni: 'Ostatni',
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -52,6 +55,10 @@ export function DocumentsPage() {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DocumentResponse | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
+  const [versions, setVersions] = useState<DocumentVersionResponse[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionUploadTarget, setVersionUploadTarget] = useState<DocumentResponse | null>(null);
 
   const fetchDocuments = useCallback(
     () => getDocuments(activeCategory || undefined),
@@ -69,7 +76,7 @@ export function DocumentsPage() {
       setDownloadError(null);
       await downloadDocument(doc.id, doc.name, getAccessToken);
     } catch {
-      setDownloadError('Stahování se nezdařilo');
+      setDownloadError('Stahovani se nezdarilo');
     }
   };
 
@@ -81,9 +88,36 @@ export function DocumentsPage() {
       setDeleteTarget(null);
       refetch();
     } catch {
-      setDownloadError('Smazání se nezdařilo');
+      setDownloadError('Smazani se nezdarilo');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleToggleVersions = async (doc: DocumentResponse) => {
+    if (expandedDocId === doc.id) {
+      setExpandedDocId(null);
+      setVersions([]);
+      return;
+    }
+    setExpandedDocId(doc.id);
+    setVersionsLoading(true);
+    try {
+      const v = await getDocumentVersions(doc.id);
+      setVersions(v);
+    } catch {
+      setVersions([]);
+    } finally {
+      setVersionsLoading(false);
+    }
+  };
+
+  const handleDownloadVersion = async (doc: DocumentResponse, version: number) => {
+    try {
+      setDownloadError(null);
+      await downloadDocumentVersion(doc.id, version, doc.name, getAccessToken);
+    } catch {
+      setDownloadError('Stahovani verze se nezdarilo');
     }
   };
 
@@ -96,7 +130,7 @@ export function DocumentsPage() {
             onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
-            Nahrát dokument
+            Nahrat dokument
           </button>
         )}
       </div>
@@ -142,7 +176,7 @@ export function DocumentsPage() {
       {/* Empty state */}
       {!loading && !error && documents && documents.length === 0 && (
         <div className="mt-8 text-center">
-          <p className="text-gray-500">Žádné dokumenty v této kategorii.</p>
+          <p className="text-gray-500">Zadne dokumenty v teto kategorii.</p>
         </div>
       )}
 
@@ -154,16 +188,19 @@ export function DocumentsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Název dokumentu
+                    Nazev dokumentu
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Kategorie
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Datum nahrání
+                    Datum nahrani
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Velikost
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Verze
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                     Akce
@@ -172,42 +209,19 @@ export function DocumentsPage() {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
-                      {doc.name}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          CATEGORY_COLORS[doc.category] ?? 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {CATEGORY_LABELS[doc.category] ?? doc.category}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                      {formatDate(doc.uploadedAt)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                      {formatFileSize(doc.fileSizeBytes)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
-                      <button
-                        onClick={() => void handleDownload(doc)}
-                        className="font-medium text-blue-600 hover:text-blue-800"
-                      >
-                        Stáhnout
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => setDeleteTarget(doc)}
-                          className="ml-4 font-medium text-red-600 hover:text-red-800"
-                        >
-                          Smazat
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                  <DocumentRow
+                    key={doc.id}
+                    doc={doc}
+                    isAdmin={isAdmin}
+                    isExpanded={expandedDocId === doc.id}
+                    versions={expandedDocId === doc.id ? versions : []}
+                    versionsLoading={expandedDocId === doc.id && versionsLoading}
+                    onDownload={() => void handleDownload(doc)}
+                    onDelete={() => setDeleteTarget(doc)}
+                    onToggleVersions={() => void handleToggleVersions(doc)}
+                    onUploadVersion={() => setVersionUploadTarget(doc)}
+                    onDownloadVersion={(v) => void handleDownloadVersion(doc, v)}
+                  />
                 ))}
               </tbody>
             </table>
@@ -242,22 +256,58 @@ export function DocumentsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 flex gap-3">
+                <div className="mt-3 flex flex-wrap gap-3">
                   <button
                     onClick={() => void handleDownload(doc)}
                     className="text-sm font-medium text-blue-600 hover:text-blue-800"
                   >
-                    Stáhnout
+                    Stahnout
+                  </button>
+                  <button
+                    onClick={() => void handleToggleVersions(doc)}
+                    className="text-sm font-medium text-gray-600 hover:text-gray-800"
+                  >
+                    {expandedDocId === doc.id ? 'Skryt verze' : 'Verze'}
                   </button>
                   {isAdmin && (
-                    <button
-                      onClick={() => setDeleteTarget(doc)}
-                      className="text-sm font-medium text-red-600 hover:text-red-800"
-                    >
-                      Smazat
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setVersionUploadTarget(doc)}
+                        className="text-sm font-medium text-green-600 hover:text-green-800"
+                      >
+                        Nova verze
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(doc)}
+                        className="text-sm font-medium text-red-600 hover:text-red-800"
+                      >
+                        Smazat
+                      </button>
+                    </>
                   )}
                 </div>
+                {/* Mobile version list */}
+                {expandedDocId === doc.id && (
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    {versionsLoading && <Spinner />}
+                    {!versionsLoading && versions.length === 0 && (
+                      <p className="text-xs text-gray-400">Zadne verze</p>
+                    )}
+                    {!versionsLoading && versions.map((v) => (
+                      <div key={v.versionNumber} className="flex items-center justify-between py-1">
+                        <span className="text-xs text-gray-500">
+                          v{v.versionNumber} - {formatDate(v.uploadedAt)} - {formatFileSize(v.fileSizeBytes)}
+                        </span>
+                        <button
+                          onClick={() => void handleDownloadVersion(doc, v.versionNumber)}
+                          className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          Stahnout
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -276,17 +326,167 @@ export function DocumentsPage() {
         />
       )}
 
+      {/* Version upload modal */}
+      {versionUploadTarget && (
+        <VersionUploadModal
+          doc={versionUploadTarget}
+          onClose={() => setVersionUploadTarget(null)}
+          onUploaded={() => {
+            setVersionUploadTarget(null);
+            refetch();
+            // Refresh versions if currently expanded
+            if (expandedDocId === versionUploadTarget.id) {
+              void getDocumentVersions(versionUploadTarget.id).then(setVersions);
+            }
+          }}
+          getAccessToken={getAccessToken}
+        />
+      )}
+
       {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={deleteTarget !== null}
         title="Smazat dokument"
         message={`Opravdu chcete smazat dokument "${deleteTarget?.name ?? ''}"?`}
-        confirmLabel={deleteLoading ? 'Mažu...' : 'Smazat'}
+        confirmLabel={deleteLoading ? 'Mazu...' : 'Smazat'}
         confirmVariant="danger"
         onConfirm={() => void handleDeleteConfirm()}
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+  );
+}
+
+// ─── Document Row with expandable versions ──────────────────────────────────
+
+interface DocumentRowProps {
+  doc: DocumentResponse;
+  isAdmin: boolean;
+  isExpanded: boolean;
+  versions: DocumentVersionResponse[];
+  versionsLoading: boolean;
+  onDownload: () => void;
+  onDelete: () => void;
+  onToggleVersions: () => void;
+  onUploadVersion: () => void;
+  onDownloadVersion: (version: number) => void;
+}
+
+function DocumentRow({
+  doc,
+  isAdmin,
+  isExpanded,
+  versions,
+  versionsLoading,
+  onDownload,
+  onDelete,
+  onToggleVersions,
+  onUploadVersion,
+  onDownloadVersion,
+}: DocumentRowProps) {
+  return (
+    <>
+      <tr className="hover:bg-gray-50">
+        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+          <button
+            onClick={onToggleVersions}
+            className="text-left hover:text-blue-600"
+          >
+            {doc.name}
+          </button>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-sm">
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+              CATEGORY_COLORS[doc.category] ?? 'bg-gray-100 text-gray-700'
+            }`}
+          >
+            {CATEGORY_LABELS[doc.category] ?? doc.category}
+          </span>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+          {formatDate(doc.uploadedAt)}
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+          {formatFileSize(doc.fileSizeBytes)}
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+          <button
+            onClick={onToggleVersions}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            {isExpanded ? 'Skryt' : 'Zobrazit'}
+          </button>
+        </td>
+        <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
+          <button
+            onClick={onDownload}
+            className="font-medium text-blue-600 hover:text-blue-800"
+          >
+            Stahnout
+          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={onUploadVersion}
+                className="ml-4 font-medium text-green-600 hover:text-green-800"
+              >
+                Nova verze
+              </button>
+              <button
+                onClick={onDelete}
+                className="ml-4 font-medium text-red-600 hover:text-red-800"
+              >
+                Smazat
+              </button>
+            </>
+          )}
+        </td>
+      </tr>
+      {isExpanded && (
+        <tr>
+          <td colSpan={6} className="bg-gray-50 px-8 py-3">
+            {versionsLoading && (
+              <div className="flex justify-center py-2">
+                <Spinner />
+              </div>
+            )}
+            {!versionsLoading && versions.length === 0 && (
+              <p className="text-sm text-gray-400">Zadne verze k zobrazeni</p>
+            )}
+            {!versionsLoading && versions.length > 0 && (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500">
+                    <th className="pb-1 text-left font-medium">Verze</th>
+                    <th className="pb-1 text-left font-medium">Datum</th>
+                    <th className="pb-1 text-left font-medium">Velikost</th>
+                    <th className="pb-1 text-right font-medium">Akce</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {versions.map((v) => (
+                    <tr key={v.versionNumber} className="border-t border-gray-200">
+                      <td className="py-1.5 text-gray-700">v{v.versionNumber}</td>
+                      <td className="py-1.5 text-gray-500">{formatDate(v.uploadedAt)}</td>
+                      <td className="py-1.5 text-gray-500">{formatFileSize(v.fileSizeBytes)}</td>
+                      <td className="py-1.5 text-right">
+                        <button
+                          onClick={() => onDownloadVersion(v.versionNumber)}
+                          className="font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          Stahnout
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -325,7 +525,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
       await uploadDocument(file, name.trim(), category, getAccessToken);
       onUploaded();
     } catch {
-      setUploadError('Nahrávání se nezdařilo');
+      setUploadError('Nahravani se nezdarilo');
     } finally {
       setUploading(false);
       submittingRef.current = false;
@@ -343,7 +543,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
         onClick={onClose}
       />
       <div className="relative z-10 mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">Nahrát dokument</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Nahrat dokument</h2>
 
         <div className="mt-4 space-y-4">
           {/* Document name */}
@@ -352,7 +552,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               htmlFor="doc-name"
               className="block text-sm font-medium text-gray-700"
             >
-              Název dokumentu
+              Nazev dokumentu
             </label>
             <input
               id="doc-name"
@@ -360,7 +560,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Název dokumentu"
+              placeholder="Nazev dokumentu"
             />
           </div>
 
@@ -379,9 +579,9 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="stanovy">Stanovy</option>
-              <option value="zapisy">Zápisy</option>
+              <option value="zapisy">Zapisy</option>
               <option value="smlouvy">Smlouvy</option>
-              <option value="ostatni">Ostatní</option>
+              <option value="ostatni">Ostatni</option>
             </select>
           </div>
 
@@ -428,14 +628,14 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
             disabled={uploading}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Zrušit
+            Zrusit
           </button>
           <button
             onClick={() => void handleSubmit()}
             disabled={uploading || !file || !name.trim()}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {uploading ? 'Nahrávám...' : 'Nahrát'}
+            {uploading ? 'Nahravam...' : 'Nahrat'}
           </button>
         </div>
       </div>
@@ -443,3 +643,113 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
   );
 }
 
+// ─── Version Upload Modal ───────────────────────────────────────────────────
+
+interface VersionUploadModalProps {
+  doc: DocumentResponse;
+  onClose: () => void;
+  onUploaded: () => void;
+  getAccessToken: () => Promise<string | null>;
+}
+
+function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: VersionUploadModalProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const handleSubmit = async () => {
+    if (!file || submittingRef.current) return;
+    submittingRef.current = true;
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      await uploadDocumentVersion(doc.id, file, getAccessToken);
+      onUploaded();
+    } catch {
+      setUploadError('Nahravani verze se nezdarilo');
+    } finally {
+      setUploading(false);
+      submittingRef.current = false;
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="fixed inset-0 bg-black/50 transition-opacity"
+        onClick={onClose}
+      />
+      <div className="relative z-10 mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Nahrat novou verzi: {doc.name}
+        </h2>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Soubor
+            </label>
+            <div className="mt-1">
+              {file ? (
+                <div className="flex items-center justify-between rounded-md border border-gray-300 px-3 py-2">
+                  <span className="truncate text-sm text-gray-700">
+                    {file.name} ({formatFileSize(file.size)})
+                  </span>
+                  <button
+                    onClick={() => setFile(null)}
+                    className="ml-2 text-sm text-red-600 hover:text-red-800"
+                  >
+                    Odebrat
+                  </button>
+                </div>
+              ) : (
+                <FileUploadZone
+                  onFileSelected={setFile}
+                  accept=".pdf,.docx,.xlsx,.jpg,.png"
+                  disabled={uploading}
+                />
+              )}
+            </div>
+          </div>
+
+          {uploadError && (
+            <div className="rounded-md bg-red-50 p-3">
+              <p className="text-sm text-red-700">{uploadError}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={uploading}
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Zrusit
+          </button>
+          <button
+            onClick={() => void handleSubmit()}
+            disabled={uploading || !file}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {uploading ? 'Nahravam...' : 'Nahrat verzi'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

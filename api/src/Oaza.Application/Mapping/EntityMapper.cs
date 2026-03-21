@@ -100,6 +100,16 @@ public static class EntityMapper
             UploadedBy: document.UploadedBy);
     }
 
+    public static DocumentVersionResponse ToResponse(DocumentVersion version)
+    {
+        return new DocumentVersionResponse(
+            VersionNumber: version.VersionNumber,
+            FileSizeBytes: version.FileSizeBytes,
+            ContentType: version.ContentType,
+            UploadedAt: version.UploadedAt,
+            UploadedBy: version.UploadedBy);
+    }
+
     public static FinanceResponse ToResponse(FinancialRecord record)
     {
         return new FinanceResponse(
