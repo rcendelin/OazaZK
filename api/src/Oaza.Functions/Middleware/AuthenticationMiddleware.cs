@@ -40,7 +40,7 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
 
     public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
     {
-        if (IsAnonymousEndpoint(context))
+        if (await IsAnonymousEndpointAsync(context))
         {
             await next(context);
             return;
@@ -93,7 +93,7 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
         await next(context);
     }
 
-    private static bool IsAnonymousEndpoint(FunctionContext context)
+    private static async Task<bool> IsAnonymousEndpointAsync(FunctionContext context)
     {
         // Check for [AllowAnonymous] attribute on the function method
         var targetMethod = GetTargetMethod(context);
@@ -109,7 +109,7 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
         }
 
         // Fallback: check path-based list
-        var httpRequestData = context.GetHttpRequestDataAsync().GetAwaiter().GetResult();
+        var httpRequestData = await context.GetHttpRequestDataAsync();
         if (httpRequestData is not null)
         {
             var path = httpRequestData.Url.AbsolutePath;

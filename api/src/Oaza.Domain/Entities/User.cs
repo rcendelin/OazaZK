@@ -15,4 +15,7 @@ public class User
     public DateTime? MagicLinkExpiry { get; set; }
     public DateTime? LastLogin { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
+    public int MagicLinkRequestCount { get; set; }
+    public DateTime? MagicLinkRequestWindowStart { get; set; }
+    public int MagicLinkFailedAttempts { get; set; }
 }

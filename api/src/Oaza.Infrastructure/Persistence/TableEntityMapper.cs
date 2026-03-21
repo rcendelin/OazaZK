@@ -28,7 +28,10 @@ public static class TableEntityMapper
             { "MagicLinkTokenHash", user.MagicLinkTokenHash },
             { "MagicLinkExpiry", user.MagicLinkExpiry },
             { "LastLogin", user.LastLogin },
-            { "NotificationsEnabled", user.NotificationsEnabled }
+            { "NotificationsEnabled", user.NotificationsEnabled },
+            { "MagicLinkRequestCount", user.MagicLinkRequestCount },
+            { "MagicLinkRequestWindowStart", user.MagicLinkRequestWindowStart },
+            { "MagicLinkFailedAttempts", user.MagicLinkFailedAttempts }
         };
         return entity;
     }
@@ -47,7 +50,10 @@ public static class TableEntityMapper
             MagicLinkTokenHash = entity.GetString("MagicLinkTokenHash"),
             MagicLinkExpiry = entity.GetDateTimeOffset("MagicLinkExpiry")?.UtcDateTime,
             LastLogin = entity.GetDateTimeOffset("LastLogin")?.UtcDateTime,
-            NotificationsEnabled = entity.GetBoolean("NotificationsEnabled") ?? true
+            NotificationsEnabled = entity.GetBoolean("NotificationsEnabled") ?? true,
+            MagicLinkRequestCount = entity.GetInt32("MagicLinkRequestCount") ?? 0,
+            MagicLinkRequestWindowStart = entity.GetDateTimeOffset("MagicLinkRequestWindowStart")?.UtcDateTime,
+            MagicLinkFailedAttempts = entity.GetInt32("MagicLinkFailedAttempts") ?? 0
         };
     }
 

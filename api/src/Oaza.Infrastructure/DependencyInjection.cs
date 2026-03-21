@@ -2,7 +2,9 @@ using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Oaza.Application.Interfaces;
 using Oaza.Domain.Interfaces;
+using Oaza.Infrastructure.Email;
 using Oaza.Infrastructure.Persistence;
 
 namespace Oaza.Infrastructure;
@@ -36,6 +38,15 @@ public static class DependencyInjection
         services.AddSingleton<ISettlementRepository, SettlementRepository>();
         services.AddSingleton<IDocumentRepository, DocumentRepository>();
         services.AddSingleton<IFinancialRecordRepository, FinancialRecordRepository>();
+
+        // Email service
+        services.Configure<SendGridSettings>(options =>
+        {
+            options.ApiKey = configuration["SendGrid__ApiKey"] ?? string.Empty;
+            options.FromEmail = configuration["SendGrid__FromEmail"] ?? string.Empty;
+            options.FromName = configuration["SendGrid__FromName"] ?? string.Empty;
+        });
+        services.AddSingleton<IEmailService, SendGridEmailService>();
 
         return services;
     }
