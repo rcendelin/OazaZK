@@ -1,0 +1,40 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.exe
+.vs/
+*.nupkg
+project.lock.json
+
+# Azure Functions
+local.settings.json
+appsettings.Development.json
+
+# Node / React
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# Vite
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Claude Code
+.claude/
