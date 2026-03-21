@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Oaza.Application/Oaza.Application.csproj" />
+    <Project Path="src/Oaza.Domain/Oaza.Domain.csproj" />
+    <Project Path="src/Oaza.Functions/Oaza.Functions.csproj" />
+    <Project Path="src/Oaza.Infrastructure/Oaza.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Oaza.Application.Tests/Oaza.Application.Tests.csproj" />
+    <Project Path="tests/Oaza.Domain.Tests/Oaza.Domain.Tests.csproj" />
+    <Project Path="tests/Oaza.Functions.Tests/Oaza.Functions.Tests.csproj" />
+  </Folder>
+</Solution>
