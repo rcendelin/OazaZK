@@ -129,11 +129,18 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
         var typeName = entryPoint[..lastDot];
         var methodName = entryPoint[(lastDot + 1)..];
 
-        var assembly = Assembly.GetEntryAssembly();
-        if (assembly is null) return null;
+        // Search all loaded assemblies — Assembly.GetEntryAssembly() may not
+        // return the correct assembly in Azure Functions Isolated Worker
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var type = assembly.GetType(typeName);
+            if (type is not null)
+            {
+                return type.GetMethod(methodName);
+            }
+        }
 
-        var type = assembly.GetType(typeName);
-        return type?.GetMethod(methodName);
+        return null;
     }
 
     private static string? ExtractBearerToken(HttpRequestData request)
