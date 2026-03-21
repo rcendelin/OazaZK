@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Oaza.Application.Interfaces;
 using Oaza.Domain.Interfaces;
+using Oaza.Infrastructure.Caching;
 using Oaza.Infrastructure.Email;
 using Oaza.Infrastructure.Persistence;
 
@@ -38,6 +39,9 @@ public static class DependencyInjection
         services.AddSingleton<ISettlementRepository, SettlementRepository>();
         services.AddSingleton<IDocumentRepository, DocumentRepository>();
         services.AddSingleton<IFinancialRecordRepository, FinancialRecordRepository>();
+
+        // Import session cache
+        services.AddSingleton<IImportSessionCache, InMemoryImportSessionCache>();
 
         // Email service
         services.Configure<SendGridSettings>(options =>

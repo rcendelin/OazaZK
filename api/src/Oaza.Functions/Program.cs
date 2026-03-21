@@ -59,6 +59,25 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IUserRepository>(),
                 sp.GetRequiredService<IJwtService>(),
                 sp.GetRequiredService<ILogger<VerifyMagicLinkUseCase>>()));
+
+        // Use cases: Settlement calculation
+        services.AddSingleton<CalculateSettlementUseCase>(sp =>
+            new CalculateSettlementUseCase(
+                sp.GetRequiredService<IBillingPeriodRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IWaterMeterRepository>(),
+                sp.GetRequiredService<IMeterReadingRepository>(),
+                sp.GetRequiredService<ISupplierInvoiceRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<ILogger<CalculateSettlementUseCase>>()));
+
+        // Use cases: Meter readings import
+        services.AddSingleton<ImportReadingsUseCase>(sp =>
+            new ImportReadingsUseCase(
+                sp.GetRequiredService<IMeterReadingRepository>(),
+                sp.GetRequiredService<IWaterMeterRepository>(),
+                sp.GetRequiredService<IImportSessionCache>(),
+                sp.GetRequiredService<ILogger<ImportReadingsUseCase>>()));
     })
     .Build();
 
