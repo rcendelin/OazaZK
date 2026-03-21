@@ -2,10 +2,8 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Oaza.Application.DTOs;
 using Oaza.Domain.Entities;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
-using QuestPdfDocument = QuestPDF.Fluent.Document;
+using PdfSharpCore.Drawing;
+using PdfSharpCore.Pdf;
 
 namespace Oaza.Application.UseCases;
 
@@ -19,9 +17,6 @@ public class GenerateSettlementPdfUseCase
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <summary>
-    /// Generates a PDF settlement sheet for a single house.
-    /// </summary>
     public byte[] Generate(
         BillingPeriod period,
         House house,
@@ -33,264 +28,139 @@ public class GenerateSettlementPdfUseCase
             "Generating settlement PDF for house {HouseId} ({HouseName}), period {PeriodId}.",
             house.Id, house.Name, period.Id);
 
-        var document = QuestPdfDocument.Create(container =>
+        var document = new PdfDocument();
+        document.Info.Title = $"Vyuctovani - {house.Name} - {period.Name}";
+        var page = document.AddPage();
+        page.Size = PdfSharpCore.PageSize.A4;
+        var gfx = XGraphics.FromPdfPage(page);
+
+        var fontTitle = new XFont("Arial", 18, XFontStyle.Bold);
+        var fontSubtitle = new XFont("Arial", 14, XFontStyle.Regular);
+        var fontSection = new XFont("Arial", 11, XFontStyle.Bold);
+        var fontNormal = new XFont("Arial", 10, XFontStyle.Regular);
+        var fontBold = new XFont("Arial", 10, XFontStyle.Bold);
+        var fontSmall = new XFont("Arial", 8, XFontStyle.Regular);
+        var fontBalance = new XFont("Arial", 13, XFontStyle.Bold);
+
+        var blue = XColor.FromArgb(30, 64, 175);
+        var gray = XColor.FromArgb(107, 114, 128);
+        var green = XColor.FromArgb(22, 163, 74);
+        var red = XColor.FromArgb(220, 38, 38);
+        var lightGray = XColor.FromArgb(243, 244, 246);
+
+        double y = 50;
+        double leftMargin = 55;
+        double rightEdge = page.Width - 55;
+        double contentWidth = rightEdge - leftMargin;
+
+        // Header
+        gfx.DrawString("Oaza Zadni Kopanina", fontTitle, new XSolidBrush(blue), leftMargin, y);
+        y += 24;
+        gfx.DrawString("Vyuctovani vodneho", fontSubtitle, new XSolidBrush(gray), leftMargin, y);
+        y += 20;
+        gfx.DrawString(period.Name, new XFont("Arial", 12, XFontStyle.Regular), new XSolidBrush(gray), leftMargin, y);
+        y += 16;
+        gfx.DrawLine(new XPen(blue, 1), leftMargin, y, rightEdge, y);
+        y += 20;
+
+        // Period info
+        DrawSectionBox(gfx, leftMargin, ref y, contentWidth, lightGray, "Obdobi", fontSection, blue, new[]
         {
-            container.Page(page =>
-            {
-                page.Size(PageSizes.A4);
-                page.MarginTop(1.5f, Unit.Centimetre);
-                page.MarginBottom(1.5f, Unit.Centimetre);
-                page.MarginLeft(2f, Unit.Centimetre);
-                page.MarginRight(2f, Unit.Centimetre);
-                page.DefaultTextStyle(x => x.FontSize(10));
+            ($"Datum od: {period.DateFrom:d. MMMM yyyy}", $"Datum do: {period.DateTo:d. MMMM yyyy}")
+        }, fontNormal, fontBold);
 
-                page.Header().Element(header => ComposeHeader(header, period));
-                page.Content().Element(content => ComposeContent(
-                    content, period, house, detail, totalNetworkConsumption, totalInvoiceAmount));
-                page.Footer().Element(ComposeFooter);
-            });
-        });
-
-        return document.GeneratePdf();
-    }
-
-    private static void ComposeHeader(IContainer container, BillingPeriod period)
-    {
-        container.Column(column =>
+        // House info
+        DrawSectionBox(gfx, leftMargin, ref y, contentWidth, lightGray, "Informace o domacnosti", fontSection, blue, new[]
         {
-            column.Item().Text("Oaza Zadni Kopanina")
-                .FontSize(18).Bold().FontColor(Colors.Blue.Darken3);
+            ($"Nazev: {house.Name}", $"Kontaktni osoba: {house.ContactPerson}"),
+            ($"Adresa: {house.Address}", $"E-mail: {house.Email}")
+        }, fontNormal, fontBold);
 
-            column.Item().PaddingTop(4).Text("Vyuctovani vodneho")
-                .FontSize(14).SemiBold().FontColor(Colors.Grey.Darken2);
+        // Consumption table
+        y += 10;
+        gfx.DrawString("Spotreba", fontSection, new XSolidBrush(blue), leftMargin, y);
+        y += 16;
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Polozka", "Hodnota", fontBold, true);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Spotreba vaseho domu", FormatVolume(detail.ConsumptionM3), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Prirazena ztrata", FormatVolume(detail.LossAllocatedM3), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkova spotreba site", FormatVolume(totalNetworkConsumption), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, new XSolidBrush(lightGray).Color, XColors.Black, "Vas podil na celku", FormatPercent(detail.SharePercent), fontBold, false);
 
-            column.Item().PaddingTop(2).Text(period.Name)
-                .FontSize(12).FontColor(Colors.Grey.Darken1);
+        // Financial table
+        y += 16;
+        gfx.DrawString("Financni vyuctovani", fontSection, new XSolidBrush(blue), leftMargin, y);
+        y += 16;
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Polozka", "Castka", fontBold, true);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkova faktura dodavatele", FormatCurrency(totalInvoiceAmount), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Vase castka k uhrade", FormatCurrency(detail.CalculatedAmount), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Zaplacene zalohy", FormatCurrency(detail.TotalAdvances), fontNormal, false);
 
-            column.Item().PaddingTop(8).LineHorizontal(1).LineColor(Colors.Blue.Darken3);
-        });
-    }
-
-    private static void ComposeContent(
-        IContainer container,
-        BillingPeriod period,
-        House house,
-        HouseSettlementDetail detail,
-        decimal totalNetworkConsumption,
-        decimal totalInvoiceAmount)
-    {
-        container.PaddingTop(16).Column(column =>
-        {
-            column.Spacing(12);
-
-            // Period info section
-            column.Item().Element(c => ComposePeriodInfo(c, period));
-
-            // House info section
-            column.Item().Element(c => ComposeHouseInfo(c, house));
-
-            // Consumption table
-            column.Item().Element(c => ComposeConsumptionTable(c, detail, totalNetworkConsumption));
-
-            // Financial table
-            column.Item().Element(c => ComposeFinancialTable(c, detail, totalInvoiceAmount));
-
-            // Balance summary
-            column.Item().Element(c => ComposeBalanceSummary(c, detail));
-        });
-    }
-
-    private static void ComposePeriodInfo(IContainer container, BillingPeriod period)
-    {
-        container.Background(Colors.Grey.Lighten4).Padding(10).Column(column =>
-        {
-            column.Item().Text("Obdobi").FontSize(11).SemiBold().FontColor(Colors.Blue.Darken3);
-            column.Item().PaddingTop(4).Row(row =>
-            {
-                row.RelativeItem().Text(text =>
-                {
-                    text.Span("Datum od: ").SemiBold();
-                    text.Span(period.DateFrom.ToString("d. MMMM yyyy", CzechCulture));
-                });
-                row.RelativeItem().Text(text =>
-                {
-                    text.Span("Datum do: ").SemiBold();
-                    text.Span(period.DateTo.ToString("d. MMMM yyyy", CzechCulture));
-                });
-            });
-        });
-    }
-
-    private static void ComposeHouseInfo(IContainer container, House house)
-    {
-        container.Background(Colors.Grey.Lighten4).Padding(10).Column(column =>
-        {
-            column.Item().Text("Informace o domacnosti").FontSize(11).SemiBold().FontColor(Colors.Blue.Darken3);
-            column.Item().PaddingTop(4).Row(row =>
-            {
-                row.RelativeItem().Column(col =>
-                {
-                    col.Item().Text(text =>
-                    {
-                        text.Span("Nazev: ").SemiBold();
-                        text.Span(house.Name);
-                    });
-                    col.Item().PaddingTop(2).Text(text =>
-                    {
-                        text.Span("Adresa: ").SemiBold();
-                        text.Span(house.Address);
-                    });
-                });
-                row.RelativeItem().Column(col =>
-                {
-                    col.Item().Text(text =>
-                    {
-                        text.Span("Kontaktni osoba: ").SemiBold();
-                        text.Span(house.ContactPerson);
-                    });
-                    col.Item().PaddingTop(2).Text(text =>
-                    {
-                        text.Span("E-mail: ").SemiBold();
-                        text.Span(house.Email);
-                    });
-                });
-            });
-        });
-    }
-
-    private static void ComposeConsumptionTable(
-        IContainer container, HouseSettlementDetail detail, decimal totalNetworkConsumption)
-    {
-        container.Column(column =>
-        {
-            column.Item().Text("Spotreba").FontSize(11).SemiBold().FontColor(Colors.Blue.Darken3);
-            column.Item().PaddingTop(6).Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(3);
-                    columns.RelativeColumn(2);
-                });
-
-                table.Header(header =>
-                {
-                    header.Cell().Background(Colors.Blue.Darken3).Padding(6)
-                        .Text("Polozka").FontColor(Colors.White).SemiBold();
-                    header.Cell().Background(Colors.Blue.Darken3).Padding(6)
-                        .AlignRight().Text("Hodnota").FontColor(Colors.White).SemiBold();
-                });
-
-                AddConsumptionRow(table, "Spotreba vaseho domu",
-                    FormatVolume(detail.ConsumptionM3), false);
-                AddConsumptionRow(table, "Prirazena ztrata",
-                    FormatVolume(detail.LossAllocatedM3), false);
-                AddConsumptionRow(table, "Celkova spotreba site",
-                    FormatVolume(totalNetworkConsumption), false);
-                AddConsumptionRow(table, "Vas podil na celku",
-                    FormatPercent(detail.SharePercent), true);
-            });
-        });
-    }
-
-    private static void AddConsumptionRow(TableDescriptor table, string label, string value, bool isLast)
-    {
-        var bgColor = isLast ? Colors.Grey.Lighten3 : Colors.White;
-
-        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-            .Padding(6).Text(label);
-        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-            .Padding(6).AlignRight().Text(value);
-    }
-
-    private static void ComposeFinancialTable(
-        IContainer container, HouseSettlementDetail detail, decimal totalInvoiceAmount)
-    {
-        container.Column(column =>
-        {
-            column.Item().Text("Financni vyuctovani").FontSize(11).SemiBold().FontColor(Colors.Blue.Darken3);
-            column.Item().PaddingTop(6).Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(3);
-                    columns.RelativeColumn(2);
-                });
-
-                table.Header(header =>
-                {
-                    header.Cell().Background(Colors.Blue.Darken3).Padding(6)
-                        .Text("Polozka").FontColor(Colors.White).SemiBold();
-                    header.Cell().Background(Colors.Blue.Darken3).Padding(6)
-                        .AlignRight().Text("Castka").FontColor(Colors.White).SemiBold();
-                });
-
-                AddFinancialRow(table, "Celkova faktura dodavatele",
-                    FormatCurrency(totalInvoiceAmount), false);
-                AddFinancialRow(table, "Vase castka k uhrade",
-                    FormatCurrency(detail.CalculatedAmount), false);
-                AddFinancialRow(table, "Zaplacene zalohy",
-                    FormatCurrency(detail.TotalAdvances), false);
-            });
-        });
-    }
-
-    private static void AddFinancialRow(TableDescriptor table, string label, string value, bool highlight)
-    {
-        var bgColor = highlight ? Colors.Grey.Lighten3 : Colors.White;
-
-        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-            .Padding(6).Text(label);
-        table.Cell().Background(bgColor).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-            .Padding(6).AlignRight().Text(value);
-    }
-
-    private static void ComposeBalanceSummary(IContainer container, HouseSettlementDetail detail)
-    {
+        // Balance summary
+        y += 16;
         var isOverpayment = detail.Balance < 0;
         var balanceLabel = isOverpayment ? "Preplatek" : "Doplatek";
-        var balanceColor = isOverpayment ? Colors.Green.Darken2 : Colors.Red.Darken2;
+        var balanceColor = isOverpayment ? green : red;
         var balanceAmount = Math.Abs(detail.Balance);
 
-        container.Background(Colors.Grey.Lighten3).Padding(12).Row(row =>
+        gfx.DrawRectangle(new XSolidBrush(lightGray), leftMargin, y, contentWidth, 30);
+        gfx.DrawString(balanceLabel, fontBalance, new XSolidBrush(balanceColor), leftMargin + 10, y + 20);
+        var amountText = FormatCurrency(balanceAmount);
+        var amountWidth = gfx.MeasureString(amountText, fontBalance).Width;
+        gfx.DrawString(amountText, fontBalance, new XSolidBrush(balanceColor), rightEdge - amountWidth - 10, y + 20);
+        y += 40;
+
+        // Footer
+        y = page.Height - 40;
+        gfx.DrawLine(new XPen(XColors.LightGray, 0.5), leftMargin, y, rightEdge, y);
+        y += 12;
+        gfx.DrawString($"Datum vystaveni: {DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
+        var footerText = "Vygenerovano portalem Oaza Zadni Kopanina";
+        var footerWidth = gfx.MeasureString(footerText, fontSmall).Width;
+        gfx.DrawString(footerText, fontSmall, XBrushes.Gray, rightEdge - footerWidth, y);
+
+        using var ms = new MemoryStream();
+        document.Save(ms, false);
+        return ms.ToArray();
+    }
+
+    private static void DrawSectionBox(XGraphics gfx, double x, ref double y, double width,
+        XColor bgColor, string title, XFont titleFont, XColor titleColor,
+        (string left, string right)[] rows, XFont normalFont, XFont boldFont)
+    {
+        var height = 20 + rows.Length * 18;
+        gfx.DrawRectangle(new XSolidBrush(bgColor), x, y, width, height);
+        gfx.DrawString(title, titleFont, new XSolidBrush(titleColor), x + 10, y + 14);
+        var rowY = y + 30;
+        foreach (var (left, right) in rows)
         {
-            row.RelativeItem().Text(balanceLabel)
-                .FontSize(13).Bold().FontColor(balanceColor);
-            row.RelativeItem().AlignRight().Text(FormatCurrency(balanceAmount))
-                .FontSize(13).Bold().FontColor(balanceColor);
-        });
+            gfx.DrawString(left, normalFont, XBrushes.Black, x + 10, rowY);
+            gfx.DrawString(right, normalFont, XBrushes.Black, x + width / 2, rowY);
+            rowY += 18;
+        }
+        y += height + 12;
     }
 
-    private static void ComposeFooter(IContainer container)
+    private static void DrawTableRow(XGraphics gfx, double x, ref double y, double width,
+        XColor bgColor, XColor textColor, string col1, string col2, XFont font, bool isHeader)
     {
-        container.Column(column =>
+        var rowHeight = 22.0;
+        gfx.DrawRectangle(new XSolidBrush(bgColor), x, y, width, rowHeight);
+        gfx.DrawString(col1, font, new XSolidBrush(textColor), x + 8, y + 15);
+        var col2Width = gfx.MeasureString(col2, font).Width;
+        gfx.DrawString(col2, font, new XSolidBrush(textColor), x + width - col2Width - 8, y + 15);
+        if (!isHeader)
         {
-            column.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
-            column.Item().PaddingTop(4).Row(row =>
-            {
-                row.RelativeItem().Text(text =>
-                {
-                    text.Span("Datum vystaveni: ").FontSize(8);
-                    text.Span(DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)).FontSize(8);
-                });
-                row.RelativeItem().AlignRight()
-                    .Text("Vygenerovano portalem Oaza Zadni Kopanina")
-                    .FontSize(8).FontColor(Colors.Grey.Medium);
-            });
-        });
+            gfx.DrawLine(new XPen(XColors.LightGray, 0.5), x, y + rowHeight, x + width, y + rowHeight);
+        }
+        y += rowHeight;
     }
 
-    private static string FormatVolume(decimal value)
-    {
-        return value.ToString("N2", CzechCulture) + " m\u00B3";
-    }
+    private static string FormatVolume(decimal value) =>
+        value.ToString("N2", CzechCulture) + " m\u00B3";
 
-    private static string FormatPercent(decimal value)
-    {
-        return value.ToString("N2", CzechCulture) + " %";
-    }
+    private static string FormatPercent(decimal value) =>
+        value.ToString("N2", CzechCulture) + " %";
 
-    private static string FormatCurrency(decimal value)
-    {
-        return value.ToString("N2", CzechCulture) + " Kc";
-    }
+    private static string FormatCurrency(decimal value) =>
+        value.ToString("N2", CzechCulture) + " Kc";
 }
