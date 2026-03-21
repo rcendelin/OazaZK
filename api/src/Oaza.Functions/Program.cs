@@ -10,10 +10,6 @@ using Oaza.Domain.Interfaces;
 using Oaza.Infrastructure;
 using Oaza.Infrastructure.Auth;
 using Oaza.Functions.Middleware;
-using QuestPDF.Infrastructure;
-
-// QuestPDF community license (free for small projects)
-QuestPDF.Settings.License = LicenseType.Community;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication(workerApp =>

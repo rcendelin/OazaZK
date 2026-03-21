@@ -72,7 +72,7 @@ oaza/
 - **.NET 8** with Azure Functions Isolated Worker model
 - **Azure.Data.Tables** SDK for Table Storage (NOT EF Core — no relational DB)
 - **ClosedXML** for Excel import/export (.xlsx parsing)
-- **QuestPDF** for PDF generation (settlement sheets)
+- **PdfSharpCore** for PDF generation (settlement sheets)
 - **SendGrid** for magic link emails and notifications (Free tier, 100 emails/day)
 - **FluentValidation** for request validation
 - **System.IdentityModel.Tokens.Jwt** for JWT generation/validation
@@ -88,7 +88,7 @@ oaza/
 <!-- Oaza.Application -->
 <PackageReference Include="FluentValidation" />
 <PackageReference Include="ClosedXML" />
-<PackageReference Include="QuestPDF" />
+<PackageReference Include="PdfSharpCore" />
 
 <!-- Oaza.Functions -->
 <PackageReference Include="Microsoft.Azure.Functions.Worker" />
