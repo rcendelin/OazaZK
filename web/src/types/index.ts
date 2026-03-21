@@ -65,6 +65,7 @@ export interface SupplierInvoice {
 
 export interface AdvancePayment {
   houseId: string;
+  houseName: string | null;
   year: number;
   month: number;
   amount: number;
@@ -74,6 +75,7 @@ export interface AdvancePayment {
 export interface Settlement {
   periodId: string;
   houseId: string;
+  houseName: string;
   consumptionM3: number;
   sharePercent: number;
   calculatedAmount: number;
@@ -84,47 +86,45 @@ export interface Settlement {
 
 // API response types
 
-export interface ReadingWithMeter {
+// Matches backend ReadingResponse DTO
+export interface ReadingResponse {
   meterId: string;
   meterNumber: string;
-  meterType: MeterType;
-  houseId: string | null;
   houseName: string | null;
   readingDate: string;
   value: number;
   consumption: number | null;
-  source: ReadingSource;
+  source: string;
+  importedAt: string;
+  importedBy: string;
 }
 
 export interface MonthlyReadingsResponse {
   year: number;
   month: number;
-  readings: ReadingWithMeter[];
+  readings: ReadingResponse[];
 }
 
+// Matches backend ImportValidationMessage DTO
 export interface ImportValidationMessage {
-  type: 'Error' | 'Warning';
+  type: string;
   message: string;
   row: number | null;
-  column: string | null;
+  meterId: string | null;
 }
 
+// Matches backend ImportPreviewRow DTO
 export interface ImportPreviewRow {
-  date: string;
-  readings: Record<string, number>;
+  readingDate: string;
+  meterValues: Record<string, number>;
 }
 
+// Matches backend ImportPreviewResponse DTO
 export interface ImportPreviewResponse {
   importSessionId: string;
   rows: ImportPreviewRow[];
-  meters: Array<{
-    meterId: string;
-    meterNumber: string;
-    meterType: MeterType;
-    houseName: string | null;
-  }>;
-  messages: ImportValidationMessage[];
-  hasErrors: boolean;
+  errors: ImportValidationMessage[];
+  warnings: ImportValidationMessage[];
 }
 
 export interface BillingPeriodResponse {

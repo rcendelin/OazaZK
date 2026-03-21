@@ -11,11 +11,14 @@ const czNumber = new Intl.NumberFormat('cs-CZ', {
 
 type ImportState = 'initial' | 'uploading' | 'preview' | 'confirming' | 'success';
 
-function ValidationMessages({ messages }: { messages: ImportValidationMessage[] }) {
-  const errors = messages.filter((m) => m.type === 'Error');
-  const warnings = messages.filter((m) => m.type === 'Warning');
-
-  if (messages.length === 0) return null;
+function ValidationMessages({
+  errors,
+  warnings,
+}: {
+  errors: ImportValidationMessage[];
+  warnings: ImportValidationMessage[];
+}) {
+  if (errors.length === 0 && warnings.length === 0) return null;
 
   return (
     <div className="space-y-3">
@@ -27,8 +30,7 @@ function ValidationMessages({ messages }: { messages: ImportValidationMessage[] 
           <ul className="mt-2 space-y-1">
             {errors.map((msg, i) => (
               <li key={i} className="text-sm text-red-700">
-                {msg.row !== null && `Řádek ${msg.row}: `}
-                {msg.column !== null && `[${msg.column}] `}
+                {msg.row !== null && `\u0158\u00e1dek ${msg.row}: `}
                 {msg.message}
               </li>
             ))}
@@ -38,13 +40,12 @@ function ValidationMessages({ messages }: { messages: ImportValidationMessage[] 
       {warnings.length > 0 && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
           <h4 className="text-sm font-semibold text-amber-800">
-            Upozornění ({warnings.length})
+            Upozorn\u011bn\u00ed ({warnings.length})
           </h4>
           <ul className="mt-2 space-y-1">
             {warnings.map((msg, i) => (
               <li key={i} className="text-sm text-amber-700">
-                {msg.row !== null && `Řádek ${msg.row}: `}
-                {msg.column !== null && `[${msg.column}] `}
+                {msg.row !== null && `\u0158\u00e1dek ${msg.row}: `}
                 {msg.message}
               </li>
             ))}
@@ -56,60 +57,42 @@ function ValidationMessages({ messages }: { messages: ImportValidationMessage[] 
 }
 
 function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
+  // Collect all unique meter IDs from the rows
+  const meterIds = Array.from(
+    new Set(preview.rows.flatMap((row) => Object.keys(row.meterValues))),
+  );
+
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className="w-full text-left text-sm">
         <thead className="bg-gray-50 text-xs uppercase text-gray-500">
           <tr>
             <th className="px-4 py-3">Datum</th>
-            {preview.meters.map((meter) => (
-              <th key={meter.meterId} className="px-4 py-3">
-                {meter.meterType === 'Main'
-                  ? 'Hlavní vodoměr'
-                  : meter.houseName ?? meter.meterNumber}
+            {meterIds.map((meterId) => (
+              <th key={meterId} className="px-4 py-3">
+                {meterId}
               </th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {preview.rows.map((row, rowIdx) => {
-            // Check for messages associated with this row
-            const rowMessages = preview.messages.filter(
-              (m) => m.row === rowIdx + 1,
-            );
-
-            return (
-              <tr key={rowIdx} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {row.date}
-                </td>
-                {preview.meters.map((meter) => {
-                  const value = row.readings[meter.meterId];
-                  const cellMsg = rowMessages.find(
-                    (m) => m.column === meter.meterNumber,
-                  );
-                  const isError = cellMsg?.type === 'Error';
-                  const isWarning = cellMsg?.type === 'Warning';
-
-                  return (
-                    <td
-                      key={meter.meterId}
-                      className={`px-4 py-3 ${
-                        isError
-                          ? 'bg-red-50 text-red-800'
-                          : isWarning
-                            ? 'bg-amber-50 text-amber-800'
-                            : 'text-gray-600'
-                      }`}
-                      title={cellMsg?.message}
-                    >
-                      {value !== undefined ? czNumber.format(value) : '\u2014'}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
+          {preview.rows.map((row, rowIdx) => (
+            <tr key={rowIdx} className="hover:bg-gray-50">
+              <td className="px-4 py-3 font-medium text-gray-900">
+                {new Intl.DateTimeFormat('cs-CZ').format(
+                  new Date(row.readingDate),
+                )}
+              </td>
+              {meterIds.map((meterId) => {
+                const value = row.meterValues[meterId];
+                return (
+                  <td key={meterId} className="px-4 py-3 text-gray-600">
+                    {value !== undefined ? czNumber.format(value) : '\u2014'}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -142,7 +125,7 @@ export function ReadingsImportPage() {
       setState('preview');
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Import se nezdařil';
+        err instanceof Error ? err.message : 'Import se nezda\u0159il';
       setError(message);
       setState('initial');
     } finally {
@@ -163,7 +146,9 @@ export function ReadingsImportPage() {
       setState('success');
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Potvrzení importu se nezdařilo';
+        err instanceof Error
+          ? err.message
+          : 'Potvrzen\u00ed importu se nezda\u0159ilo';
       setError(message);
       setState('preview');
     } finally {
@@ -179,11 +164,13 @@ export function ReadingsImportPage() {
     setSuccessCount(null);
   }, []);
 
+  const hasErrors = preview !== null && preview.errors.length > 0;
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Import odečtů</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Import ode\u010dt\u016f</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Nahrajte soubor Excel (.xlsx) s odečty vodoměrů
+        Nahrajte soubor Excel (.xlsx) s ode\u010dty vodom\u011br\u016f
       </p>
 
       {/* Success message */}
@@ -204,15 +191,15 @@ export function ReadingsImportPage() {
               />
             </svg>
             <p className="text-sm font-medium text-green-800">
-              Import byl úspěšný. Importováno{' '}
-              {successCount !== null ? successCount : ''} odečtů.
+              Import byl \u00fasp\u011b\u0161n\u00fd. Importov\u00e1no{' '}
+              {successCount !== null ? successCount : ''} ode\u010dt\u016f.
             </p>
           </div>
           <button
             onClick={handleReset}
             className="mt-3 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
           >
-            Importovat další
+            Importovat dal\u0161\u00ed
           </button>
         </div>
       )}
@@ -260,7 +247,7 @@ export function ReadingsImportPage() {
                 {state === 'uploading' ? (
                   <span className="flex items-center gap-2">
                     <Spinner size="sm" />
-                    Nahrávám...
+                    Nahr\u00e1v\u00e1m...
                   </span>
                 ) : (
                   'Importovat'
@@ -275,12 +262,15 @@ export function ReadingsImportPage() {
       {(state === 'preview' || state === 'confirming') && preview && (
         <div className="mt-6 space-y-6">
           {/* Validation messages */}
-          <ValidationMessages messages={preview.messages} />
+          <ValidationMessages
+            errors={preview.errors}
+            warnings={preview.warnings}
+          />
 
           {/* Preview table */}
           <div>
             <h2 className="mb-3 text-lg font-semibold text-gray-900">
-              Náhled importu
+              N\u00e1hled importu
             </h2>
             <PreviewTable preview={preview} />
           </div>
@@ -292,11 +282,11 @@ export function ReadingsImportPage() {
               disabled={state === 'confirming'}
               className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
-              Zrušit
+              Zru\u0161it
             </button>
             <button
               onClick={() => void handleConfirm()}
-              disabled={state === 'confirming' || preview.hasErrors}
+              disabled={state === 'confirming' || hasErrors}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
               {state === 'confirming' ? (
@@ -308,9 +298,9 @@ export function ReadingsImportPage() {
                 'Potvrdit import'
               )}
             </button>
-            {preview.hasErrors && (
+            {hasErrors && (
               <p className="text-sm text-red-600">
-                Opravte chyby před potvrzením importu
+                Opravte chyby p\u0159ed potvrzen\u00edm importu
               </p>
             )}
           </div>

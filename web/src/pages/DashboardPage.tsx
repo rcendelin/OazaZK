@@ -49,10 +49,10 @@ function AdminDashboard() {
     }
 
     const mainReading = readingsData.readings.find(
-      (r) => r.meterType === 'Main',
+      (r) => r.houseName === null,
     );
     const individualReadings = readingsData.readings.filter(
-      (r) => r.meterType === 'Individual',
+      (r) => r.houseName !== null,
     );
 
     const totalIndividualConsumption = individualReadings.reduce(
@@ -83,7 +83,7 @@ function AdminDashboard() {
     const activeHouses = houses.filter((h) => h.isActive);
     return activeHouses.map((house) => {
       const reading = readingsData.readings.find(
-        (r) => r.houseId === house.id && r.meterType === 'Individual',
+        (r) => r.houseName === house.name && r.houseName !== null,
       );
       return {
         house,
@@ -281,7 +281,6 @@ function AdminDashboard() {
 }
 
 function MemberDashboard() {
-  const { user } = useAuth();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -299,11 +298,13 @@ function MemberDashboard() {
   const loading = readingsLoading || periodsLoading;
 
   const myReading = useMemo(() => {
-    if (!readingsData || !user?.houseId) return null;
+    if (!readingsData) return null;
+    // For members, the API already filters to their house's readings.
+    // Pick the individual (non-main) reading.
     return readingsData.readings.find(
-      (r) => r.houseId === user.houseId && r.meterType === 'Individual',
+      (r) => r.houseName !== null,
     ) ?? null;
-  }, [readingsData, user?.houseId]);
+  }, [readingsData]);
 
   const lastClosedPeriod = useMemo(
     () =>

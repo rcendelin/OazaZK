@@ -369,6 +369,102 @@ public class CalculateSettlementUseCaseTests
         result.Houses.Should().OnlyContain(h => h.SharePercent == 50m);
     }
 
+    [Fact]
+    public async Task CalculateAsync_NoInvoices_TotalIsZero()
+    {
+        // Arrange: period with consumption but no invoices
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A", "house-2", "House B");
+        SetupMeters("main-meter", "meter-1", "house-1", "meter-2", "house-2");
+
+        SetupReadings("main-meter", (PeriodStart, 0m), (PeriodEnd, 100m));
+        SetupReadings("meter-1", (PeriodStart, 0m), (PeriodEnd, 40m));
+        SetupReadings("meter-2", (PeriodStart, 0m), (PeriodEnd, 60m));
+
+        // No invoices
+        _invoiceRepo.Setup(r => r.GetByPeriodAsync(PeriodStart, PeriodEnd))
+            .ReturnsAsync(new List<SupplierInvoice>());
+
+        SetupAdvances("house-1", 1000m);
+        SetupAdvances("house-2", 2000m);
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert
+        result.TotalInvoiceAmount.Should().Be(0m);
+        result.Houses.Should().HaveCount(2);
+
+        // All calculated amounts should be 0 since no invoices
+        result.Houses.Should().OnlyContain(h => h.CalculatedAmount == 0m);
+
+        // Balances should be negative (overpayment) since advances > 0 but amount = 0
+        var houseA = result.Houses.First(h => h.HouseId == "house-1");
+        houseA.Balance.Should().Be(-1000m);
+
+        var houseB = result.Houses.First(h => h.HouseId == "house-2");
+        houseB.Balance.Should().Be(-2000m);
+    }
+
+    [Fact]
+    public async Task CalculateAsync_SingleHouse_Gets100PercentShare()
+    {
+        // Arrange: single house scenario
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A");
+        SetupMeters("main-meter", "meter-1", "house-1");
+
+        SetupReadings("main-meter", (PeriodStart, 0m), (PeriodEnd, 100m));
+        SetupReadings("meter-1", (PeriodStart, 0m), (PeriodEnd, 80m));
+
+        // Loss = 20 m³, all allocated to single house
+        SetupInvoices(5000m);
+        SetupAdvances("house-1", 4000m);
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert
+        result.Houses.Should().HaveCount(1);
+        var house = result.Houses[0];
+
+        house.ConsumptionM3.Should().Be(80m);
+        house.LossAllocatedM3.Should().Be(20m);
+        house.SharePercent.Should().Be(100m);
+        house.CalculatedAmount.Should().Be(5000m);
+        house.TotalAdvances.Should().Be(4000m);
+        house.Balance.Should().Be(1000m); // underpayment
+    }
+
+    [Fact]
+    public async Task CalculateAsync_SingleHouse_ProportionalLoss_AlsoGets100Percent()
+    {
+        // Arrange: single house with proportional loss allocation
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A");
+        SetupMeters("main-meter", "meter-1", "house-1");
+
+        SetupReadings("main-meter", (PeriodStart, 0m), (PeriodEnd, 100m));
+        SetupReadings("meter-1", (PeriodStart, 0m), (PeriodEnd, 80m));
+
+        SetupInvoices(5000m);
+        SetupAdvances("house-1", 5000m);
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.ProportionalToConsumption);
+
+        // Assert: with proportional, single house gets all the loss too
+        result.Houses.Should().HaveCount(1);
+        var house = result.Houses[0];
+
+        house.LossAllocatedM3.Should().Be(20m);
+        house.SharePercent.Should().Be(100m);
+        house.Balance.Should().Be(0m); // exact match
+    }
+
     #region Test Setup Helpers
 
     private void SetupOpenPeriod(string periodId)

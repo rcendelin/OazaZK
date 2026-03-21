@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { getReadings } from '../api/readings';
 import { getHouses } from '../api/houses';
-import type { House, ReadingWithMeter } from '../types';
+import type { House, ReadingResponse } from '../types';
 
 const formatNumber = (value: number, decimals = 1): string =>
   new Intl.NumberFormat('cs-CZ', {
@@ -94,7 +94,10 @@ export function ReadingsOverviewPage() {
     let readings = [...readingsData.readings];
 
     if (selectedHouseId !== 'all') {
-      readings = readings.filter((r) => r.houseId === selectedHouseId);
+      const selectedHouse = houses?.find((h) => h.id === selectedHouseId);
+      if (selectedHouse) {
+        readings = readings.filter((r) => r.houseName === selectedHouse.name);
+      }
     }
 
     readings.sort((a, b) => {
@@ -119,14 +122,14 @@ export function ReadingsOverviewPage() {
     });
 
     return readings;
-  }, [readingsData, selectedHouseId, sortField, sortDir]);
+  }, [readingsData, selectedHouseId, sortField, sortDir, houses]);
 
   // Compute summary
   const summary = useMemo(() => {
     if (!readingsData?.readings) return null;
     const readings = readingsData.readings;
-    const mainMeterReading = readings.find((r) => r.meterType === 'Main');
-    const houseReadings = readings.filter((r) => r.meterType === 'Individual');
+    const mainMeterReading = readings.find((r) => r.houseName === null);
+    const houseReadings = readings.filter((r) => r.houseName !== null);
     const totalConsumption = houseReadings.reduce(
       (sum, r) => sum + (r.consumption ?? 0),
       0,
@@ -322,7 +325,7 @@ export function ReadingsOverviewPage() {
   );
 }
 
-function ReadingRow({ reading }: { reading: ReadingWithMeter }) {
+function ReadingRow({ reading }: { reading: ReadingResponse }) {
   return (
     <tr className="hover:bg-gray-50">
       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
