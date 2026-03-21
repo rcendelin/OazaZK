@@ -177,3 +177,50 @@ export interface SettlementResponse {
   balance: number;
   lossAllocatedM3: number;
 }
+
+// Document types
+export interface DocumentResponse {
+  id: string;
+  category: string;
+  name: string;
+  fileSizeBytes: number;
+  contentType: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+// Financial record types
+export interface FinanceResponse {
+  id: string;
+  year: number;
+  type: FinancialRecordType;
+  category: string;
+  amount: number;
+  date: string;
+  description: string;
+  hasAttachment: boolean;
+}
+
+export interface FinanceSummaryResponse {
+  year: number;
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+  categories: CategorySummary[];
+}
+
+export interface CategorySummary {
+  category: string;
+  income: number;
+  expenses: number;
+}
+
+export interface CreateFinanceRequest {
+  type: FinancialRecordType;
+  category: string;
+  amount: number;
+  date: string;
+  description: string;
+}
+
+export type UpdateFinanceRequest = CreateFinanceRequest;

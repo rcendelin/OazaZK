@@ -88,6 +88,31 @@ public static class EntityMapper
         );
     }
 
+    public static DocumentResponse ToResponse(Document document)
+    {
+        return new DocumentResponse(
+            Id: document.Id,
+            Category: document.Category,
+            Name: document.Name,
+            FileSizeBytes: document.FileSizeBytes,
+            ContentType: document.ContentType,
+            UploadedAt: document.UploadedAt,
+            UploadedBy: document.UploadedBy);
+    }
+
+    public static FinanceResponse ToResponse(FinancialRecord record)
+    {
+        return new FinanceResponse(
+            Id: record.Id,
+            Year: record.Year,
+            Type: record.Type.ToString(),
+            Category: record.Category,
+            Amount: record.Amount,
+            Date: record.Date,
+            Description: record.Description,
+            HasAttachment: !string.IsNullOrEmpty(record.AttachmentBlobName));
+    }
+
     // IMPORTANT: Never include MagicLinkTokenHash or EntraObjectId in response
     public static UserResponse ToResponse(User user)
     {

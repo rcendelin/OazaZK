@@ -105,4 +105,16 @@ public class BlobStorageService : IBlobStorageService
 
         return await blobClient.ExistsAsync();
     }
+
+    public async Task DeleteAsync(string containerName, string blobPath)
+    {
+        var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+        var blobClient = containerClient.GetBlobClient(blobPath);
+
+        await blobClient.DeleteIfExistsAsync();
+
+        _logger.LogInformation(
+            "Deleted blob {BlobPath} from container {Container}.",
+            blobPath, containerName);
+    }
 }

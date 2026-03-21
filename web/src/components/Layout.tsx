@@ -14,8 +14,8 @@ const navItems: NavItem[] = [
   { label: 'Odečty', path: '/readings' },
   { label: 'Import odečtů', path: '/readings/import', adminOnly: true },
   { label: 'Vyúčtování', path: '/billing' },
-  { label: 'Dokumenty', path: '/documents', phase2: true },
-  { label: 'Hospodaření', path: '/finance', phase2: true },
+  { label: 'Dokumenty', path: '/documents' },
+  { label: 'Hospodaření', path: '/finance' },
 ];
 
 const adminNavItems: NavItem[] = [
