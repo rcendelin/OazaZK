@@ -33,8 +33,13 @@ var host = new HostBuilder()
 
         services.Configure<EntraIdSettings>(options =>
         {
-            options.TenantId = configuration["EntraId__TenantId"] ?? string.Empty;
-            options.ClientId = configuration["EntraId__ClientId"] ?? string.Empty;
+            // Azure Functions maps EntraId__TenantId env var to EntraId:TenantId config key
+            options.TenantId = configuration["EntraId:TenantId"]
+                ?? configuration["EntraId__TenantId"]
+                ?? string.Empty;
+            options.ClientId = configuration["EntraId:ClientId"]
+                ?? configuration["EntraId__ClientId"]
+                ?? string.Empty;
         });
 
         // Auth services
