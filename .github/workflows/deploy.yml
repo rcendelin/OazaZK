@@ -27,13 +27,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Oaza.sln
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build Oaza.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --configuration Release --no-restore --verbosity normal
+        run: dotnet test Oaza.sln --configuration Release --no-restore --verbosity normal
 
       - name: Publish
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
