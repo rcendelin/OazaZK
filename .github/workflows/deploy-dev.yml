@@ -45,6 +45,7 @@ jobs:
         with:
           name: api-artifact
           path: api/publish
+          include-hidden-files: true
 
   build-web:
     name: Build Frontend
