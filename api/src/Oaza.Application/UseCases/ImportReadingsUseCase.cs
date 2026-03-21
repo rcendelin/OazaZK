@@ -291,7 +291,8 @@ public class ImportReadingsUseCase
             Readings = readings,
             Errors = errors,
             Warnings = warnings,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = importedBy
         });
 
         _logger.LogInformation(
@@ -316,6 +317,12 @@ public class ImportReadingsUseCase
         if (session is null)
         {
             throw new AppException("Import session not found or expired. Please re-upload the file.", 404);
+        }
+
+        // Verify the confirming user is the same as the one who created the session
+        if (!string.IsNullOrEmpty(session.CreatedBy) && session.CreatedBy != importedBy)
+        {
+            throw new AppException("You can only confirm your own import sessions.", 403);
         }
 
         if (session.Errors.Count > 0)

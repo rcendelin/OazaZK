@@ -507,7 +507,19 @@ public class ReadingFunctions
             string? effectiveHouseId = null;
             string? houseName = null;
 
-            if (!string.IsNullOrEmpty(houseIdParam))
+            if (user.Role == UserRole.Member)
+            {
+                // Member can only see their own house's data
+                if (!string.IsNullOrEmpty(houseIdParam) && houseIdParam != user.HouseId)
+                    return await WriteErrorResponseAsync(req, 403, "Access denied.");
+                effectiveHouseId = user.HouseId;
+                if (!string.IsNullOrEmpty(effectiveHouseId))
+                {
+                    var memberHouse = await _houseRepository.GetAsync(PartitionKeys.House, effectiveHouseId);
+                    houseName = memberHouse?.Name;
+                }
+            }
+            else if (!string.IsNullOrEmpty(houseIdParam))
             {
                 effectiveHouseId = houseIdParam;
                 var house = await _houseRepository.GetAsync(PartitionKeys.House, houseIdParam);

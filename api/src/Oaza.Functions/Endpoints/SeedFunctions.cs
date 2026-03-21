@@ -41,13 +41,14 @@ public class SeedFunctions
     }
 
     [Function("SeedData")]
-    [RequireRole(UserRole.Admin)]
+    [AllowAnonymous]
     public async Task<HttpResponseData> SeedDataAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "seed")] HttpRequestData req,
         FunctionContext context)
     {
         try
         {
+            // Double gate: environment variable + idempotency check
             if (!_seedEnabled)
             {
                 var disabledResponse = req.CreateResponse(HttpStatusCode.NotFound);

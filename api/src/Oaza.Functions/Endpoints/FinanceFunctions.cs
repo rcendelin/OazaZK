@@ -198,7 +198,8 @@ public class FinanceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
-            var recordType = Enum.Parse<FinancialRecordType>(request.Type, ignoreCase: true);
+            if (!Enum.TryParse<FinancialRecordType>(request.Type, ignoreCase: true, out var recordType))
+                return await WriteErrorResponseAsync(req, 400, "Invalid record type.");
 
             var record = new FinancialRecord
             {
@@ -261,7 +262,8 @@ public class FinanceFunctions
             var newYear = request.Date.Year;
             var oldYear = existing.Year;
 
-            var recordType = Enum.Parse<FinancialRecordType>(request.Type, ignoreCase: true);
+            if (!Enum.TryParse<FinancialRecordType>(request.Type, ignoreCase: true, out var recordType))
+                return await WriteErrorResponseAsync(req, 400, "Invalid record type.");
 
             existing.Type = recordType;
             existing.Category = request.Category.ToLowerInvariant();

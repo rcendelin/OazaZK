@@ -214,7 +214,7 @@ public class DocumentFunctions
             await stream.CopyToAsync(ms);
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", document.ContentType);
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(document.Name)}\"");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{SanitizeFileName(document.Name)}\"");
             response.Body = new MemoryStream(ms.ToArray());
             return response;
         }
@@ -424,7 +424,7 @@ public class DocumentFunctions
             await stream.CopyToAsync(ms);
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", versionEntity.ContentType);
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(document.Name)}\"");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{SanitizeFileName(document.Name)}\"");
             response.Body = new MemoryStream(ms.ToArray());
             return response;
         }
@@ -468,6 +468,16 @@ public class DocumentFunctions
             ms.Write(buffer, 0, bytesRead);
         }
         return ms.ToArray();
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var fileName = Path.GetFileName(name);
+        return fileName
+            .Replace("\"", "")
+            .Replace("\r", "")
+            .Replace("\n", "")
+            .Replace(";", "");
     }
 
     private static User GetAuthenticatedUser(FunctionContext context)

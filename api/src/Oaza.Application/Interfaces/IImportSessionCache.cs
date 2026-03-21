@@ -16,4 +16,5 @@ public class ImportSessionData
     public List<ImportValidationMessage> Errors { get; set; } = new();
     public List<ImportValidationMessage> Warnings { get; set; } = new();
     public DateTime CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
 }
