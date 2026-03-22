@@ -91,12 +91,20 @@ jobs:
           name: api-artifact
           path: api-artifact
 
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
+      - name: Create deployment ZIP
+        run: cd api-artifact && zip -r ../deploy.zip . && cd ..
+
+      - name: Azure Login
+        uses: Azure/login@v2
         with:
-          app-name: func-oaza-dev
-          package: api-artifact
-          publish-profile: ${{ secrets.DEV_FUNCTIONAPP_PUBLISH_PROFILE }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Functions
+        run: |
+          az functionapp deployment source config-zip \
+            --name func-oaza-dev \
+            --resource-group rg-oaza-dev \
+            --src deploy.zip
 
   deploy-web:
     name: Deploy Frontend (DEV)
