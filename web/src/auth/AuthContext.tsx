@@ -55,7 +55,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         scopes: loginRequest.scopes,
         account: accounts[0],
       });
-      return response.accessToken;
+      // Use idToken — our backend validates against Entra ID OIDC with
+      // audience = clientId, which matches the id_token audience
+      return response.idToken;
     } catch (err) {
       if (err instanceof InteractionRequiredAuthError) {
         try {
