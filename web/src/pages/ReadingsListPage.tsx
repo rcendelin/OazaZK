@@ -23,6 +23,7 @@ export function ReadingsListPage() {
 
   const [editCell, setEditCell] = useState<{ meterId: string; date: string } | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [editDate, setEditDate] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const savingRef = useRef(false);
@@ -62,12 +63,14 @@ export function ReadingsListPage() {
   const startEdit = (meterId: string, date: string, currentValue: number) => {
     setEditCell({ meterId, date });
     setEditValue(String(currentValue).replace('.', ','));
+    setEditDate(date);
     setEditError(null);
     setSaveSuccess(null);
   };
 
   const cancelEdit = () => {
     setEditCell(null);
+    setEditDate('');
     setEditValue('');
     setEditError(null);
   };
@@ -85,11 +88,14 @@ export function ReadingsListPage() {
     }
 
     try {
-      await updateReading(editCell.meterId, editCell.date, parsed);
+      const dateChanged = editDate !== editCell.date;
+      await updateReading(editCell.meterId, editCell.date, parsed, dateChanged ? editDate : undefined);
       const meter = meters?.find((m) => m.id === editCell.meterId);
-      setSaveSuccess(`${meter?.name || editCell.meterId} k ${shortDate(editCell.date)}: ${czNum(parsed)} m³`);
+      const dateInfo = dateChanged ? ` (datum změněno na ${shortDate(editDate)})` : '';
+      setSaveSuccess(`${meter?.name || editCell.meterId}: ${czNum(parsed)} m³${dateInfo}`);
       setEditCell(null);
       setEditValue('');
+      setEditDate('');
       refetch();
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Uložení selhalo');
@@ -169,7 +175,7 @@ export function ReadingsListPage() {
                         if (editing) {
                           return (
                             <td key={date} className="px-1 py-1 border-b bg-yellow-50">
-                              <div className="flex flex-col items-center gap-0.5">
+                              <div className="flex flex-col items-center gap-1">
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -179,11 +185,18 @@ export function ReadingsListPage() {
                                     if (e.key === 'Enter') void handleSave();
                                     if (e.key === 'Escape') cancelEdit();
                                   }}
+                                  placeholder="m³"
                                   className="w-20 border rounded px-1 py-0.5 text-xs text-right focus:ring-1 focus:ring-blue-500"
                                   autoFocus
                                 />
-                                <div className="flex gap-0.5">
-                                  <button onClick={() => void handleSave()} className="text-blue-600 text-xs hover:underline">OK</button>
+                                <input
+                                  type="date"
+                                  value={editDate}
+                                  onChange={(e) => setEditDate(e.target.value)}
+                                  className="w-24 border rounded px-1 py-0.5 text-xs focus:ring-1 focus:ring-blue-500"
+                                />
+                                <div className="flex gap-1">
+                                  <button onClick={() => void handleSave()} className="bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs hover:bg-blue-700">OK</button>
                                   <button onClick={cancelEdit} className="text-gray-400 text-xs hover:underline">×</button>
                                 </div>
                                 {editError && <span className="text-xs text-red-600">{editError}</span>}

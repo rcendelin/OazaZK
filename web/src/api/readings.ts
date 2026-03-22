@@ -36,8 +36,11 @@ export const createReading = (data: {
 export const getAllReadings = (): Promise<ReadingResponse[]> =>
   apiClient.get<ReadingResponse[]>('/readings/all');
 
-export const updateReading = (meterId: string, date: string, value: number): Promise<void> =>
-  apiClient.put<void>(`/readings/${encodeURIComponent(meterId)}/${encodeURIComponent(date)}`, { value });
+export const updateReading = (meterId: string, date: string, value: number, newDate?: string): Promise<void> =>
+  apiClient.put<void>(`/readings/${encodeURIComponent(meterId)}/${encodeURIComponent(date)}`, {
+    value,
+    ...(newDate ? { newDate } : {}),
+  });
 
 export const getChartData = (
   houseId?: string,
