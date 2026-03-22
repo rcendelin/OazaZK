@@ -518,6 +518,43 @@ az functionapp config appsettings delete \
 
 ---
 
+## Krok 10.5 — Ruční nastavení Administrátora
+
+Seed vytvořil admin uživatele s emailem `rostislav@cendelinovi.cz`, ale bez propojení s Entra ID. Aby přihlášení přes Microsoft fungovalo, musíš ručně nastavit `EntraObjectId`.
+
+### 10.5.1 Zjisti svůj Entra Object ID
+
+```bash
+az ad signed-in-user show --query id -o tsv
+```
+
+Zapiš si výstup (GUID, např. `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
+
+### 10.5.2 Uprav uživatele v Table Storage
+
+1. Jdi na **Azure Portal → stoazadev → Storage browser → Tables → Users**
+2. Najdi řádek s:
+   - **PartitionKey** = `USER`
+   - **Email** = `rostislav@cendelinovi.cz`
+3. Klikni na řádek → **Edit entity**
+4. Přidej nebo uprav property:
+   - **Name:** `EntraObjectId`
+   - **Type:** `String`
+   - **Value:** tvůj Object ID z kroku 10.5.1
+5. Klikni **Update**
+
+### 10.5.3 Ověř přihlášení
+
+1. Otevři `https://oaza-dev.cendelinovi.cz`
+2. Klikni "Přihlásit přes Microsoft"
+3. Po přihlášení by se měl zobrazit dashboard s tvým jménem
+
+> **Poznámka:** Pokud property `EntraObjectId` v řádku neexistuje, přidej ji tlačítkem **Add property** v editoru entity. Typ musí být `String`.
+
+> **Další uživatele** (členy spolku) přidáš přes admin rozhraní portálu: **Správa uživatelů → Pozvat uživatele**. Tam zadáš jméno, email, roli a přiřazení k domácnosti.
+
+---
+
 ## Krok 11 — Ověření funkčnosti
 
 Otevři v prohlížeči: **https://oaza-dev.cendelinovi.cz**
