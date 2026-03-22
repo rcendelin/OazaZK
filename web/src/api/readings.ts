@@ -25,6 +25,13 @@ export const confirmImport = (
     importSessionId: sessionId,
   });
 
+export const createReading = (data: {
+  meterId: string;
+  readingDate: string;
+  value: number;
+}): Promise<void> =>
+  apiClient.post<void>('/readings', data);
+
 export const getChartData = (
   houseId?: string,
   from?: string,
