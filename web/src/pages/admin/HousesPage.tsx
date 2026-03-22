@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { getHouses, createHouse, updateHouse } from '../../api/houses';
+import { getUsers } from '../../api/users';
 import { Spinner } from '../../components/Spinner';
-import type { House } from '../../types/index';
+import type { House, User } from '../../types/index';
 
 interface HouseFormData {
   name: string;
@@ -13,10 +14,24 @@ interface HouseFormData {
 
 const emptyForm: HouseFormData = { name: '', address: '', contactPerson: '', email: '' };
 
+const roleBadge: Record<string, { label: string; cls: string }> = {
+  Admin: { label: 'Admin', cls: 'bg-red-100 text-red-700' },
+  Member: { label: 'Člen', cls: 'bg-blue-100 text-blue-700' },
+  Accountant: { label: 'Účetní', cls: 'bg-green-100 text-green-700' },
+};
+
 export function HousesPage() {
   const { data: houses, loading, error, refetch } = useApi<House[]>(
     useCallback(() => getHouses(), []),
   );
+  const { data: users } = useApi<User[]>(
+    useCallback(() => getUsers(), []),
+  );
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const usersForHouse = (houseId: string): User[] =>
+    users?.filter((u) => u.houseId === houseId) ?? [];
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<HouseFormData>(emptyForm);
@@ -163,6 +178,7 @@ export function HousesPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-700">Adresa</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-700">Kontaktní osoba</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-700">Email</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-700">Členové</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-700">Stav</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-700">Akce</th>
               </tr>
@@ -170,11 +186,12 @@ export function HousesPage() {
             <tbody>
               {houses?.map((house) =>
                 editId === house.id ? (
-                  <tr key={house.id} className="border-b bg-blue-50">
+                  <tr key={`edit-${house.id}`} className="border-b bg-blue-50">
                     <td className="px-4 py-2"><input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
                     <td className="px-4 py-2"><input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
                     <td className="px-4 py-2"><input type="text" value={editForm.contactPerson} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
                     <td className="px-4 py-2"><input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
+                    <td className="px-4 py-2 text-gray-400 text-xs">{usersForHouse(house.id).length}</td>
                     <td className="px-4 py-2">
                       <select value={editForm.isActive ? 'true' : 'false'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })} className="border rounded px-2 py-1 text-sm">
                         <option value="true">Aktivní</option>
@@ -190,11 +207,21 @@ export function HousesPage() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={house.id} className="border-b hover:bg-gray-50">
+                  <React.Fragment key={house.id}>
+                  <tr className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">{house.name}</td>
                     <td className="px-4 py-3 text-gray-600">{house.address}</td>
                     <td className="px-4 py-3 text-gray-600">{house.contactPerson}</td>
                     <td className="px-4 py-3 text-gray-600">{house.email}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setExpandedId(expandedId === house.id ? null : house.id)}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                      >
+                        {usersForHouse(house.id).length} {usersForHouse(house.id).length === 1 ? 'uživatel' : usersForHouse(house.id).length >= 2 && usersForHouse(house.id).length <= 4 ? 'uživatelé' : 'uživatelů'}
+                        {expandedId === house.id ? ' ▲' : ' ▼'}
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${house.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {house.isActive ? 'Aktivní' : 'Neaktivní'}
@@ -209,10 +236,38 @@ export function HousesPage() {
                       </div>
                     </td>
                   </tr>
+                  {expandedId === house.id && (
+                    <tr key={`${house.id}-members`} className="bg-gray-50">
+                      <td colSpan={7} className="px-6 py-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2">Členové domácnosti {house.name}</p>
+                        {usersForHouse(house.id).length === 0 ? (
+                          <p className="text-xs text-gray-400">Žádní přiřazení uživatelé</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-3">
+                            {usersForHouse(house.id).map((u) => (
+                              <div key={u.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border text-xs">
+                                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-medium text-xs">
+                                  {u.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className="font-medium">{u.name}</span>
+                                  <span className="text-gray-400 ml-1">({u.email})</span>
+                                </div>
+                                <span className={`px-1.5 py-0.5 rounded-full text-xs ${roleBadge[u.role]?.cls ?? 'bg-gray-100 text-gray-600'}`}>
+                                  {roleBadge[u.role]?.label ?? u.role}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ),
               )}
               {(!houses || houses.length === 0) && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Žádné domácnosti</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Žádné domácnosti</td></tr>
               )}
             </tbody>
           </table>
