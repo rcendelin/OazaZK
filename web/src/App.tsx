@@ -14,6 +14,7 @@ import { DocumentsPage } from './pages/DocumentsPage';
 import { FinancePage } from './pages/FinancePage';
 import { HousesPage } from './pages/admin/HousesPage';
 import { UsersPage } from './pages/admin/UsersPage';
+import { MetersPage } from './pages/admin/MetersPage';
 
 function App() {
   return (
@@ -56,6 +57,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Admin">
                     <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/meters"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <MetersPage />
                   </ProtectedRoute>
                 }
               />

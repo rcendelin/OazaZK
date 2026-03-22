@@ -19,14 +19,16 @@ public static class EntityMapper
         };
     }
 
-    public static MeterResponse ToResponse(WaterMeter meter)
+    public static MeterResponse ToResponse(WaterMeter meter, string? houseName = null)
     {
         return new MeterResponse
         {
             Id = meter.Id,
             MeterNumber = meter.MeterNumber,
+            Name = meter.Name,
             Type = meter.Type.ToString(),
             HouseId = meter.HouseId,
+            HouseName = houseName,
             InstallationDate = meter.InstallationDate,
         };
     }

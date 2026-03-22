@@ -19,6 +19,7 @@ namespace Oaza.Functions.Endpoints;
 public class MeterFunctions
 {
     private readonly IWaterMeterRepository _meterRepository;
+    private readonly IHouseRepository _houseRepository;
     private readonly ILogger<MeterFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -27,9 +28,10 @@ public class MeterFunctions
         PropertyNameCaseInsensitive = true,
     };
 
-    public MeterFunctions(IWaterMeterRepository meterRepository, ILogger<MeterFunctions> logger)
+    public MeterFunctions(IWaterMeterRepository meterRepository, IHouseRepository houseRepository, ILogger<MeterFunctions> logger)
     {
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
+        _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -40,8 +42,10 @@ public class MeterFunctions
         try
         {
             var meters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
+            var houses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
+            var houseLookup = houses.ToDictionary(h => h.Id, h => h.Name);
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
-                meters.Select(EntityMapper.ToResponse).ToList());
+                meters.Select(m => EntityMapper.ToResponse(m, m.HouseId != null && houseLookup.TryGetValue(m.HouseId, out var hn) ? hn : null)).ToList());
         }
         catch (AppException ex)
         {
@@ -82,6 +86,7 @@ public class MeterFunctions
             {
                 Id = Guid.NewGuid().ToString(),
                 MeterNumber = request.MeterNumber,
+                Name = request.Name,
                 Type = meterType,
                 HouseId = request.HouseId,
                 InstallationDate = DateTime.UtcNow,
@@ -132,6 +137,7 @@ public class MeterFunctions
             }
 
             existing.MeterNumber = request.MeterNumber;
+            existing.Name = request.Name;
             existing.HouseId = request.HouseId;
 
             await _meterRepository.UpsertAsync(existing);

@@ -91,6 +91,7 @@ public static class TableEntityMapper
         return new TableEntity(PartitionKeys.Meter, meter.Id)
         {
             { "MeterNumber", meter.MeterNumber },
+            { "Name", meter.Name },
             { "Type", meter.Type.ToString() },
             { "HouseId", meter.HouseId },
             { "InstallationDate", meter.InstallationDate }
@@ -103,6 +104,7 @@ public static class TableEntityMapper
         {
             Id = entity.RowKey,
             MeterNumber = entity.GetString("MeterNumber") ?? string.Empty,
+            Name = entity.GetString("Name") ?? string.Empty,
             Type = Enum.TryParse<MeterType>(entity.GetString("Type"), out var meterType) ? meterType : MeterType.Individual,
             HouseId = entity.GetString("HouseId"),
             InstallationDate = entity.GetDateTimeOffset("InstallationDate")?.UtcDateTime ?? DateTime.MinValue
