@@ -122,8 +122,8 @@ export function ReadingsOverviewPage() {
       const point: Record<string, string | number> = { date: new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(new Date(date)) };
       for (const m of sortedMeters) {
         const r = readingMap.get(m.id)?.get(date);
-        if (r?.consumption != null && r.consumption > 0) {
-          point[m.id] = r.consumption;
+        if (r != null) {
+          point[m.id] = r.value;
         }
       }
       return point;
@@ -182,7 +182,7 @@ export function ReadingsOverviewPage() {
       {/* Multi-line chart */}
       {showChart && !loading && chartData.length > 0 && (
         <div className="rounded-lg bg-white p-5 border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Graf spotřeby (m³)</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Stav vodoměrů (m³)</h3>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
