@@ -30,7 +30,7 @@ function ValidationMessages({
           <ul className="mt-2 space-y-1">
             {errors.map((msg, i) => (
               <li key={i} className="text-sm text-red-700">
-                {msg.row !== null && `\Ř\ádek ${msg.row}: `}
+                {msg.row !== null && `Řádek ${msg.row}: `}
                 {msg.message}
               </li>
             ))}
@@ -40,12 +40,12 @@ function ValidationMessages({
       {warnings.length > 0 && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
           <h4 className="text-sm font-semibold text-amber-800">
-            Upozorn\ěn\í ({warnings.length})
+            Upozornění ({warnings.length})
           </h4>
           <ul className="mt-2 space-y-1">
             {warnings.map((msg, i) => (
               <li key={i} className="text-sm text-amber-700">
-                {msg.row !== null && `\Ř\ádek ${msg.row}: `}
+                {msg.row !== null && `Řádek ${msg.row}: `}
                 {msg.message}
               </li>
             ))}
@@ -125,7 +125,7 @@ export function ReadingsImportPage() {
       setState('preview');
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Import se nezda\řil';
+        err instanceof Error ? err.message : 'Import se nezdařil';
       setError(message);
       setState('initial');
     } finally {
@@ -148,7 +148,7 @@ export function ReadingsImportPage() {
       const message =
         err instanceof Error
           ? err.message
-          : 'Potvrzen\í importu se nezda\řilo';
+          : 'Potvrzení importu se nezdařilo';
       setError(message);
       setState('preview');
     } finally {
@@ -168,9 +168,9 @@ export function ReadingsImportPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Import ode\čt\ů</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Import odečtů</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Nahrajte soubor Excel (.xlsx) s ode\čty vodom\ěr\ů
+        Nahrajte soubor Excel (.xlsx) s odečty vodoměrů
       </p>
 
       {/* Success message */}
@@ -191,15 +191,15 @@ export function ReadingsImportPage() {
               />
             </svg>
             <p className="text-sm font-medium text-green-800">
-              Import byl \úsp\ě\šn\ý. Importov\áno{' '}
-              {successCount !== null ? successCount : ''} ode\čt\ů.
+              Import byl úspěšný. Importováno{' '}
+              {successCount !== null ? successCount : ''} odečtů.
             </p>
           </div>
           <button
             onClick={handleReset}
             className="mt-3 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
           >
-            Importovat dal\š\í
+            Importovat další
           </button>
         </div>
       )}
@@ -247,7 +247,7 @@ export function ReadingsImportPage() {
                 {state === 'uploading' ? (
                   <span className="flex items-center gap-2">
                     <Spinner size="sm" />
-                    Nahr\áv\ám...
+                    Nahrávám...
                   </span>
                 ) : (
                   'Importovat'
@@ -270,7 +270,7 @@ export function ReadingsImportPage() {
           {/* Preview table */}
           <div>
             <h2 className="mb-3 text-lg font-semibold text-gray-900">
-              N\áhled importu
+              Náhled importu
             </h2>
             <PreviewTable preview={preview} />
           </div>
@@ -282,7 +282,7 @@ export function ReadingsImportPage() {
               disabled={state === 'confirming'}
               className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
-              Zru\šit
+              Zrušit
             </button>
             <button
               onClick={() => void handleConfirm()}
@@ -300,7 +300,7 @@ export function ReadingsImportPage() {
             </button>
             {hasErrors && (
               <p className="text-sm text-red-600">
-                Opravte chyby p\řed potvrzen\ím importu
+                Opravte chyby před potvrzením importu
               </p>
             )}
           </div>
