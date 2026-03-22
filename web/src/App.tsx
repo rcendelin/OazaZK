@@ -15,6 +15,7 @@ import { FinancePage } from './pages/FinancePage';
 import { HousesPage } from './pages/admin/HousesPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
+import { ReadingsListPage } from './pages/ReadingsListPage';
 
 function App() {
   return (
@@ -33,6 +34,14 @@ function App() {
             >
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/readings" element={<ReadingsOverviewPage />} />
+              <Route
+                path="/readings/list"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <ReadingsListPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/readings/import"
                 element={

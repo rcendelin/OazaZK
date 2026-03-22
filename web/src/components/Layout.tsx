@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
     label: 'Odečty',
     path: '/readings',
     children: [
+      { label: 'Seznam odečtů', path: '/readings/list', adminOnly: true },
       { label: 'Import odečtů', path: '/readings/import', adminOnly: true },
     ],
   },

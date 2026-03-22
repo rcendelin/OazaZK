@@ -32,6 +32,9 @@ export const createReading = (data: {
 }): Promise<void> =>
   apiClient.post<void>('/readings', data);
 
+export const updateReading = (meterId: string, date: string, value: number): Promise<void> =>
+  apiClient.put<void>(`/readings/${encodeURIComponent(meterId)}/${encodeURIComponent(date)}`, { value });
+
 export const getChartData = (
   houseId?: string,
   from?: string,
