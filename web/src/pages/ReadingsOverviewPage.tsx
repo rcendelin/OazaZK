@@ -122,11 +122,12 @@ export function ReadingsOverviewPage() {
   const mainConsumption = mainLatest?.consumption ?? null;
   const loss = mainConsumption != null ? mainConsumption - totalIndividualConsumption : null;
 
-  // ─── Chart data: multi-line (one line per visible meter) ───
+  // ─── Chart data: multi-line, numeric X axis (timestamp) ───
   const chartData = useMemo(() => {
     if (allDates.length === 0) return [];
     return allDates.map((date) => {
-      const point: Record<string, string | number> = { date: new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(new Date(date)) };
+      const ts = new Date(date).getTime();
+      const point: Record<string, number> = { ts };
       for (const m of visibleMeters) {
         const r = readingMap.get(m.id)?.get(date);
         if (r != null) {
@@ -136,6 +137,11 @@ export function ReadingsOverviewPage() {
       return point;
     });
   }, [allDates, visibleMeters, readingMap]);
+
+  const formatXTick = (ts: number) => {
+    const d = new Date(ts);
+    return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: '2-digit' }).format(d);
+  };
 
   const presetButtons: { key: PeriodPreset; label: string }[] = [
     { key: '1m', label: 'Poslední měsíc' },
@@ -199,12 +205,16 @@ export function ReadingsOverviewPage() {
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
+              <XAxis dataKey="ts" type="number" scale="time" domain={['dataMin', 'dataMax']}
+                tickFormatter={formatXTick} tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => czNum(v)} />
-              <Tooltip formatter={(v, name) => {
-                const meter = visibleMeters.find((m) => m.id === String(name));
-                return [`${czNum(Number(v))} m³`, meter?.name || meter?.meterNumber || String(name)];
-              }} />
+              <Tooltip
+                labelFormatter={(ts) => new Intl.DateTimeFormat('cs-CZ').format(new Date(Number(ts)))}
+                formatter={(v, name) => {
+                  const meter = visibleMeters.find((m) => m.id === String(name));
+                  return [`${czNum(Number(v))} m³`, meter?.name || meter?.meterNumber || String(name)];
+                }}
+              />
               <Legend formatter={(value: string) => {
                 const meter = visibleMeters.find((m) => m.id === value);
                 return meter?.name || meter?.meterNumber || value;
