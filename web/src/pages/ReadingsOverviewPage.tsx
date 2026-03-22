@@ -46,6 +46,7 @@ export function ReadingsOverviewPage() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [showChart, setShowChart] = useState(true);
+  const [showMainMeter, setShowMainMeter] = useState(true);
 
   const { data: allReadings, loading, error } = useApi<ReadingResponse[]>(
     useCallback(() => getAllReadings(), []),
@@ -74,6 +75,12 @@ export function ReadingsOverviewPage() {
       return (a.name || a.meterNumber).localeCompare(b.name || b.meterNumber, 'cs');
     });
   }, [meters, isAdmin, user?.houseId]);
+
+  // Meters visible in chart/table (filtered by showMainMeter toggle)
+  const visibleMeters = useMemo(() => {
+    if (showMainMeter) return sortedMeters;
+    return sortedMeters.filter((m) => m.type !== 'Main');
+  }, [sortedMeters, showMainMeter]);
 
   // Build reading lookup: meterId -> dateKey -> reading
   const readingMap = useMemo(() => {
@@ -115,12 +122,12 @@ export function ReadingsOverviewPage() {
   const mainConsumption = mainLatest?.consumption ?? null;
   const loss = mainConsumption != null ? mainConsumption - totalIndividualConsumption : null;
 
-  // ─── Chart data: multi-line (one line per meter) ───
+  // ─── Chart data: multi-line (one line per visible meter) ───
   const chartData = useMemo(() => {
     if (allDates.length === 0) return [];
     return allDates.map((date) => {
       const point: Record<string, string | number> = { date: new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(new Date(date)) };
-      for (const m of sortedMeters) {
+      for (const m of visibleMeters) {
         const r = readingMap.get(m.id)?.get(date);
         if (r != null) {
           point[m.id] = r.value;
@@ -128,7 +135,7 @@ export function ReadingsOverviewPage() {
       }
       return point;
     });
-  }, [allDates, sortedMeters, readingMap]);
+  }, [allDates, visibleMeters, readingMap]);
 
   const presetButtons: { key: PeriodPreset; label: string }[] = [
     { key: '1m', label: 'Poslední měsíc' },
@@ -170,10 +177,16 @@ export function ReadingsOverviewPage() {
             </div>
           </div>
         )}
-        <button onClick={() => setShowChart((p) => !p)}
-          className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 self-end">
-          {showChart ? 'Skrýt graf' : 'Zobrazit graf'}
-        </button>
+        <div className="flex gap-2 self-end">
+          <button onClick={() => setShowMainMeter((p) => !p)}
+            className={`rounded-md px-4 py-2 text-sm font-medium ring-1 transition-colors ${showMainMeter ? 'bg-blue-600 text-white ring-blue-600' : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-50'}`}>
+            {showMainMeter ? 'Skrýt společný' : 'Zobrazit společný'}
+          </button>
+          <button onClick={() => setShowChart((p) => !p)}
+            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
+            {showChart ? 'Skrýt graf' : 'Zobrazit graf'}
+          </button>
+        </div>
       </div>
 
       {loading && <div className="flex justify-center py-12"><Spinner size="lg" /></div>}
@@ -189,14 +202,14 @@ export function ReadingsOverviewPage() {
               <XAxis dataKey="date" tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => czNum(v)} />
               <Tooltip formatter={(v, name) => {
-                const meter = sortedMeters.find((m) => m.id === String(name));
+                const meter = visibleMeters.find((m) => m.id === String(name));
                 return [`${czNum(Number(v))} m³`, meter?.name || meter?.meterNumber || String(name)];
               }} />
               <Legend formatter={(value: string) => {
-                const meter = sortedMeters.find((m) => m.id === value);
+                const meter = visibleMeters.find((m) => m.id === value);
                 return meter?.name || meter?.meterNumber || value;
               }} />
-              {sortedMeters.map((meter, idx) => (
+              {visibleMeters.map((meter, idx) => (
                 <Line
                   key={meter.id}
                   type="monotone"
@@ -257,7 +270,7 @@ export function ReadingsOverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedMeters.map((meter, idx) => {
+                    {visibleMeters.map((meter, idx) => {
                       const isMain = meter.type === 'Main';
                       const meterReadings = readingMap.get(meter.id);
                       return (
@@ -299,7 +312,7 @@ export function ReadingsOverviewPage() {
           )}
 
           <p className="text-xs text-gray-400">
-            {sortedMeters.length} vodoměrů × {allDates.length} měření. Barva bodu v grafu odpovídá barvě vodoměru v tabulce.
+            {visibleMeters.length} vodoměrů × {allDates.length} měření. Barva bodu v grafu odpovídá barvě vodoměru v tabulce.
           </p>
         </>
       )}
