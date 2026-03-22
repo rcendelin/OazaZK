@@ -29,8 +29,10 @@ export interface House {
 export interface WaterMeter {
   id: string;
   meterNumber: string;
+  name: string;
   type: MeterType;
   houseId: string | null;
+  houseName: string | null;
   installationDate: string;
 }
 

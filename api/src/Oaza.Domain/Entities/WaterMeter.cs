@@ -6,6 +6,7 @@ public class WaterMeter
 {
     public string Id { get; set; } = string.Empty;
     public string MeterNumber { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public MeterType Type { get; set; }
     public string? HouseId { get; set; }
     public DateTime InstallationDate { get; set; }
