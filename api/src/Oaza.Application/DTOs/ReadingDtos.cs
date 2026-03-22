@@ -41,6 +41,7 @@ public class CreateReadingRequest
 public class UpdateReadingRequest
 {
     public decimal Value { get; set; }
+    public DateTime? NewDate { get; set; }
 }
 
 // Reading response

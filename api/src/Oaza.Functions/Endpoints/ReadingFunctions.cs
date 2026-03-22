@@ -416,6 +416,36 @@ public class ReadingFunctions
                     $"Negative consumption: next reading value {nextReading.Value} would be less than corrected value {request.Value}.");
             }
 
+            // Check if date is being changed
+            var effectiveDate = readingDate;
+            if (request.NewDate.HasValue)
+            {
+                var newDate = DateTime.SpecifyKind(request.NewDate.Value.Date, DateTimeKind.Utc);
+                if (newDate != readingDate)
+                {
+                    // Delete old record, create new one with new date
+                    await _readingRepository.DeleteAsync(meterId, rowKey);
+
+                    var newReading = new MeterReading
+                    {
+                        MeterId = meterId,
+                        ReadingDate = newDate,
+                        Value = request.Value,
+                        Source = existing.Source,
+                        ImportedAt = DateTime.UtcNow,
+                        ImportedBy = user.Id,
+                    };
+                    await _readingRepository.UpsertAsync(newReading);
+                    effectiveDate = newDate;
+
+                    _logger.LogInformation("Reading moved for meter {MeterId} from {OldDate} to {NewDate}. Value: {Value}.",
+                        meterId, date, newDate.ToString("yyyy-MM-dd"), request.Value);
+
+                    // Skip the normal upsert below
+                    goto BuildResponse;
+                }
+            }
+
             existing.Value = request.Value;
             existing.ImportedAt = DateTime.UtcNow;
             existing.ImportedBy = user.Id;
@@ -425,6 +455,7 @@ public class ReadingFunctions
             _logger.LogInformation("Reading updated for meter {MeterId} on {Date}. New value: {Value}.",
                 meterId, date, request.Value);
 
+            BuildResponse:
             // Build response
             string? houseName = null;
             if (meter.HouseId is not null)
@@ -433,19 +464,27 @@ public class ReadingFunctions
                 houseName = house?.Name;
             }
 
-            decimal? consumption = previousReading is not null ? request.Value - previousReading.Value : null;
+            // Re-fetch readings for accurate consumption calc after date change
+            var updatedReadings = await _readingRepository.GetByMeterIdAsync(meterId);
+            var updatedReading = updatedReadings.FirstOrDefault(r => r.ReadingDate.Date == effectiveDate.Date);
+            var prevForResponse = updatedReadings
+                .Where(r => r.ReadingDate < effectiveDate)
+                .OrderByDescending(r => r.ReadingDate)
+                .FirstOrDefault();
+            decimal? consumption = prevForResponse is not null && updatedReading is not null
+                ? updatedReading.Value - prevForResponse.Value : null;
 
             var readingResponse = new ReadingResponse
             {
-                MeterId = existing.MeterId,
+                MeterId = meterId,
                 MeterNumber = meter.MeterNumber,
                 HouseName = houseName,
-                ReadingDate = existing.ReadingDate,
-                Value = existing.Value,
+                ReadingDate = effectiveDate,
+                Value = request.Value,
                 Consumption = consumption,
-                Source = existing.Source.ToString(),
-                ImportedAt = existing.ImportedAt,
-                ImportedBy = existing.ImportedBy
+                Source = updatedReading?.Source.ToString() ?? existing.Source.ToString(),
+                ImportedAt = DateTime.UtcNow,
+                ImportedBy = user.Id
             };
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, readingResponse);
