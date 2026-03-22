@@ -3,6 +3,7 @@ import type {
   MonthlyReadingsResponse,
   ImportPreviewResponse,
   ChartResponse,
+  ReadingResponse,
 } from '../types/index.ts';
 
 export const getReadings = (
@@ -31,6 +32,9 @@ export const createReading = (data: {
   value: number;
 }): Promise<void> =>
   apiClient.post<void>('/readings', data);
+
+export const getAllReadings = (): Promise<ReadingResponse[]> =>
+  apiClient.get<ReadingResponse[]>('/readings/all');
 
 export const updateReading = (meterId: string, date: string, value: number): Promise<void> =>
   apiClient.put<void>(`/readings/${encodeURIComponent(meterId)}/${encodeURIComponent(date)}`, { value });

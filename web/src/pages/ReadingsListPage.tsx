@@ -1,249 +1,226 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useApi } from '../hooks/useApi';
-import { getReadings, updateReading } from '../api/readings';
+import { getAllReadings, updateReading } from '../api/readings';
 import { getMeters } from '../api/meters';
 import { Spinner } from '../components/Spinner';
 import type { ReadingResponse, WaterMeter } from '../types';
 
 const czNum = (v: number, d = 1) =>
   new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
-const czDate = (s: string) => new Intl.DateTimeFormat('cs-CZ').format(new Date(s));
 
-function getMonthOptions(): Array<{ label: string; year: number; month: number }> {
-  const now = new Date();
-  const options: Array<{ label: string; year: number; month: number }> = [];
-  const fmt = new Intl.DateTimeFormat('cs-CZ', { year: 'numeric', month: 'long' });
-  for (let i = 0; i < 36; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const label = fmt.format(d);
-    options.push({ label: label.charAt(0).toUpperCase() + label.slice(1), year: d.getFullYear(), month: d.getMonth() + 1 });
-  }
-  return options;
-}
+const shortDate = (s: string) => {
+  const d = new Date(s);
+  return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+};
 
 export function ReadingsListPage() {
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-  const [filterMeter, setFilterMeter] = useState<string>('all');
+  const { data: allReadings, loading, error, refetch } = useApi<ReadingResponse[]>(
+    useCallback(() => getAllReadings(), []),
+  );
+  const { data: meters } = useApi<WaterMeter[]>(
+    useCallback(() => getMeters(), []),
+  );
 
-  const monthOptions = useMemo(() => getMonthOptions(), []);
-
-  const fetchReadings = useCallback(() => getReadings(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
-  const fetchMeters = useCallback(() => getMeters(), []);
-
-  const { data: readingsData, loading, error, refetch } = useApi(fetchReadings, [selectedYear, selectedMonth]);
-  const { data: meters } = useApi<WaterMeter[]>(fetchMeters, []);
-
-  const readings: ReadingResponse[] = readingsData?.readings ?? (Array.isArray(readingsData) ? readingsData as ReadingResponse[] : []);
-
-  // Editing state
-  const [editKey, setEditKey] = useState<string | null>(null); // "meterId|date"
+  const [editCell, setEditCell] = useState<{ meterId: string; date: string } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
-  const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const savingRef = useRef(false);
 
-  const meterLookup = useMemo(() => {
-    const map = new Map<string, WaterMeter>();
-    meters?.forEach((m) => map.set(m.id, m));
-    return map;
+  // Sort meters: main first, then by name
+  const sortedMeters = useMemo(() => {
+    if (!meters) return [];
+    return [...meters].sort((a, b) => {
+      if (a.type === 'Main' && b.type !== 'Main') return -1;
+      if (a.type !== 'Main' && b.type === 'Main') return 1;
+      return (a.name || a.meterNumber).localeCompare(b.name || b.meterNumber, 'cs');
+    });
   }, [meters]);
 
-  const filteredReadings = useMemo(() => {
-    let list = [...readings];
-    if (filterMeter !== 'all') {
-      list = list.filter((r) => r.meterId === filterMeter);
+  // Collect unique dates (sorted chronologically)
+  const allDates = useMemo(() => {
+    if (!allReadings) return [];
+    const dateSet = new Set<string>();
+    for (const r of allReadings) {
+      dateSet.add(r.readingDate.split('T')[0]);
     }
-    // Sort: main meter first, then by house, then by date
-    list.sort((a, b) => {
-      const mA = meterLookup.get(a.meterId);
-      const mB = meterLookup.get(b.meterId);
-      if (mA?.type === 'Main' && mB?.type !== 'Main') return -1;
-      if (mA?.type !== 'Main' && mB?.type === 'Main') return 1;
-      const nameA = a.houseName ?? a.meterNumber;
-      const nameB = b.houseName ?? b.meterNumber;
-      const cmp = nameA.localeCompare(nameB, 'cs');
-      if (cmp !== 0) return cmp;
-      return new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime();
-    });
-    return list;
-  }, [readings, filterMeter, meterLookup]);
+    return [...dateSet].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  }, [allReadings]);
 
-  const handleMonthChange = (value: string) => {
-    const [y, m] = value.split('-').map(Number);
-    setSelectedYear(y);
-    setSelectedMonth(m);
-    setEditKey(null);
-    setEditError(null);
-    setEditSuccess(null);
-  };
+  // Build lookup: meterId -> date -> reading
+  const readingMap = useMemo(() => {
+    const map = new Map<string, Map<string, ReadingResponse>>();
+    if (!allReadings) return map;
+    for (const r of allReadings) {
+      const dateKey = r.readingDate.split('T')[0];
+      if (!map.has(r.meterId)) map.set(r.meterId, new Map());
+      map.get(r.meterId)!.set(dateKey, r);
+    }
+    return map;
+  }, [allReadings]);
 
-  const startEdit = (r: ReadingResponse) => {
-    const key = `${r.meterId}|${r.readingDate}`;
-    setEditKey(key);
-    setEditValue(String(r.value).replace('.', ','));
+  const startEdit = (meterId: string, date: string, currentValue: number) => {
+    setEditCell({ meterId, date });
+    setEditValue(String(currentValue).replace('.', ','));
     setEditError(null);
-    setEditSuccess(null);
+    setSaveSuccess(null);
   };
 
   const cancelEdit = () => {
-    setEditKey(null);
+    setEditCell(null);
     setEditValue('');
     setEditError(null);
   };
 
-  const handleSave = async (r: ReadingResponse) => {
-    if (savingRef.current) return;
+  const handleSave = async () => {
+    if (!editCell || savingRef.current) return;
     savingRef.current = true;
     setEditError(null);
-    setEditSuccess(null);
 
     const parsed = parseFloat(editValue.replace(',', '.'));
     if (isNaN(parsed) || parsed < 0) {
-      setEditError('Neplatná hodnota.');
+      setEditError('Neplatná hodnota');
       savingRef.current = false;
       return;
     }
 
     try {
-      const dateStr = new Date(r.readingDate).toISOString().split('T')[0];
-      await updateReading(r.meterId, dateStr, parsed);
-      setEditKey(null);
+      await updateReading(editCell.meterId, editCell.date, parsed);
+      const meter = meters?.find((m) => m.id === editCell.meterId);
+      setSaveSuccess(`${meter?.name || editCell.meterId} k ${shortDate(editCell.date)}: ${czNum(parsed)} m³`);
+      setEditCell(null);
       setEditValue('');
-      setEditSuccess(`Odečet ${r.meterNumber} k ${czDate(r.readingDate)} upraven na ${czNum(parsed)} m³.`);
       refetch();
     } catch (err) {
-      setEditError(err instanceof Error ? err.message : 'Uložení selhalo.');
+      setEditError(err instanceof Error ? err.message : 'Uložení selhalo');
     } finally {
       savingRef.current = false;
     }
   };
 
-  const readingKey = (r: ReadingResponse) => `${r.meterId}|${r.readingDate}`;
+  if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+  if (error) return <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>;
+
+  const isEditing = (meterId: string, date: string) =>
+    editCell?.meterId === meterId && editCell?.date === date;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Seznam odečtů</h1>
-        <p className="mt-1 text-sm text-gray-600">Kompletní seznam všech odečtů s možností editace</p>
+        <p className="mt-1 text-sm text-gray-600">
+          Všechny odečty — řádky = vodoměry, sloupce = data měření. Klikněte na hodnotu pro editaci.
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Období</label>
-          <select value={`${selectedYear}-${selectedMonth}`} onChange={(e) => handleMonthChange(e.target.value)}
-            className="border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            {monthOptions.map((opt) => (
-              <option key={`${opt.year}-${opt.month}`} value={`${opt.year}-${opt.month}`}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Vodoměr</label>
-          <select value={filterMeter} onChange={(e) => setFilterMeter(e.target.value)}
-            className="border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <option value="all">Všechny vodoměry</option>
-            {meters?.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name || m.meterNumber} {m.type === 'Main' ? '(hlavní)' : m.houseName ? `(${m.houseName})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Messages */}
-      {editSuccess && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3">
-          <p className="text-sm text-green-700">{editSuccess}</p>
+      {saveSuccess && (
+        <div className="rounded-md border border-green-200 bg-green-50 px-4 py-2">
+          <p className="text-sm text-green-700">Uloženo: {saveSuccess}</p>
         </div>
       )}
 
-      {loading && <div className="flex justify-center py-12"><Spinner size="lg" /></div>}
-      {error && <div className="rounded-md bg-red-50 p-4"><p className="text-sm text-red-700">{error}</p></div>}
+      {allDates.length === 0 && (
+        <div className="bg-gray-50 rounded-lg p-12 text-center">
+          <p className="text-gray-400">Žádné odečty v systému. Importujte data nebo zadejte ručně.</p>
+        </div>
+      )}
 
-      {!loading && !error && (
+      {allDates.length > 0 && (
         <div className="bg-white border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="text-sm border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Vodoměr</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Domácnost</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Datum</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-700">Stav (m³)</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-700">Spotřeba (m³)</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Zdroj</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Importováno</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-700">Akce</th>
+                <tr className="bg-gray-50">
+                  <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-medium text-gray-700 border-b border-r min-w-[200px]">
+                    Vodoměr
+                  </th>
+                  {allDates.map((date) => (
+                    <th key={date} className="px-2 py-2 text-center font-medium text-gray-500 border-b whitespace-nowrap min-w-[90px]">
+                      <div className="text-xs">{shortDate(date)}</div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredReadings.map((r) => {
-                  const key = readingKey(r);
-                  const isEditing = editKey === key;
-                  const meter = meterLookup.get(r.meterId);
-                  const isMain = meter?.type === 'Main';
+                {sortedMeters.map((meter) => {
+                  const isMain = meter.type === 'Main';
+                  const meterReadings = readingMap.get(meter.id);
 
                   return (
-                    <tr key={key} className={`border-b ${isMain ? 'bg-blue-50' : 'hover:bg-gray-50'} ${isEditing ? 'bg-yellow-50' : ''}`}>
-                      <td className="px-4 py-2">
+                    <tr key={meter.id} className={`${isMain ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                      <td className={`sticky left-0 z-10 px-3 py-2 border-b border-r font-medium ${isMain ? 'bg-blue-50' : 'bg-white'}`}>
                         <div className="flex items-center gap-2">
                           <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${isMain ? 'bg-blue-200 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
                             {isMain ? 'H' : 'I'}
                           </span>
-                          <span className="font-medium">{meter?.name || r.meterNumber}</span>
-                          <span className="text-gray-400 text-xs">({r.meterNumber})</span>
+                          <div>
+                            <div className="text-gray-900">{meter.name || meter.meterNumber}</div>
+                            <div className="text-xs text-gray-400">
+                              {meter.meterNumber}
+                              {meter.houseName ? ` · ${meter.houseName}` : ''}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-2 text-gray-600">{r.houseName ?? '—'}</td>
-                      <td className="px-4 py-2 text-gray-600 text-xs">{czDate(r.readingDate)}</td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        {isEditing ? (
-                          <div className="flex items-center gap-1 justify-end">
-                            <input type="text" inputMode="decimal" value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') void handleSave(r); if (e.key === 'Escape') cancelEdit(); }}
-                              className="w-24 border rounded px-2 py-1 text-sm text-right focus:ring-2 focus:ring-blue-500"
-                              autoFocus />
-                          </div>
-                        ) : (
-                          <span className="font-medium">{czNum(r.value)}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono">
-                        {r.consumption != null ? czNum(r.consumption) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-xs ${r.source === 'Import' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {r.source === 'Import' ? 'Import' : 'Ruční'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-gray-400 text-xs">{czDate(r.importedAt)}</td>
-                      <td className="px-4 py-2 text-right">
-                        {isEditing ? (
-                          <div className="flex gap-1 justify-end">
-                            <button onClick={() => void handleSave(r)}
-                              className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700">Uložit</button>
-                            <button onClick={cancelEdit}
-                              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs hover:bg-gray-200">Zrušit</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => startEdit(r)}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium">Upravit</button>
-                        )}
-                        {isEditing && editError && <p className="text-xs text-red-600 mt-1">{editError}</p>}
-                      </td>
+                      {allDates.map((date) => {
+                        const reading = meterReadings?.get(date);
+                        const editing = isEditing(meter.id, date);
+
+                        if (editing) {
+                          return (
+                            <td key={date} className="px-1 py-1 border-b bg-yellow-50">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') void handleSave();
+                                    if (e.key === 'Escape') cancelEdit();
+                                  }}
+                                  className="w-20 border rounded px-1 py-0.5 text-xs text-right focus:ring-1 focus:ring-blue-500"
+                                  autoFocus
+                                />
+                                <div className="flex gap-0.5">
+                                  <button onClick={() => void handleSave()} className="text-blue-600 text-xs hover:underline">OK</button>
+                                  <button onClick={cancelEdit} className="text-gray-400 text-xs hover:underline">×</button>
+                                </div>
+                                {editError && <span className="text-xs text-red-600">{editError}</span>}
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        if (!reading) {
+                          return (
+                            <td key={date} className="px-2 py-2 border-b text-center text-gray-200">
+                              —
+                            </td>
+                          );
+                        }
+
+                        return (
+                          <td
+                            key={date}
+                            className="px-2 py-2 border-b text-center cursor-pointer hover:bg-blue-50 group"
+                            onClick={() => startEdit(meter.id, date, reading.value)}
+                            title={`Klikněte pro editaci · Spotřeba: ${reading.consumption != null ? czNum(reading.consumption) + ' m³' : '—'} · ${reading.source === 'Import' ? 'Import' : 'Ruční'}`}
+                          >
+                            <span className="font-mono text-xs font-medium text-gray-900 group-hover:text-blue-600">
+                              {czNum(reading.value)}
+                            </span>
+                            {reading.consumption != null && reading.consumption > 0 && (
+                              <div className="text-xs text-gray-400">
+                                +{czNum(reading.consumption)}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
-                {filteredReadings.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                    Žádné odečty pro vybrané období{filterMeter !== 'all' ? ' a vodoměr' : ''}
-                  </td></tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -251,8 +228,9 @@ export function ReadingsListPage() {
       )}
 
       <p className="text-xs text-gray-400">
-        {filteredReadings.length} odečtů. Klikněte na "Upravit" pro opravu hodnoty.
-        Spotřeba se přepočítá automaticky jako rozdíl oproti předchozímu odečtu.
+        {sortedMeters.length} vodoměrů × {allDates.length} měření.
+        Klikněte na hodnotu pro úpravu. Pod hodnotou je spotřeba (rozdíl oproti předchozímu měření).
+        Tooltip ukazuje detail (spotřeba, zdroj).
       </p>
     </div>
   );
