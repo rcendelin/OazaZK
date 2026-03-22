@@ -169,7 +169,7 @@ export function ConsumptionChart({
               tick={{ fontSize: 12 }}
               tickFormatter={(value: number) => czNumber.format(value)}
               label={{
-                value: 'm\u00B3',
+                value: 'm\³',
                 position: 'insideTopLeft',
                 offset: -5,
                 style: { fontSize: 12 },
@@ -177,7 +177,7 @@ export function ConsumptionChart({
             />
             <Tooltip
               formatter={(value) => [
-                `${czNumber.format(Number(value))} m\u00B3`,
+                `${czNumber.format(Number(value))} m\³`,
                 'Spotřeba',
               ]}
               labelStyle={{ fontWeight: 'bold' }}

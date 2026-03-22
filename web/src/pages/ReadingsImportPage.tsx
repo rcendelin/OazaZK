@@ -30,7 +30,7 @@ function ValidationMessages({
           <ul className="mt-2 space-y-1">
             {errors.map((msg, i) => (
               <li key={i} className="text-sm text-red-700">
-                {msg.row !== null && `\u0158\u00e1dek ${msg.row}: `}
+                {msg.row !== null && `\Ř\ádek ${msg.row}: `}
                 {msg.message}
               </li>
             ))}
@@ -40,12 +40,12 @@ function ValidationMessages({
       {warnings.length > 0 && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
           <h4 className="text-sm font-semibold text-amber-800">
-            Upozorn\u011bn\u00ed ({warnings.length})
+            Upozorn\ěn\í ({warnings.length})
           </h4>
           <ul className="mt-2 space-y-1">
             {warnings.map((msg, i) => (
               <li key={i} className="text-sm text-amber-700">
-                {msg.row !== null && `\u0158\u00e1dek ${msg.row}: `}
+                {msg.row !== null && `\Ř\ádek ${msg.row}: `}
                 {msg.message}
               </li>
             ))}
@@ -87,7 +87,7 @@ function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
                 const value = row.meterValues[meterId];
                 return (
                   <td key={meterId} className="px-4 py-3 text-gray-600">
-                    {value !== undefined ? czNumber.format(value) : '\u2014'}
+                    {value !== undefined ? czNumber.format(value) : '\—'}
                   </td>
                 );
               })}
@@ -125,7 +125,7 @@ export function ReadingsImportPage() {
       setState('preview');
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Import se nezda\u0159il';
+        err instanceof Error ? err.message : 'Import se nezda\řil';
       setError(message);
       setState('initial');
     } finally {
@@ -148,7 +148,7 @@ export function ReadingsImportPage() {
       const message =
         err instanceof Error
           ? err.message
-          : 'Potvrzen\u00ed importu se nezda\u0159ilo';
+          : 'Potvrzen\í importu se nezda\řilo';
       setError(message);
       setState('preview');
     } finally {
@@ -168,9 +168,9 @@ export function ReadingsImportPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Import ode\u010dt\u016f</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Import ode\čt\ů</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Nahrajte soubor Excel (.xlsx) s ode\u010dty vodom\u011br\u016f
+        Nahrajte soubor Excel (.xlsx) s ode\čty vodom\ěr\ů
       </p>
 
       {/* Success message */}
@@ -191,15 +191,15 @@ export function ReadingsImportPage() {
               />
             </svg>
             <p className="text-sm font-medium text-green-800">
-              Import byl \u00fasp\u011b\u0161n\u00fd. Importov\u00e1no{' '}
-              {successCount !== null ? successCount : ''} ode\u010dt\u016f.
+              Import byl \úsp\ě\šn\ý. Importov\áno{' '}
+              {successCount !== null ? successCount : ''} ode\čt\ů.
             </p>
           </div>
           <button
             onClick={handleReset}
             className="mt-3 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
           >
-            Importovat dal\u0161\u00ed
+            Importovat dal\š\í
           </button>
         </div>
       )}
@@ -247,7 +247,7 @@ export function ReadingsImportPage() {
                 {state === 'uploading' ? (
                   <span className="flex items-center gap-2">
                     <Spinner size="sm" />
-                    Nahr\u00e1v\u00e1m...
+                    Nahr\áv\ám...
                   </span>
                 ) : (
                   'Importovat'
@@ -270,7 +270,7 @@ export function ReadingsImportPage() {
           {/* Preview table */}
           <div>
             <h2 className="mb-3 text-lg font-semibold text-gray-900">
-              N\u00e1hled importu
+              N\áhled importu
             </h2>
             <PreviewTable preview={preview} />
           </div>
@@ -282,7 +282,7 @@ export function ReadingsImportPage() {
               disabled={state === 'confirming'}
               className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
-              Zru\u0161it
+              Zru\šit
             </button>
             <button
               onClick={() => void handleConfirm()}
@@ -300,7 +300,7 @@ export function ReadingsImportPage() {
             </button>
             {hasErrors && (
               <p className="text-sm text-red-600">
-                Opravte chyby p\u0159ed potvrzen\u00edm importu
+                Opravte chyby p\řed potvrzen\ím importu
               </p>
             )}
           </div>

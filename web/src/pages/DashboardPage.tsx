@@ -27,9 +27,9 @@ const czDate = new Intl.DateTimeFormat('cs-CZ');
 
 const categoryLabels: Record<string, string> = {
   stanovy: 'Stanovy',
-  zapisy: 'Z\u00E1pisy',
+  zapisy: 'Z\ápisy',
   smlouvy: 'Smlouvy',
-  ostatni: 'Ostatn\u00ED',
+  ostatni: 'Ostatn\í',
 };
 
 function FinanceCard({
@@ -54,24 +54,24 @@ function FinanceCard({
       <div className="border-b border-gray-200 px-5 py-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">
-            Hospoda\u0159en\u00ED
+            Hospoda\řen\í
           </h3>
           <Link
             to="/finance"
             className="text-sm font-medium text-blue-600 hover:text-blue-800"
           >
-            Zobrazit v\u0161e
+            Zobrazit v\še
           </Link>
         </div>
       </div>
       <div className="p-5">
         {financeSummaryBalance !== null && (
           <div className="mb-4">
-            <p className="text-sm text-gray-500">Bilance aktu\u00E1ln\u00EDho roku</p>
+            <p className="text-sm text-gray-500">Bilance aktu\áln\ího roku</p>
             <p
               className={`text-xl font-bold ${financeSummaryBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}
             >
-              {czCurrency.format(financeSummaryBalance)} K\u010D
+              {czCurrency.format(financeSummaryBalance)} K\č
             </p>
           </div>
         )}
@@ -94,21 +94,21 @@ function FinanceCard({
                   className={`ml-3 shrink-0 font-medium ${record.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}
                 >
                   {record.type === 'Income' ? '+' : '-'}
-                  {czCurrency.format(record.amount)} K\u010D
+                  {czCurrency.format(record.amount)} K\č
                 </span>
               </li>
             ))}
           </ul>
         ) : (
           <p className="text-sm text-gray-400">
-            \u017D\u00E1dn\u00E9 finan\u010Dn\u00ED z\u00E1znamy
+            \Ž\ádn\é finan\čn\í z\áznamy
           </p>
         )}
         <button
           onClick={() => navigate('/finance')}
           className="mt-4 w-full rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
         >
-          P\u0159ej\u00EDt na hospoda\u0159en\u00ED
+          P\řej\ít na hospoda\řen\í
         </button>
       </div>
     </div>
@@ -141,13 +141,13 @@ function DocumentsCard({
             to="/documents"
             className="text-sm font-medium text-blue-600 hover:text-blue-800"
           >
-            Zobrazit v\u0161e
+            Zobrazit v\še
           </Link>
         </div>
       </div>
       <div className="p-5">
         <div className="mb-4">
-          <p className="text-sm text-gray-500">Celkem dokument\u016F</p>
+          <p className="text-sm text-gray-500">Celkem dokument\ů</p>
           <p className="text-xl font-bold text-gray-900">{totalCount}</p>
         </div>
         {last3.length > 0 ? (
@@ -159,7 +159,7 @@ function DocumentsCard({
                 </p>
                 <p className="text-xs text-gray-500">
                   {categoryLabels[doc.category] ?? doc.category}
-                  {' \u2022 '}
+                  {' \• '}
                   {czDate.format(new Date(doc.uploadedAt))}
                 </p>
               </li>
@@ -167,14 +167,14 @@ function DocumentsCard({
           </ul>
         ) : (
           <p className="text-sm text-gray-400">
-            \u017D\u00E1dn\u00E9 dokumenty
+            \Ž\ádn\é dokumenty
           </p>
         )}
         <button
           onClick={() => navigate('/documents')}
           className="mt-4 w-full rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
         >
-          P\u0159ej\u00EDt na dokumenty
+          P\řej\ít na dokumenty
         </button>
       </div>
     </div>
@@ -295,39 +295,39 @@ function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">P\u0159ehled</h1>
+      <h1 className="text-2xl font-bold text-gray-900">P\řehled</h1>
       <p className="mt-1 text-sm text-gray-500">
-        {czDate.format(now)} — aktu\u00E1ln\u00ED stav
+        {czDate.format(now)} — aktu\áln\í stav
       </p>
 
       {/* Metric cards */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard
-          title="Hlavn\u00ED vodom\u011Br"
+          title="Hlavn\í vodom\ěr"
           value={
             metrics.mainMeterValue !== null
-              ? `${czNumber.format(metrics.mainMeterValue)} m\u00B3`
-              : '\u2014'
+              ? `${czNumber.format(metrics.mainMeterValue)} m\³`
+              : '\—'
           }
-          subtitle="Aktu\u00E1ln\u00ED stav"
+          subtitle="Aktu\áln\í stav"
         />
         <MetricCard
-          title="Celkov\u00E1 spot\u0159eba"
+          title="Celkov\á spot\řeba"
           value={
             metrics.totalConsumption !== null
-              ? `${czNumber.format(metrics.totalConsumption)} m\u00B3`
-              : '\u2014'
+              ? `${czNumber.format(metrics.totalConsumption)} m\³`
+              : '\—'
           }
-          subtitle="Sou\u010Det dom\u00E1cnost\u00ED"
+          subtitle="Sou\čet dom\ácnost\í"
         />
         <MetricCard
-          title="Ztr\u00E1ta na s\u00EDti"
+          title="Ztr\áta na s\íti"
           value={
             metrics.networkLoss !== null
-              ? `${czNumber.format(metrics.networkLoss)} m\u00B3`
-              : '\u2014'
+              ? `${czNumber.format(metrics.networkLoss)} m\³`
+              : '\—'
           }
-          subtitle="Rozd\u00EDl hlavn\u00ED - sou\u010Det"
+          subtitle="Rozd\íl hlavn\í - sou\čet"
           trend={
             metrics.networkLoss !== null
               ? metrics.networkLoss > 0
@@ -339,22 +339,22 @@ function AdminDashboard() {
           }
         />
         <MetricCard
-          title="Aktivn\u00ED domy"
+          title="Aktivn\í domy"
           value={
             metrics.activeHouses !== null
               ? String(metrics.activeHouses)
-              : '\u2014'
+              : '\—'
           }
-          subtitle="Registrovan\u00E9 dom\u00E1cnosti"
+          subtitle="Registrovan\é dom\ácnosti"
         />
         <MetricCard
-          title="Stav \u00FA\u010Dtu spolku"
+          title="Stav \ú\čtu spolku"
           value={
             financeBalance
-              ? `${czCurrency.format(financeBalance.balance)} K\u010D`
-              : '\u2014'
+              ? `${czCurrency.format(financeBalance.balance)} K\č`
+              : '\—'
           }
-          subtitle="Kumulativn\u00ED bilance"
+          subtitle="Kumulativn\í bilance"
           trend={
             financeBalance
               ? financeBalance.balance > 0
@@ -374,16 +374,16 @@ function AdminDashboard() {
           <div className="rounded-lg bg-white shadow-sm">
             <div className="border-b border-gray-200 px-5 py-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Ode\u010Dty za aktu\u00E1ln\u00ED m\u011Bs\u00EDc
+                Ode\čty za aktu\áln\í m\ěs\íc
               </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>
-                    <th className="px-5 py-3">D\u016Fm</th>
-                    <th className="px-5 py-3">Stav vodom\u011Bru</th>
-                    <th className="px-5 py-3">Spot\u0159eba</th>
+                    <th className="px-5 py-3">D\ům</th>
+                    <th className="px-5 py-3">Stav vodom\ěru</th>
+                    <th className="px-5 py-3">Spot\řeba</th>
                     <th className="px-5 py-3">Status</th>
                   </tr>
                 </thead>
@@ -395,23 +395,23 @@ function AdminDashboard() {
                       </td>
                       <td className="px-5 py-3 text-gray-600">
                         {reading
-                          ? `${czNumber.format(reading.value)} m\u00B3`
-                          : '\u2014'}
+                          ? `${czNumber.format(reading.value)} m\³`
+                          : '\—'}
                       </td>
                       <td className="px-5 py-3 text-gray-600">
                         {reading?.consumption !== null &&
                         reading?.consumption !== undefined
-                          ? `${czNumber.format(reading.consumption)} m\u00B3`
-                          : '\u2014'}
+                          ? `${czNumber.format(reading.consumption)} m\³`
+                          : '\—'}
                       </td>
                       <td className="px-5 py-3">
                         {reading ? (
                           <span className="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                            Kompletn\u00ED
+                            Kompletn\í
                           </span>
                         ) : (
                           <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                            Nekompletn\u00ED
+                            Nekompletn\í
                           </span>
                         )}
                       </td>
@@ -423,7 +423,7 @@ function AdminDashboard() {
                         colSpan={4}
                         className="px-5 py-8 text-center text-gray-400"
                       >
-                        \u017D\u00E1dn\u00E9 ode\u010Dty pro tento m\u011Bs\u00EDc
+                        \Ž\ádn\é ode\čty pro tento m\ěs\íc
                       </td>
                     </tr>
                   )}
@@ -438,20 +438,20 @@ function AdminDashboard() {
           {/* Quick actions */}
           <div className="rounded-lg bg-white p-5 shadow-sm">
             <h3 className="text-sm font-semibold uppercase text-gray-500">
-              Rychl\u00E9 akce
+              Rychl\é akce
             </h3>
             <div className="mt-3 space-y-2">
               <button
                 onClick={() => navigate('/readings/import')}
                 className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
-                Import ode\u010Dt\u016F
+                Import ode\čt\ů
               </button>
               <button
                 onClick={() => navigate('/billing')}
                 className="w-full rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
               >
-                Nov\u00E9 vy\u00FA\u010Dtov\u00E1n\u00ED
+                Nov\é vy\ú\čtov\án\í
               </button>
             </div>
           </div>
@@ -459,11 +459,11 @@ function AdminDashboard() {
           {/* Open billing periods */}
           <div className="rounded-lg bg-white p-5 shadow-sm">
             <h3 className="text-sm font-semibold uppercase text-gray-500">
-              Otev\u0159en\u00E1 obdob\u00ED
+              Otev\řen\á obdob\í
             </h3>
             {openPeriods.length === 0 ? (
               <p className="mt-3 text-sm text-gray-400">
-                \u017D\u00E1dn\u00E1 otev\u0159en\u00E1 obdob\u00ED
+                \Ž\ádn\á otev\řen\á obdob\í
               </p>
             ) : (
               <ul className="mt-3 space-y-3">
@@ -477,7 +477,7 @@ function AdminDashboard() {
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
                       {czDate.format(new Date(period.dateFrom))}
-                      {' \u2013 '}
+                      {' \– '}
                       {czDate.format(new Date(period.dateTo))}
                     </p>
                   </li>
@@ -551,54 +551,54 @@ function MemberDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">P\u0159ehled</h1>
+      <h1 className="text-2xl font-bold text-gray-900">P\řehled</h1>
       <p className="mt-1 text-sm text-gray-500">
-        {czDate.format(now)} — v\u00E1\u0161 p\u0159ehled
+        {czDate.format(now)} — v\á\š p\řehled
       </p>
 
       {/* Metric cards */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Stav vodom\u011Bru"
+          title="Stav vodom\ěru"
           value={
             myReading
-              ? `${czNumber.format(myReading.value)} m\u00B3`
-              : '\u2014'
+              ? `${czNumber.format(myReading.value)} m\³`
+              : '\—'
           }
-          subtitle="Aktu\u00E1ln\u00ED stav"
+          subtitle="Aktu\áln\í stav"
         />
         <MetricCard
-          title="Spot\u0159eba tento m\u011Bs\u00EDc"
+          title="Spot\řeba tento m\ěs\íc"
           value={
             myReading?.consumption !== null &&
             myReading?.consumption !== undefined
-              ? `${czNumber.format(myReading.consumption)} m\u00B3`
-              : '\u2014'
+              ? `${czNumber.format(myReading.consumption)} m\³`
+              : '\—'
           }
-          subtitle="M\u011Bs\u00ED\u010Dn\u00ED spot\u0159eba"
+          subtitle="M\ěs\í\čn\í spot\řeba"
         />
         <MetricCard
-          title="Posledn\u00ED vy\u00FA\u010Dtov\u00E1n\u00ED"
-          value={lastClosedPeriod ? lastClosedPeriod.name : '\u2014'}
+          title="Posledn\í vy\ú\čtov\án\í"
+          value={lastClosedPeriod ? lastClosedPeriod.name : '\—'}
           subtitle={
             lastClosedPeriod
-              ? `Obdob\u00ED do ${czDate.format(new Date(lastClosedPeriod.dateTo))}`
-              : '\u017D\u00E1dn\u00E9 uzav\u0159en\u00E9 obdob\u00ED'
+              ? `Obdob\í do ${czDate.format(new Date(lastClosedPeriod.dateTo))}`
+              : '\Ž\ádn\é uzav\řen\é obdob\í'
           }
         />
         <MetricCard
-          title="Stav \u00FA\u010Dtu"
+          title="Stav \ú\čtu"
           value={
             memberBalance !== null
-              ? `${czCurrency.format(memberBalance)} K\u010D`
-              : '\u2014'
+              ? `${czCurrency.format(memberBalance)} K\č`
+              : '\—'
           }
           subtitle={
             memberBalance !== null
               ? memberBalance >= 0
-                ? 'P\u0159eplatek'
+                ? 'P\řeplatek'
                 : 'Nedoplatek'
-              : 'Z\u00E1lohy vs. vy\u00FA\u010Dtov\u00E1n\u00ED'
+              : 'Z\álohy vs. vy\ú\čtov\án\í'
           }
           trend={
             memberBalance !== null
@@ -623,18 +623,18 @@ function MemberDashboard() {
       {/* Last settlement info */}
       <div className="mt-6 rounded-lg bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">
-          Posledn\u00ED vy\u00FA\u010Dtov\u00E1n\u00ED
+          Posledn\í vy\ú\čtov\án\í
         </h2>
         {lastClosedPeriod ? (
           <p className="mt-2 text-sm text-gray-600">
-            Obdob\u00ED: {lastClosedPeriod.name} (
+            Obdob\í: {lastClosedPeriod.name} (
             {czDate.format(new Date(lastClosedPeriod.dateFrom))}
-            {' \u2013 '}
+            {' \– '}
             {czDate.format(new Date(lastClosedPeriod.dateTo))})
           </p>
         ) : (
           <p className="mt-2 text-sm text-gray-400">
-            Zat\u00EDm nebylo provedeno \u017E\u00E1dn\u00E9 vy\u00FA\u010Dtov\u00E1n\u00ED.
+            Zat\ím nebylo provedeno \ž\ádn\é vy\ú\čtov\án\í.
           </p>
         )}
       </div>
