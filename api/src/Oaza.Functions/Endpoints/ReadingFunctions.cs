@@ -467,6 +467,73 @@ public class ReadingFunctions
         "červenec", "srpen", "září", "říjen", "listopad", "prosinec"
     };
 
+    /// <summary>
+    /// Returns all readings for all meters (admin only). Used for the editable readings list.
+    /// </summary>
+    [Function("GetAllReadings")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> GetAllReadingsAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/all")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+
+            var allMeters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
+            var allHouses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
+            var houseLookup = allHouses.ToDictionary(h => h.Id, h => h.Name);
+
+            var readings = new List<ReadingResponse>();
+
+            foreach (var meter in allMeters)
+            {
+                var meterReadings = await _readingRepository.GetByMeterIdAsync(meter.Id);
+
+                MeterReading? previous = null;
+                foreach (var reading in meterReadings.OrderBy(r => r.ReadingDate))
+                {
+                    decimal? consumption = null;
+                    if (previous is not null)
+                    {
+                        consumption = reading.Value - previous.Value;
+                    }
+
+                    string? houseName = null;
+                    if (meter.HouseId is not null && houseLookup.TryGetValue(meter.HouseId, out var name))
+                    {
+                        houseName = name;
+                    }
+
+                    readings.Add(new ReadingResponse
+                    {
+                        MeterId = meter.Id,
+                        MeterNumber = meter.MeterNumber,
+                        HouseName = houseName,
+                        ReadingDate = reading.ReadingDate,
+                        Value = reading.Value,
+                        Consumption = consumption,
+                        Source = reading.Source.ToString(),
+                        ImportedAt = reading.ImportedAt,
+                        ImportedBy = reading.ImportedBy,
+                    });
+
+                    previous = reading;
+                }
+            }
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, readings);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
     [Function("GetChartData")]
     public async Task<HttpResponseData> GetChartDataAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/chart")] HttpRequestData req,
