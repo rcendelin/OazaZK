@@ -54,7 +54,11 @@ public class AdvanceSettingsFunctions
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
         }
         catch (AppException ex) { return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message); }
-        catch (Exception) { return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred."); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Advance settings error.");
+            return await WriteErrorResponseAsync(req, 500, $"Chyba: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     [Function("UpdateAdvanceSettings")]
@@ -69,6 +73,11 @@ public class AdvanceSettingsFunctions
             var settings = await JsonSerializer.DeserializeAsync<AdvanceSettings>(req.Body, JsonOptions);
             if (settings is null)
                 return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+
+            // Ensure collections are never null
+            settings.ElectricityCoefficients ??= new Dictionary<string, decimal>();
+            settings.HouseOverrides ??= new Dictionary<string, HouseAdvanceOverride>();
+            settings.LossAllocationMethod ??= "ProportionalToConsumption";
 
             if (settings.ElectricityCoefficients.Count > 0)
             {
@@ -86,7 +95,11 @@ public class AdvanceSettingsFunctions
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
         }
         catch (AppException ex) { return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message); }
-        catch (Exception) { return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred."); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating advance settings.");
+            return await WriteErrorResponseAsync(req, 500, $"Chyba při ukládání: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     [Function("CalculateAdvances")]
