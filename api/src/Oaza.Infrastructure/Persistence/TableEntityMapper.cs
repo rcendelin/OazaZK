@@ -357,7 +357,7 @@ public static class TableEntityMapper
         var entity = new TableEntity("SETTINGS", "advances")
         {
             { "WaterPricePerM3", settings.WaterPricePerM3.ToString("G29", CultureInfo.InvariantCulture) },
-            { "WaterPriceValidFrom", settings.WaterPriceValidFrom },
+            { "WaterPriceValidFrom", DateTime.SpecifyKind(settings.WaterPriceValidFrom, DateTimeKind.Utc) },
             { "MonthlyElectricityCost", settings.MonthlyElectricityCost.ToString("G29", CultureInfo.InvariantCulture) },
             { "MonthlyCommonBaseFee", settings.MonthlyCommonBaseFee.ToString("G29", CultureInfo.InvariantCulture) },
             { "LossAllocationMethod", settings.LossAllocationMethod },
@@ -365,7 +365,7 @@ public static class TableEntityMapper
             { "HouseOverridesJson", System.Text.Json.JsonSerializer.Serialize(settings.HouseOverrides, jsonOpts) }
         };
         if (settings.WaterPriceValidTo.HasValue)
-            entity["WaterPriceValidTo"] = settings.WaterPriceValidTo.Value;
+            entity["WaterPriceValidTo"] = DateTime.SpecifyKind(settings.WaterPriceValidTo.Value, DateTimeKind.Utc);
         return entity;
     }
 
