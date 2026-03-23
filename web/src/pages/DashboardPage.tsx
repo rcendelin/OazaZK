@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.tsx';
 import { useApi } from '../hooks/useApi.ts';
 import { getHouses } from '../api/houses.ts';
-import { getReadings } from '../api/readings.ts';
+import { getAllReadings } from '../api/readings.ts';
 import { getBillingPeriods } from '../api/billing.ts';
 import { getFinanceSummary, getFinanceBalance, getFinanceRecords } from '../api/finance.ts';
 import { getDocuments } from '../api/documents.ts';
@@ -11,7 +11,7 @@ import { getSettlements } from '../api/settlements.ts';
 import { MetricCard } from '../components/MetricCard.tsx';
 import { ConsumptionChart } from '../components/ConsumptionChart.tsx';
 import { Spinner } from '../components/Spinner.tsx';
-import type { FinanceResponse, DocumentResponse } from '../types/index.ts';
+import type { FinanceResponse, DocumentResponse, ReadingResponse } from '../types/index.ts';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 1,
@@ -185,16 +185,15 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth() + 1;
 
   const { data: houses, loading: housesLoading } = useApi(
     () => getHouses(),
     [],
   );
 
-  const { data: readingsData, loading: readingsLoading } = useApi(
-    () => getReadings(year, month),
-    [year, month],
+  const { data: allReadings, loading: readingsLoading } = useApi(
+    () => getAllReadings(),
+    [],
   );
 
   const { data: periods, loading: periodsLoading } = useApi(
@@ -231,8 +230,21 @@ function AdminDashboard() {
     financeRecordsLoading ||
     documentsLoading;
 
+  // Get latest reading per meter from all readings
+  const latestByMeter = useMemo(() => {
+    if (!allReadings) return new Map<string, ReadingResponse>();
+    const map = new Map<string, ReadingResponse>();
+    for (const r of allReadings) {
+      const existing = map.get(r.meterId);
+      if (!existing || new Date(r.readingDate) > new Date(existing.readingDate)) {
+        map.set(r.meterId, r);
+      }
+    }
+    return map;
+  }, [allReadings]);
+
   const metrics = useMemo(() => {
-    if (!readingsData || !houses) {
+    if (!allReadings || !houses) {
       return {
         mainMeterValue: null,
         totalConsumption: null,
@@ -241,12 +253,9 @@ function AdminDashboard() {
       };
     }
 
-    const mainReading = readingsData.readings.find(
-      (r) => r.houseName === null,
-    );
-    const individualReadings = readingsData.readings.filter(
-      (r) => r.houseName !== null,
-    );
+    const latestReadings = [...latestByMeter.values()];
+    const mainReading = latestReadings.find((r) => r.houseName === null);
+    const individualReadings = latestReadings.filter((r) => r.houseName !== null);
 
     const totalIndividualConsumption = individualReadings.reduce(
       (sum, r) => sum + (r.consumption ?? 0),
@@ -264,7 +273,7 @@ function AdminDashboard() {
       networkLoss: loss,
       activeHouses,
     };
-  }, [readingsData, houses]);
+  }, [allReadings, houses, latestByMeter]);
 
   const openPeriods = useMemo(
     () => periods?.filter((p) => p.status === 'Open') ?? [],
@@ -272,10 +281,10 @@ function AdminDashboard() {
   );
 
   const houseReadingsMap = useMemo(() => {
-    if (!readingsData || !houses) return [];
+    if (!allReadings || !houses) return [];
     const activeHouses = houses.filter((h) => h.isActive);
     return activeHouses.map((house) => {
-      const reading = readingsData.readings.find(
+      const reading = [...latestByMeter.values()].find(
         (r) => r.houseName === house.name && r.houseName !== null,
       );
       return {
@@ -283,7 +292,7 @@ function AdminDashboard() {
         reading: reading ?? null,
       };
     });
-  }, [readingsData, houses]);
+  }, [allReadings, houses, latestByMeter]);
 
   if (loading) {
     return (
@@ -502,13 +511,10 @@ function AdminDashboard() {
 
 function MemberDashboard() {
   const { user } = useAuth();
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
 
-  const { data: readingsData, loading: readingsLoading } = useApi(
-    () => getReadings(year, month),
-    [year, month],
+  const { data: allReadings, loading: readingsLoading } = useApi(
+    () => getAllReadings(),
+    [],
   );
 
   const { data: periods, loading: periodsLoading } = useApi(
@@ -519,13 +525,13 @@ function MemberDashboard() {
   const loading = readingsLoading || periodsLoading;
 
   const myReading = useMemo(() => {
-    if (!readingsData) return null;
-    // For members, the API already filters to their house's readings.
-    // Pick the individual (non-main) reading.
-    return readingsData.readings.find(
-      (r) => r.houseName !== null,
-    ) ?? null;
-  }, [readingsData]);
+    if (!allReadings) return null;
+    // Find the latest reading for the member's house (non-main meter)
+    const houseReadings = allReadings
+      .filter((r) => r.houseName !== null)
+      .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
+    return houseReadings[0] ?? null;
+  }, [allReadings]);
 
   const lastClosedPeriod = useMemo(
     () =>
@@ -553,7 +559,7 @@ function MemberDashboard() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900">Přehled</h1>
       <p className="mt-1 text-sm text-gray-500">
-        {czDate.format(now)} — váš přehled
+        {czDate.format(new Date())} — váš přehled
       </p>
 
       {/* Metric cards */}
