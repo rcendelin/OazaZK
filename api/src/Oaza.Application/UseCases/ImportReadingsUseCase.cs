@@ -61,80 +61,117 @@ public class ImportReadingsUseCase
             };
         }
 
-        // Parse Excel
+        // Parse Excel — TRANSPOSED FORMAT:
+        // Row 1 = header: A1="Vodoměr", B1=date1, C1=date2, ...
+        // Row 2+ = meter rows: A=meter number, B=value for date1, C=value for date2, ...
         using var workbook = new XLWorkbook(excelStream);
         var worksheet = workbook.Worksheets.First();
 
-        // Read header row to map columns to meters
-        var columnMeterMap = MapColumnsToMeters(worksheet, allMeters, errors);
+        // 1. Parse dates from header row (columns B onwards)
+        var columnDateMap = new Dictionary<int, DateTime>();
+        var headerRow = worksheet.Row(1);
+        var lastCol = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
 
-        if (columnMeterMap.Count == 0 && errors.Count > 0)
+        for (var col = 2; col <= lastCol; col++)
         {
-            return new ImportPreviewResponse
+            var cell = headerRow.Cell(col);
+            if (cell.IsEmpty()) continue;
+
+            DateTime date;
+            if (cell.DataType == XLDataType.DateTime)
             {
-                Rows = previewRows,
-                Errors = errors,
-                Warnings = warnings,
-                ImportSessionId = string.Empty
-            };
+                date = cell.GetDateTime().Date;
+            }
+            else
+            {
+                var dateStr = cell.GetString().Trim();
+                if (!TryParseCzechDate(dateStr, out date))
+                {
+                    errors.Add(new ImportValidationMessage
+                    {
+                        Type = "error",
+                        Message = $"Cannot parse date in column {col}: '{dateStr}'."
+                    });
+                    continue;
+                }
+            }
+            columnDateMap[col] = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
         }
 
-        // Pre-load existing readings for all meters (for duplicate and consumption checks)
+        if (columnDateMap.Count == 0)
+        {
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "No valid dates found in header row." });
+            return new ImportPreviewResponse { Rows = previewRows, Errors = errors, Warnings = warnings, ImportSessionId = string.Empty };
+        }
+
+        // 2. Build meter lookup
+        var meterLookup = allMeters.ToDictionary(m => m.MeterNumber.Trim(), m => m, StringComparer.OrdinalIgnoreCase);
+
+        // Pre-load existing readings
         var existingReadingsByMeter = new Dictionary<string, IReadOnlyList<MeterReading>>();
         foreach (var meter in allMeters)
         {
             existingReadingsByMeter[meter.Id] = await _readingRepository.GetByMeterIdAsync(meter.Id);
         }
 
-        // Process data rows (starting from row 2, after header)
-        var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
         var now = DateTime.UtcNow;
-        var seenMeterMonths = new HashSet<(string meterId, int year, int month)>();
+        var seenMeterDates = new HashSet<(string meterId, DateTime date)>();
+
+        // Group readings by date for preview
+        var previewByDate = new Dictionary<DateTime, Dictionary<string, decimal>>();
+
+        // 3. Process meter rows (row 2 onwards)
+        var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 1;
 
         for (var rowNum = 2; rowNum <= lastRow; rowNum++)
         {
-            var row = worksheet.Row(rowNum);
+            var meterCell = worksheet.Row(rowNum).Cell(1);
+            if (meterCell.IsEmpty()) continue;
 
-            // Column A = date
-            var dateCell = row.Cell(1);
-            if (dateCell.IsEmpty())
-            {
-                continue; // skip empty rows
-            }
+            var meterNumber = meterCell.GetString().Trim();
 
-            DateTime readingDate;
-            if (dateCell.DataType == XLDataType.DateTime)
+            // Match meter
+            WaterMeter? meter = null;
+            if (meterLookup.TryGetValue(meterNumber, out var directMatch))
             {
-                readingDate = dateCell.GetDateTime().Date;
+                meter = directMatch;
             }
             else
             {
-                var dateStr = dateCell.GetString().Trim();
-                if (!TryParseCzechDate(dateStr, out readingDate))
+                // Try substring match
+                foreach (var m in allMeters)
                 {
-                    errors.Add(new ImportValidationMessage
+                    if (meterNumber.Contains(m.MeterNumber, StringComparison.OrdinalIgnoreCase))
                     {
-                        Type = "error",
-                        Message = $"Cannot parse date: '{dateStr}'.",
-                        Row = rowNum
-                    });
-                    continue;
+                        meter = m;
+                        break;
+                    }
                 }
             }
 
-            readingDate = DateTime.SpecifyKind(readingDate.Date, DateTimeKind.Utc);
-
-            var meterValues = new Dictionary<string, decimal>();
-
-            foreach (var (colIndex, meter) in columnMeterMap)
+            if (meter == null)
             {
-                var cell = row.Cell(colIndex);
+                errors.Add(new ImportValidationMessage
+                {
+                    Type = "error",
+                    Message = $"Row {rowNum}: meter number '{meterNumber}' does not match any configured meter.",
+                    Row = rowNum
+                });
+                continue;
+            }
+
+            var existingReadings = existingReadingsByMeter[meter.Id];
+
+            // Process each date column for this meter
+            foreach (var (col, readingDate) in columnDateMap)
+            {
+                var cell = worksheet.Row(rowNum).Cell(col);
                 if (cell.IsEmpty())
                 {
                     warnings.Add(new ImportValidationMessage
                     {
                         Type = "warning",
-                        Message = $"Missing value for meter '{meter.MeterNumber}'.",
+                        Message = $"Missing value for meter '{meter.MeterNumber}' at {readingDate:d.M.yyyy}.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
@@ -146,44 +183,42 @@ public class ImportReadingsUseCase
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Cannot parse value for meter '{meter.MeterNumber}': '{cell.GetString()}'.",
+                        Message = $"Cannot parse value for meter '{meter.MeterNumber}' at {readingDate:d.M.yyyy}: '{cell.GetString()}'.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
                     continue;
                 }
 
-                // Duplicate check: reading already exists for same meter + same month
-                var existingReadings = existingReadingsByMeter[meter.Id];
+                // Duplicate check: same meter + same date in DB
                 var duplicate = existingReadings.FirstOrDefault(r =>
-                    r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
+                    r.ReadingDate.Date == readingDate.Date);
                 if (duplicate is not null)
                 {
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Duplicate reading for meter '{meter.MeterNumber}' in {readingDate:yyyy-MM}. Existing value: {duplicate.Value}.",
+                        Message = $"Duplicate reading for meter '{meter.MeterNumber}' on {readingDate:d.M.yyyy}. Existing: {duplicate.Value}.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
                     continue;
                 }
 
-                // Same-file duplicate check
-                var meterMonthKey = (meter.Id, readingDate.Year, readingDate.Month);
-                if (!seenMeterMonths.Add(meterMonthKey))
+                // Same-file duplicate
+                if (!seenMeterDates.Add((meter.Id, readingDate)))
                 {
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Duplicate reading within the file for meter '{meter.MeterNumber}' in {readingDate:yyyy-MM}.",
+                        Message = $"Duplicate in file for meter '{meter.MeterNumber}' on {readingDate:d.M.yyyy}.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
                     continue;
                 }
 
-                // Negative consumption check: new value < previous reading value
+                // Negative consumption check
                 var previousReading = existingReadings
                     .Where(r => r.ReadingDate < readingDate)
                     .OrderByDescending(r => r.ReadingDate)
@@ -194,44 +229,38 @@ public class ImportReadingsUseCase
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Negative consumption for meter '{meter.MeterNumber}': new value {value} < previous value {previousReading.Value}.",
+                        Message = $"Negative consumption for '{meter.MeterNumber}': {value} < previous {previousReading.Value}.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
                     continue;
                 }
 
-                // Anomaly detection: consumption > 2x rolling average of last 6 months
+                // Anomaly detection
                 if (previousReading is not null)
                 {
                     var consumption = value - previousReading.Value;
                     var recentReadings = existingReadings
                         .OrderByDescending(r => r.ReadingDate)
-                        .Take(7) // take 7 to compute 6 consumption deltas
-                        .OrderBy(r => r.ReadingDate)
-                        .ToList();
+                        .Take(7).OrderBy(r => r.ReadingDate).ToList();
 
                     if (recentReadings.Count >= 2)
                     {
-                        var recentConsumptions = new List<decimal>();
+                        var deltas = new List<decimal>();
                         for (var i = 1; i < recentReadings.Count; i++)
                         {
-                            var delta = recentReadings[i].Value - recentReadings[i - 1].Value;
-                            if (delta > 0)
-                            {
-                                recentConsumptions.Add(delta);
-                            }
+                            var d = recentReadings[i].Value - recentReadings[i - 1].Value;
+                            if (d > 0) deltas.Add(d);
                         }
-
-                        if (recentConsumptions.Count > 0)
+                        if (deltas.Count > 0)
                         {
-                            var average = recentConsumptions.Average();
-                            if (average > 0 && consumption > 2 * average)
+                            var avg = deltas.Average();
+                            if (avg > 0 && consumption > 2 * avg)
                             {
                                 warnings.Add(new ImportValidationMessage
                                 {
                                     Type = "warning",
-                                    Message = $"Anomaly detected for meter '{meter.MeterNumber}': consumption {consumption} m³ is more than 2× the rolling average ({average:F1} m³).",
+                                    Message = $"Anomaly for '{meter.MeterNumber}' on {readingDate:d.M.yyyy}: {consumption:F1} m³ > 2× avg ({avg:F1} m³).",
                                     Row = rowNum,
                                     MeterId = meter.Id
                                 });
@@ -240,8 +269,7 @@ public class ImportReadingsUseCase
                     }
                 }
 
-                meterValues[meter.Id] = value;
-
+                // Add reading
                 readings.Add(new MeterReading
                 {
                     MeterId = meter.Id,
@@ -251,28 +279,30 @@ public class ImportReadingsUseCase
                     ImportedAt = now,
                     ImportedBy = importedBy
                 });
+
+                if (!previewByDate.ContainsKey(readingDate))
+                    previewByDate[readingDate] = new Dictionary<string, decimal>();
+                previewByDate[readingDate][meter.Id] = value;
             }
+        }
 
-            // Check completeness: all configured meters must have a value
-            var missingMeters = allMeters
-                .Where(m => columnMeterMap.Values.Any(cm => cm.Id == m.Id) && !meterValues.ContainsKey(m.Id))
-                .ToList();
-
-            // Note: missing values already warned per-cell above
-
-            if (meterValues.Count > 0)
+        // Build preview rows from grouped data
+        foreach (var (date, values) in previewByDate.OrderBy(kv => kv.Key))
+        {
+            if (values.Count > 0)
             {
                 previewRows.Add(new ImportPreviewRow
                 {
-                    ReadingDate = readingDate,
-                    MeterValues = meterValues
+                    ReadingDate = date,
+                    MeterValues = values
                 });
             }
         }
 
-        // Check for meters in the system that are not mapped to any column
+        // Check for meters in the system that have no readings in the import
+        var importedMeterIds = readings.Select(r => r.MeterId).ToHashSet();
         var unmappedMeters = allMeters
-            .Where(m => !columnMeterMap.Values.Any(cm => cm.Id == m.Id))
+            .Where(m => !importedMeterIds.Contains(m.Id))
             .ToList();
 
         foreach (var meter in unmappedMeters)
@@ -363,82 +393,7 @@ public class ImportReadingsUseCase
         return count;
     }
 
-    /// <summary>
-    /// Maps Excel header columns to configured water meters by matching meter numbers.
-    /// Column A is reserved for dates. Columns B onwards are matched to meters.
-    /// </summary>
-    private static Dictionary<int, WaterMeter> MapColumnsToMeters(
-        IXLWorksheet worksheet, IReadOnlyList<WaterMeter> meters, List<ImportValidationMessage> errors)
-    {
-        var map = new Dictionary<int, WaterMeter>();
-        var headerRow = worksheet.Row(1);
-        var lastCol = worksheet.LastColumnUsed()?.ColumnNumber() ?? 1;
-
-        // Build a lookup by meter number (case-insensitive, trimmed)
-        var meterLookup = meters.ToDictionary(
-            m => m.MeterNumber.Trim(),
-            m => m,
-            StringComparer.OrdinalIgnoreCase);
-
-        for (var col = 2; col <= lastCol; col++)
-        {
-            var headerCell = headerRow.Cell(col);
-            if (headerCell.IsEmpty())
-            {
-                continue;
-            }
-
-            var headerValue = headerCell.GetString().Trim();
-
-            // Try to match by meter number directly
-            if (meterLookup.TryGetValue(headerValue, out var meter))
-            {
-                map[col] = meter;
-                continue;
-            }
-
-            // Try to find meter number embedded in the header text
-            var matched = false;
-            foreach (var m in meters)
-            {
-                if (headerValue.Contains(m.MeterNumber, StringComparison.OrdinalIgnoreCase))
-                {
-                    map[col] = m;
-                    matched = true;
-                    break;
-                }
-            }
-
-            if (!matched)
-            {
-                errors.Add(new ImportValidationMessage
-                {
-                    Type = "error",
-                    Message = $"Column {col} header '{headerValue}' does not match any configured meter number."
-                });
-            }
-        }
-
-        // Check for duplicate meters (same meter mapped to multiple columns)
-        var duplicateMeterIds = map.Values
-            .GroupBy(m => m.Id)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToList();
-
-        foreach (var duplicateId in duplicateMeterIds)
-        {
-            var meter = map.Values.First(m => m.Id == duplicateId);
-            var columns = map.Where(kv => kv.Value.Id == duplicateId).Select(kv => kv.Key);
-            errors.Add(new ImportValidationMessage
-            {
-                Type = "error",
-                Message = $"Meter '{meter.MeterNumber}' is mapped to multiple columns: {string.Join(", ", columns)}."
-            });
-        }
-
-        return map;
-    }
+    // MapColumnsToMeters removed — transposed format uses rows for meters, not columns.
 
     private static bool TryParseCellValue(IXLCell cell, out decimal value)
     {
