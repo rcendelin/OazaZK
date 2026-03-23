@@ -259,7 +259,9 @@ public class AdvanceSettingsFunctions
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(HttpRequestData req, HttpStatusCode status, T data)
     {
         var response = req.CreateResponse(status);
-        await response.WriteAsJsonAsync(data);
+        var json = JsonSerializer.Serialize(data, JsonOptions);
+        response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+        await response.WriteStringAsync(json);
         return response;
     }
 
