@@ -7,9 +7,18 @@ import { Spinner } from '../components/Spinner';
 import type { AdvanceSettingsData, AdvanceCalculation } from '../api/advanceSettings';
 import type { House } from '../types';
 
-const czCurrency = new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const czNum = (v: number, d = 1) => new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
-const czDate = (s: string) => s ? new Intl.DateTimeFormat('cs-CZ').format(new Date(s)) : '—';
+const fmtCzk = (v: number | null | undefined) => {
+  const n = typeof v === 'number' && !isNaN(v) ? v : 0;
+  return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+};
+const czNum = (v: number | null | undefined, d = 1) => {
+  const n = typeof v === 'number' && !isNaN(v) ? v : 0;
+  return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
+};
+const czDate = (s: string | null | undefined) => {
+  if (!s || s === '0001-01-01T00:00:00') return '—';
+  try { return new Intl.DateTimeFormat('cs-CZ').format(new Date(s)); } catch { return '—'; }
+};
 
 export function AdvancesPage() {
   const { user } = useAuth();
@@ -106,7 +115,7 @@ export function AdvancesPage() {
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">Cena vody</h3>
               <div>
-                <p className="text-2xl font-bold">{settings ? czCurrency.format(settings.waterPricePerM3) : '—'} <span className="text-sm font-normal text-gray-400">Kč/m³</span></p>
+                <p className="text-2xl font-bold">{settings ? fmtCzk(settings.waterPricePerM3) : '—'} <span className="text-sm font-normal text-gray-400">Kč/m³</span></p>
                 <p className="text-xs text-gray-500 mt-1">
                   Platnost: {settings?.waterPriceValidFrom ? czDate(settings.waterPriceValidFrom) : '—'}
                   {' — '}
@@ -116,11 +125,11 @@ export function AdvancesPage() {
             </div>
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">Měsíční úhrada spolku</h3>
-              <p className="text-2xl font-bold">{settings ? czCurrency.format(settings.monthlyAssociationFee) : '—'} <span className="text-sm font-normal text-gray-400">Kč/dům</span></p>
+              <p className="text-2xl font-bold">{settings ? fmtCzk(settings.monthlyAssociationFee) : '—'} <span className="text-sm font-normal text-gray-400">Kč/dům</span></p>
             </div>
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-500 uppercase">Elektřina ke studni</h3>
-              <p className="text-2xl font-bold">{settings ? czCurrency.format(settings.monthlyElectricityCost) : '—'} <span className="text-sm font-normal text-gray-400">Kč/měsíc celkem</span></p>
+              <p className="text-2xl font-bold">{settings ? fmtCzk(settings.monthlyElectricityCost) : '—'} <span className="text-sm font-normal text-gray-400">Kč/měsíc celkem</span></p>
             </div>
           </div>
         ) : form && (
@@ -209,7 +218,7 @@ export function AdvancesPage() {
             </div>
             <div className="rounded-lg border bg-white p-4">
               <p className="text-xs text-gray-500">Cena vody</p>
-              <p className="text-xl font-bold">{czCurrency.format(calc.settings.waterPricePerM3)} <span className="text-sm font-normal text-gray-400">Kč/m³</span></p>
+              <p className="text-xl font-bold">{fmtCzk(calc.settings.waterPricePerM3)} <span className="text-sm font-normal text-gray-400">Kč/m³</span></p>
             </div>
           </div>
 
@@ -239,11 +248,11 @@ export function AdvancesPage() {
                       <td className="px-3 py-3 text-right font-mono text-red-600">{czNum(h.lossShareM3)}</td>
                       <td className="px-3 py-3 text-right font-mono">{czNum(h.totalWaterM3)}</td>
                       <td className="px-3 py-3 text-right font-mono">{czNum(h.sharePercent)}%</td>
-                      <td className="px-3 py-3 text-right font-mono">{czCurrency.format(h.waterCostCzk)}</td>
-                      <td className="px-3 py-3 text-right font-mono">{czCurrency.format(h.associationFeeCzk)}</td>
+                      <td className="px-3 py-3 text-right font-mono">{fmtCzk(h.waterCostCzk)}</td>
+                      <td className="px-3 py-3 text-right font-mono">{fmtCzk(h.associationFeeCzk)}</td>
                       <td className="px-3 py-3 text-right font-mono">{czNum(h.electricityCoefficient)}%</td>
-                      <td className="px-3 py-3 text-right font-mono">{czCurrency.format(h.electricityCostCzk)}</td>
-                      <td className="px-3 py-3 text-right font-mono font-bold bg-blue-50">{czCurrency.format(h.totalAdvanceCzk)}</td>
+                      <td className="px-3 py-3 text-right font-mono">{fmtCzk(h.electricityCostCzk)}</td>
+                      <td className="px-3 py-3 text-right font-mono font-bold bg-blue-50">{fmtCzk(h.totalAdvanceCzk)}</td>
                     </tr>
                   ))}
                   {/* Totals */}
@@ -253,11 +262,11 @@ export function AdvancesPage() {
                     <td className="px-3 py-3 text-right font-mono text-red-600">{czNum(calc.houses.reduce((s, h) => s + h.lossShareM3, 0))}</td>
                     <td className="px-3 py-3 text-right font-mono">{czNum(calc.houses.reduce((s, h) => s + h.totalWaterM3, 0))}</td>
                     <td className="px-3 py-3 text-right font-mono">—</td>
-                    <td className="px-3 py-3 text-right font-mono">{czCurrency.format(calc.houses.reduce((s, h) => s + h.waterCostCzk, 0))}</td>
-                    <td className="px-3 py-3 text-right font-mono">{czCurrency.format(calc.houses.reduce((s, h) => s + h.associationFeeCzk, 0))}</td>
+                    <td className="px-3 py-3 text-right font-mono">{fmtCzk(calc.houses.reduce((s, h) => s + h.waterCostCzk, 0))}</td>
+                    <td className="px-3 py-3 text-right font-mono">{fmtCzk(calc.houses.reduce((s, h) => s + h.associationFeeCzk, 0))}</td>
                     <td className="px-3 py-3 text-right font-mono">—</td>
-                    <td className="px-3 py-3 text-right font-mono">{czCurrency.format(calc.houses.reduce((s, h) => s + h.electricityCostCzk, 0))}</td>
-                    <td className="px-3 py-3 text-right font-mono font-bold bg-blue-50">{czCurrency.format(calc.houses.reduce((s, h) => s + h.totalAdvanceCzk, 0))}</td>
+                    <td className="px-3 py-3 text-right font-mono">{fmtCzk(calc.houses.reduce((s, h) => s + h.electricityCostCzk, 0))}</td>
+                    <td className="px-3 py-3 text-right font-mono font-bold bg-blue-50">{fmtCzk(calc.houses.reduce((s, h) => s + h.totalAdvanceCzk, 0))}</td>
                   </tr>
                 </tbody>
               </table>
