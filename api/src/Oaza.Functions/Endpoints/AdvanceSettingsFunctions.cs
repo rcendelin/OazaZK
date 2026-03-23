@@ -164,9 +164,10 @@ public class AdvanceSettingsFunctions
                 var consumption = houseConsumptions.GetValueOrDefault(house.Id, 0);
                 var share = totalConsumption > 0 ? consumption / totalConsumption : 1m / activeHouses.Count;
 
-                var lossShare = totalConsumption > 0
-                    ? monthlyLoss * (consumption / totalConsumption)
-                    : monthlyLoss / activeHouses.Count;
+                // Loss distributed equally across all active houses
+                var lossShare = activeHouses.Count > 0
+                    ? monthlyLoss / activeHouses.Count
+                    : 0m;
 
                 var totalWaterM3 = consumption + lossShare;
 
