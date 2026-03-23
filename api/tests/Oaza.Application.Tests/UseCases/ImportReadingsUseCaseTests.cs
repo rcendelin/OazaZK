@@ -74,10 +74,12 @@ public class ImportReadingsUseCaseTests
         SetupEmptyReadings(meters);
 
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001", "IND-001", "IND-002" },
-            rows: new[]
+            dates: new[] { new DateTime(2026, 1, 15) },
+            meterRows: new[]
             {
-                new object[] { new DateTime(2026, 1, 15), 100.5m, 30.2m, 25.1m }
+                new MeterRow("MAIN-001", new object[] { 100.5m }),
+                new MeterRow("IND-001", new object[] { 30.2m }),
+                new MeterRow("IND-002", new object[] { 25.1m })
             });
 
         // Act
@@ -102,14 +104,14 @@ public class ImportReadingsUseCaseTests
         var meters = new List<WaterMeter> { _mainMeter };
         SetupMeters(meters);
 
-        // Existing reading for January 2026
+        // Existing reading for 2026-01-15 (exact date match)
         _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-main"))
             .ReturnsAsync(new List<MeterReading>
             {
                 new()
                 {
                     MeterId = "meter-main",
-                    ReadingDate = new DateTime(2026, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                    ReadingDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc),
                     Value = 90m,
                     Source = ReadingSource.Manual,
                     ImportedAt = DateTime.UtcNow,
@@ -118,10 +120,10 @@ public class ImportReadingsUseCaseTests
             });
 
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001" },
-            rows: new[]
+            dates: new[] { new DateTime(2026, 1, 15) },
+            meterRows: new[]
             {
-                new object[] { new DateTime(2026, 1, 15), 100m }
+                new MeterRow("MAIN-001", new object[] { 100m })
             });
 
         // Act
@@ -157,10 +159,10 @@ public class ImportReadingsUseCaseTests
 
         // Import with value 90 (less than previous 100)
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001" },
-            rows: new[]
+            dates: new[] { new DateTime(2026, 1, 15) },
+            meterRows: new[]
             {
-                new object[] { new DateTime(2026, 1, 15), 90m }
+                new MeterRow("MAIN-001", new object[] { 90m })
             });
 
         // Act
@@ -179,11 +181,12 @@ public class ImportReadingsUseCaseTests
         SetupMeters(meters);
         SetupEmptyReadings(meters);
 
-        // Excel has columns for both meters but value for houseMeter1 is empty
+        // Transposed format: MAIN-001 has a value, IND-001 has an empty cell
         var stream = CreateExcelWithMissingValue(
-            headers: new[] { "Datum", "MAIN-001", "IND-001" },
             date: new DateTime(2026, 1, 15),
-            mainValue: 100m);
+            meterWithValue: "MAIN-001",
+            mainValue: 100m,
+            meterWithMissing: "IND-001");
 
         // Act
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
@@ -219,22 +222,22 @@ public class ImportReadingsUseCaseTests
 
         // Import with huge consumption (previous was 80, now 200 -> consumption 120, avg ~5)
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001" },
-            rows: new[]
+            dates: new[] { new DateTime(2026, 2, 15) },
+            meterRows: new[]
             {
-                new object[] { new DateTime(2026, 2, 15), 200m }
+                new MeterRow("MAIN-001", new object[] { 200m })
             });
 
         // Act
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Warnings.Should().Contain(w => w.Message.Contains("Anomaly detected"));
+        result.Warnings.Should().Contain(w => w.Message.Contains("Anomaly"));
         result.Errors.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task ParseAndValidateAsync_UnmatchedHeader_ReturnsError()
+    public async Task ParseAndValidateAsync_UnmatchedMeterNumber_ReturnsError()
     {
         // Arrange
         var meters = new List<WaterMeter> { _mainMeter };
@@ -242,10 +245,11 @@ public class ImportReadingsUseCaseTests
         SetupEmptyReadings(meters);
 
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001", "UNKNOWN-999" },
-            rows: new[]
+            dates: new[] { new DateTime(2026, 1, 15) },
+            meterRows: new[]
             {
-                new object[] { new DateTime(2026, 1, 15), 100m, 50m }
+                new MeterRow("MAIN-001", new object[] { 100m }),
+                new MeterRow("UNKNOWN-999", new object[] { 50m })
             });
 
         // Act
@@ -263,8 +267,11 @@ public class ImportReadingsUseCaseTests
             .ReturnsAsync(new List<WaterMeter>());
 
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001" },
-            rows: new[] { new object[] { new DateTime(2026, 1, 15), 100m } });
+            dates: new[] { new DateTime(2026, 1, 15) },
+            meterRows: new[]
+            {
+                new MeterRow("MAIN-001", new object[] { 100m })
+            });
 
         // Act
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
@@ -284,8 +291,8 @@ public class ImportReadingsUseCaseTests
 
         // Create Excel with string value in Czech format
         var stream = CreateExcelWithStringValue(
-            headers: new[] { "Datum", "MAIN-001" },
             date: new DateTime(2026, 1, 15),
+            meterNumber: "MAIN-001",
             stringValue: "1 542,7");
 
         // Act
@@ -405,7 +412,7 @@ public class ImportReadingsUseCaseTests
     }
 
     [Fact]
-    public async Task ParseAndValidateAsync_MultipleRows_AllProcessed()
+    public async Task ParseAndValidateAsync_MultipleDates_AllProcessed()
     {
         // Arrange
         var meters = new List<WaterMeter> { _mainMeter };
@@ -413,12 +420,15 @@ public class ImportReadingsUseCaseTests
         SetupEmptyReadings(meters);
 
         var stream = CreateExcelStream(
-            headers: new[] { "Datum", "MAIN-001" },
-            rows: new[]
+            dates: new[]
             {
-                new object[] { new DateTime(2026, 1, 15), 100m },
-                new object[] { new DateTime(2026, 2, 15), 110m },
-                new object[] { new DateTime(2026, 3, 15), 120m }
+                new DateTime(2026, 1, 15),
+                new DateTime(2026, 2, 15),
+                new DateTime(2026, 3, 15)
+            },
+            meterRows: new[]
+            {
+                new MeterRow("MAIN-001", new object[] { 100m, 110m, 120m })
             });
 
         // Act
@@ -428,6 +438,10 @@ public class ImportReadingsUseCaseTests
         result.Errors.Should().BeEmpty();
         result.Rows.Should().HaveCount(3);
     }
+
+    // ─── Helper types ─────────────────────────────────
+
+    private record MeterRow(string MeterNumber, object[] Values);
 
     // ─── Helper methods ─────────────────────────────────
 
@@ -446,30 +460,35 @@ public class ImportReadingsUseCaseTests
         }
     }
 
-    private static Stream CreateExcelStream(string[] headers, object[][] rows)
+    /// <summary>
+    /// Creates an Excel stream in the TRANSPOSED format:
+    /// Row 1 (header): "Vodoměr" | date1 | date2 | ...
+    /// Row 2+: meterNumber | value1 | value2 | ...
+    /// </summary>
+    private static Stream CreateExcelStream(DateTime[] dates, MeterRow[] meterRows)
     {
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Odečty");
 
-        // Write headers
-        for (var col = 0; col < headers.Length; col++)
+        // Write header row: A1 = label, B1+ = dates
+        worksheet.Cell(1, 1).Value = "Vodoměr";
+        for (var col = 0; col < dates.Length; col++)
         {
-            worksheet.Cell(1, col + 1).Value = headers[col];
+            worksheet.Cell(1, col + 2).Value = dates[col];
         }
 
-        // Write rows
-        for (var rowIdx = 0; rowIdx < rows.Length; rowIdx++)
+        // Write meter rows (row 2 onwards)
+        for (var rowIdx = 0; rowIdx < meterRows.Length; rowIdx++)
         {
-            for (var colIdx = 0; colIdx < rows[rowIdx].Length; colIdx++)
-            {
-                var cell = worksheet.Cell(rowIdx + 2, colIdx + 1);
-                var value = rows[rowIdx][colIdx];
+            var row = meterRows[rowIdx];
+            worksheet.Cell(rowIdx + 2, 1).Value = row.MeterNumber;
 
-                if (value is DateTime dateValue)
-                {
-                    cell.Value = dateValue;
-                }
-                else if (value is decimal decimalValue)
+            for (var colIdx = 0; colIdx < row.Values.Length; colIdx++)
+            {
+                var cell = worksheet.Cell(rowIdx + 2, colIdx + 2);
+                var value = row.Values[colIdx];
+
+                if (value is decimal decimalValue)
                 {
                     cell.Value = (double)decimalValue;
                 }
@@ -486,19 +505,27 @@ public class ImportReadingsUseCaseTests
         return stream;
     }
 
-    private static Stream CreateExcelWithMissingValue(string[] headers, DateTime date, decimal mainValue)
+    /// <summary>
+    /// Creates an Excel in transposed format where one meter row has a missing value.
+    /// Row 1: "Vodoměr" | date
+    /// Row 2: meterWithValue | mainValue
+    /// Row 3: meterWithMissing | (empty)
+    /// </summary>
+    private static Stream CreateExcelWithMissingValue(DateTime date, string meterWithValue, decimal mainValue, string meterWithMissing)
     {
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Odečty");
 
-        for (var col = 0; col < headers.Length; col++)
-        {
-            worksheet.Cell(1, col + 1).Value = headers[col];
-        }
+        // Header row
+        worksheet.Cell(1, 1).Value = "Vodoměr";
+        worksheet.Cell(1, 2).Value = date;
 
-        worksheet.Cell(2, 1).Value = date;
+        // Meter with value
+        worksheet.Cell(2, 1).Value = meterWithValue;
         worksheet.Cell(2, 2).Value = (double)mainValue;
-        // Column 3 (IND-001) is left empty intentionally
+
+        // Meter with missing value (column B left empty intentionally)
+        worksheet.Cell(3, 1).Value = meterWithMissing;
 
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
@@ -506,17 +533,22 @@ public class ImportReadingsUseCaseTests
         return stream;
     }
 
-    private static Stream CreateExcelWithStringValue(string[] headers, DateTime date, string stringValue)
+    /// <summary>
+    /// Creates an Excel in transposed format with a string value (Czech number format).
+    /// Row 1: "Vodoměr" | date
+    /// Row 2: meterNumber | stringValue (as text)
+    /// </summary>
+    private static Stream CreateExcelWithStringValue(DateTime date, string meterNumber, string stringValue)
     {
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("Odečty");
 
-        for (var col = 0; col < headers.Length; col++)
-        {
-            worksheet.Cell(1, col + 1).Value = headers[col];
-        }
+        // Header row
+        worksheet.Cell(1, 1).Value = "Vodoměr";
+        worksheet.Cell(1, 2).Value = date;
 
-        worksheet.Cell(2, 1).Value = date;
+        // Meter row with string value
+        worksheet.Cell(2, 1).Value = meterNumber;
         worksheet.Cell(2, 2).SetValue(stringValue); // Force string type
 
         var stream = new MemoryStream();
