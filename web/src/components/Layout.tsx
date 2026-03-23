@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
     label: 'Hospodaření',
     path: '/finance',
     children: [
+      { label: 'Zálohy', path: '/advances' },
       { label: 'Vyúčtování', path: '/billing' },
     ],
   },

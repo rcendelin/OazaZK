@@ -16,6 +16,7 @@ import { HousesPage } from './pages/admin/HousesPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
+import { AdvancesPage } from './pages/AdvancesPage';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/advances" element={<AdvancesPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/finance" element={<FinancePage />} />

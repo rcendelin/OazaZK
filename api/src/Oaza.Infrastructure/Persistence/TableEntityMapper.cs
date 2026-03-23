@@ -347,4 +347,41 @@ public static class TableEntityMapper
             AttachmentBlobName = entity.GetString("AttachmentBlobName")
         };
     }
+
+    // ───────────────────── AdvanceSettings ─────────────────────
+    // PK = "SETTINGS", RK = "advances" (singleton)
+
+    public static TableEntity ToTableEntity(AdvanceSettings settings)
+    {
+        var entity = new TableEntity("SETTINGS", "advances")
+        {
+            { "WaterPricePerM3", settings.WaterPricePerM3.ToString("G29", CultureInfo.InvariantCulture) },
+            { "WaterPriceValidFrom", settings.WaterPriceValidFrom },
+            { "MonthlyAssociationFee", settings.MonthlyAssociationFee.ToString("G29", CultureInfo.InvariantCulture) },
+            { "MonthlyElectricityCost", settings.MonthlyElectricityCost.ToString("G29", CultureInfo.InvariantCulture) },
+            { "LossAllocationMethod", settings.LossAllocationMethod },
+            { "ElectricityCoefficientsJson", System.Text.Json.JsonSerializer.Serialize(settings.ElectricityCoefficients) }
+        };
+        if (settings.WaterPriceValidTo.HasValue)
+            entity["WaterPriceValidTo"] = settings.WaterPriceValidTo.Value;
+        return entity;
+    }
+
+    public static AdvanceSettings ToAdvanceSettings(TableEntity entity)
+    {
+        var coeffJson = entity.GetString("ElectricityCoefficientsJson") ?? "{}";
+        var coefficients = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, decimal>>(coeffJson)
+            ?? new Dictionary<string, decimal>();
+
+        return new AdvanceSettings
+        {
+            WaterPricePerM3 = decimal.TryParse(entity.GetString("WaterPricePerM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var price) ? price : 0m,
+            WaterPriceValidFrom = entity.GetDateTimeOffset("WaterPriceValidFrom")?.UtcDateTime ?? DateTime.MinValue,
+            WaterPriceValidTo = entity.GetDateTimeOffset("WaterPriceValidTo")?.UtcDateTime,
+            MonthlyAssociationFee = decimal.TryParse(entity.GetString("MonthlyAssociationFee"), NumberStyles.Any, CultureInfo.InvariantCulture, out var fee) ? fee : 0m,
+            MonthlyElectricityCost = decimal.TryParse(entity.GetString("MonthlyElectricityCost"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elec) ? elec : 0m,
+            LossAllocationMethod = entity.GetString("LossAllocationMethod") ?? "ProportionalToConsumption",
+            ElectricityCoefficients = coefficients,
+        };
+    }
 }
