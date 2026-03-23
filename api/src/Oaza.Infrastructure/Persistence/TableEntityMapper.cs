@@ -94,7 +94,7 @@ public static class TableEntityMapper
             { "Name", meter.Name },
             { "Type", meter.Type.ToString() },
             { "HouseId", meter.HouseId },
-            { "InstallationDate", meter.InstallationDate }
+            { "InstallationDate", DateTime.SpecifyKind(meter.InstallationDate, DateTimeKind.Utc) }
         };
     }
 
@@ -118,10 +118,10 @@ public static class TableEntityMapper
     {
         return new TableEntity(reading.MeterId, InvertedTimestamp.FromDateTime(reading.ReadingDate))
         {
-            { "ReadingDate", reading.ReadingDate },
+            { "ReadingDate", DateTime.SpecifyKind(reading.ReadingDate, DateTimeKind.Utc) },
             { "Value", reading.Value.ToString("G29", CultureInfo.InvariantCulture) },
             { "Source", reading.Source.ToString() },
-            { "ImportedAt", reading.ImportedAt },
+            { "ImportedAt", DateTime.SpecifyKind(reading.ImportedAt, DateTimeKind.Utc) },
             { "ImportedBy", reading.ImportedBy }
         };
     }
@@ -146,8 +146,8 @@ public static class TableEntityMapper
         return new TableEntity(PartitionKeys.Period, period.Id)
         {
             { "Name", period.Name },
-            { "DateFrom", period.DateFrom },
-            { "DateTo", period.DateTo },
+            { "DateFrom", DateTime.SpecifyKind(period.DateFrom, DateTimeKind.Utc) },
+            { "DateTo", DateTime.SpecifyKind(period.DateTo, DateTimeKind.Utc) },
             { "Status", period.Status.ToString() }
         };
     }
@@ -173,8 +173,8 @@ public static class TableEntityMapper
             { "Year", invoice.Year },
             { "Month", invoice.Month },
             { "InvoiceNumber", invoice.InvoiceNumber },
-            { "IssuedDate", invoice.IssuedDate },
-            { "DueDate", invoice.DueDate },
+            { "IssuedDate", DateTime.SpecifyKind(invoice.IssuedDate, DateTimeKind.Utc) },
+            { "DueDate", DateTime.SpecifyKind(invoice.DueDate, DateTimeKind.Utc) },
             { "Amount", invoice.Amount.ToString("G29", CultureInfo.InvariantCulture) },
             { "ConsumptionM3", invoice.ConsumptionM3.ToString("G29", CultureInfo.InvariantCulture) },
             { "AttachmentBlobName", invoice.AttachmentBlobName }
@@ -208,7 +208,7 @@ public static class TableEntityMapper
             { "Year", payment.Year },
             { "Month", payment.Month },
             { "Amount", payment.Amount.ToString("G29", CultureInfo.InvariantCulture) },
-            { "PaymentDate", payment.PaymentDate }
+            { "PaymentDate", DateTime.SpecifyKind(payment.PaymentDate, DateTimeKind.Utc) }
         };
     }
 
@@ -327,7 +327,7 @@ public static class TableEntityMapper
             { "Type", record.Type.ToString() },
             { "Category", record.Category },
             { "Amount", record.Amount.ToString("G29", CultureInfo.InvariantCulture) },
-            { "Date", record.Date },
+            { "Date", DateTime.SpecifyKind(record.Date, DateTimeKind.Utc) },
             { "Description", record.Description },
             { "AttachmentBlobName", record.AttachmentBlobName }
         };

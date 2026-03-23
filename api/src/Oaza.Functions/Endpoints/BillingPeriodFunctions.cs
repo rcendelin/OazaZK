@@ -123,8 +123,8 @@ public class BillingPeriodFunctions
             {
                 Id = Guid.NewGuid().ToString(),
                 Name = request.Name,
-                DateFrom = request.DateFrom,
-                DateTo = request.DateTo,
+                DateFrom = DateTime.SpecifyKind(request.DateFrom, DateTimeKind.Utc),
+                DateTo = DateTime.SpecifyKind(request.DateTo, DateTimeKind.Utc),
                 Status = BillingPeriodStatus.Open,
             };
 
