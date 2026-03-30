@@ -14,7 +14,7 @@ const czNum = (v: number, d = 1) =>
 
 type PeriodPreset = '1m' | '6m' | '1y' | 'all' | 'custom';
 
-const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed', '#0891b2', '#be185d', '#ca8a04', '#4f46e5', '#059669'];
+const COLORS = ['#4f46e5', '#71717a', '#3f3f46', '#a1a1aa', '#6366f1', '#52525b', '#818cf8', '#27272a', '#a78bfa', '#d4d4d8'];
 
 function dateToKey(d: string): string { return d.split('T')[0]; }
 
@@ -204,7 +204,7 @@ export function ReadingsOverviewPage() {
           <h3 className="text-lg font-semibold text-text-primary mb-4">Stav vodoměrů (m³)</h3>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
               <XAxis dataKey="ts" type="number" scale="time" domain={['dataMin', 'dataMax']}
                 tickFormatter={formatXTick} tick={{ fontSize: 11 }} angle={-45} textAnchor="end" height={60} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => czNum(v)} />
