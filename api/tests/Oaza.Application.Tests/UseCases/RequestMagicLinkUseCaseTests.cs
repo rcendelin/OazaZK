@@ -155,7 +155,7 @@ public class RequestMagicLinkUseCaseTests
         var user = CreateTestUser();
         _userRepoMock.Setup(r => r.GetByEmailAsync(user.Email)).ReturnsAsync(user);
         _emailServiceMock.Setup(e => e.SendMagicLinkAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(new InvalidOperationException("SendGrid error"));
+            .ThrowsAsync(new InvalidOperationException("Email service error"));
 
         // Should not throw
         await _sut.ExecuteAsync(user.Email);

@@ -1,10 +1,10 @@
 namespace Oaza.Infrastructure.Email;
 
-public class SendGridSettings
+public class AcsSettings
 {
-    public const string SectionName = "SendGrid";
+    public const string SectionName = "AzureCommunicationServices";
 
-    public string ApiKey { get; set; } = string.Empty;
+    public string ConnectionString { get; set; } = string.Empty;
     public string FromEmail { get; set; } = string.Empty;
     public string FromName { get; set; } = string.Empty;
 }

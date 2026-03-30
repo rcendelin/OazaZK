@@ -48,14 +48,14 @@ public static class DependencyInjection
         // Blob Storage service
         services.AddSingleton<IBlobStorageService, BlobStorageService>();
 
-        // Email service
-        services.Configure<SendGridSettings>(options =>
+        // Email service (Azure Communication Services)
+        services.Configure<AcsSettings>(options =>
         {
-            options.ApiKey = configuration["SendGrid__ApiKey"] ?? string.Empty;
-            options.FromEmail = configuration["SendGrid__FromEmail"] ?? string.Empty;
-            options.FromName = configuration["SendGrid__FromName"] ?? string.Empty;
+            options.ConnectionString = configuration["AzureCommunicationServices__ConnectionString"] ?? string.Empty;
+            options.FromEmail = configuration["AzureCommunicationServices__FromEmail"] ?? string.Empty;
+            options.FromName = configuration["AzureCommunicationServices__FromName"] ?? string.Empty;
         });
-        services.AddSingleton<IEmailService, SendGridEmailService>();
+        services.AddSingleton<IEmailService, AcsEmailService>();
 
         // Notification service
         services.AddSingleton<INotificationService, NotificationService>();
