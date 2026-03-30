@@ -35,7 +35,7 @@ oaza/
 │   ├── src/
 │   │   ├── Oaza.Domain/          # Entities, value objects, interfaces, enums
 │   │   ├── Oaza.Application/     # Use cases, DTOs, validators, mapping
-│   │   ├── Oaza.Infrastructure/  # Table Storage repos, Blob Storage, SendGrid, JWT
+│   │   ├── Oaza.Infrastructure/  # Table Storage repos, Blob Storage, ACS Email, JWT
 │   │   └── Oaza.Functions/       # HTTP triggers, DI setup, middleware, auth
 │   └── tests/
 │       ├── Oaza.Domain.Tests/
@@ -73,7 +73,7 @@ oaza/
 - **Azure.Data.Tables** SDK for Table Storage (NOT EF Core — no relational DB)
 - **ClosedXML** for Excel import/export (.xlsx parsing)
 - **PdfSharpCore** for PDF generation (settlement sheets)
-- **SendGrid** for magic link emails and notifications (Free tier, 100 emails/day)
+- **Azure Communication Services** for magic link emails and notifications
 - **FluentValidation** for request validation
 - **System.IdentityModel.Tokens.Jwt** for JWT generation/validation
 
@@ -83,7 +83,7 @@ oaza/
 <!-- Oaza.Infrastructure -->
 <PackageReference Include="Azure.Data.Tables" />
 <PackageReference Include="Azure.Storage.Blobs" />
-<PackageReference Include="SendGrid" />
+<PackageReference Include="Azure.Communication.Email" />
 
 <!-- Oaza.Application -->
 <PackageReference Include="FluentValidation" />
@@ -294,7 +294,7 @@ All endpoints are Azure Functions HTTP triggers. Base path: `/api/`.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/auth/magic-link` | Public | Request magic link — validates email, generates token (GUID), stores in User entity with 15min expiry, sends via SendGrid |
+| POST | `/auth/magic-link` | Public | Request magic link — validates email, generates token (GUID), stores in User entity with 15min expiry, sends via Azure Communication Services |
 | POST | `/auth/magic-link/verify` | Public | Verify magic link token — validates token + expiry + one-time use, returns JWT |
 | GET | `/auth/me` | Authenticated | Returns current user profile (from JWT claims + User entity) |
 
@@ -430,7 +430,7 @@ Timer trigger (CRON `0 0 8 1 * *`): sends reading reminder on 1st of each month.
 
 1. User enters email on login page → POST `/auth/magic-link`
 2. API validates email exists in User table, generates GUID token, stores with 15min expiry
-3. SendGrid sends email with link: `https://oaza.cendelinovi.cz/auth/verify?token={token}&email={email}`
+3. Azure Communication Services sends email with link: `https://oaza.cendelinovi.cz/auth/verify?token={token}&email={email}`
 4. User clicks link → frontend calls POST `/auth/magic-link/verify`
 5. API validates token, marks as used, returns JWT (signed with app secret, 24h expiry)
 6. Frontend stores JWT in memory (not localStorage), sends as Bearer token
@@ -535,9 +535,9 @@ JwtSecret=<random-256bit-key>
 JwtIssuer=oaza.cendelinovi.cz
 EntraId__TenantId=<entra-tenant-id>
 EntraId__ClientId=<entra-app-client-id>
-SendGrid__ApiKey=<sendgrid-api-key>
-SendGrid__FromEmail=portal@cendelinovi.cz
-SendGrid__FromName=Oáza Zadní Kopanina
+AzureCommunicationServices__ConnectionString=<acs-connection-string>
+AzureCommunicationServices__FromEmail=DoNotReply@<acs-domain>
+AzureCommunicationServices__FromName=Oáza Zadní Kopanina
 AppUrl=https://oaza.cendelinovi.cz
 ```
 
