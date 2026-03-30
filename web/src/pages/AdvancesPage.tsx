@@ -131,22 +131,22 @@ export function AdvancesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Zálohy</h1>
-        <p className="mt-1 text-sm text-gray-600">Měsíční zálohy pro jednotlivé domácnosti — oddělené složky</p>
+        <h1 className="text-2xl font-bold text-text-primary">Zálohy</h1>
+        <p className="mt-1 text-sm text-text-secondary">Měsíční zálohy pro jednotlivé domácnosti — oddělené složky</p>
       </div>
 
       {msg && (
-        <div className={`rounded-md border p-3 ${msg.type === 'ok' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-          <p className={`text-sm ${msg.type === 'ok' ? 'text-green-700' : 'text-red-700'}`}>{msg.text}</p>
+        <div className={`rounded-xl border p-3 ${msg.type === 'ok' ? 'border-success/20 bg-success-light' : 'border-danger/20 bg-danger-light'}`}>
+          <p className={`text-sm ${msg.type === 'ok' ? 'text-success' : 'text-danger'}`}>{msg.text}</p>
         </div>
       )}
 
       {/* ═══ Global settings ═══ */}
-      <div className="bg-white border rounded-lg p-6">
+      <div className="bg-surface-raised border border-border rounded-2xl p-6 shadow-card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Nastavení</h2>
           {isAdmin && !editing && (
-            <button onClick={startEdit} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+            <button onClick={startEdit} className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium">
               Upravit
             </button>
           )}
@@ -154,84 +154,84 @@ export function AdvancesPage() {
 
         {!editing ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs font-medium text-blue-600 uppercase">Cena vody</p>
-              <p className="text-xl font-bold mt-1">{fmtD(settings?.waterPricePerM3, 2)} <span className="text-sm font-normal text-gray-500">Kč/m³</span></p>
-              <p className="text-xs text-gray-400 mt-0.5">Platnost: {fmtDate(settings?.waterPriceValidFrom)} — {settings?.waterPriceValidTo ? fmtDate(settings.waterPriceValidTo) : '∞'}</p>
+            <div className="p-3 bg-accent-light rounded-xl">
+              <p className="text-xs font-medium text-accent uppercase">Cena vody</p>
+              <p className="text-xl font-bold mt-1">{fmtD(settings?.waterPricePerM3, 2)} <span className="text-sm font-normal text-text-muted">Kč/m³</span></p>
+              <p className="text-xs text-text-muted mt-0.5">Platnost: {fmtDate(settings?.waterPriceValidFrom)} — {settings?.waterPriceValidTo ? fmtDate(settings.waterPriceValidTo) : '∞'}</p>
             </div>
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <p className="text-xs font-medium text-yellow-700 uppercase">Elektřina vodárna</p>
-              <p className="text-xl font-bold mt-1">{fmt(settings?.monthlyElectricityCost)} <span className="text-sm font-normal text-gray-500">Kč/měsíc celkem</span></p>
+            <div className="p-3 bg-warning-light rounded-xl">
+              <p className="text-xs font-medium text-warning uppercase">Elektřina vodárna</p>
+              <p className="text-xl font-bold mt-1">{fmt(settings?.monthlyElectricityCost)} <span className="text-sm font-normal text-text-muted">Kč/měsíc celkem</span></p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs font-medium text-gray-600 uppercase">Společný základ</p>
-              <p className="text-xl font-bold mt-1">{fmt(settings?.monthlyCommonBaseFee)} <span className="text-sm font-normal text-gray-500">Kč/dům/měsíc</span></p>
+            <div className="p-3 bg-surface-sunken rounded-xl">
+              <p className="text-xs font-medium text-text-secondary uppercase">Společný základ</p>
+              <p className="text-xl font-bold mt-1">{fmt(settings?.monthlyCommonBaseFee)} <span className="text-sm font-normal text-text-muted">Kč/dům/měsíc</span></p>
             </div>
-            <div className="p-3 bg-red-50 rounded-lg">
-              <p className="text-xs font-medium text-red-600 uppercase">Průměrná ztráta</p>
-              <p className="text-xl font-bold mt-1">{fmtD(calc?.monthlyLossM3)} <span className="text-sm font-normal text-gray-500">m³/měsíc</span></p>
+            <div className="p-3 bg-danger-light rounded-xl">
+              <p className="text-xs font-medium text-danger uppercase">Průměrná ztráta</p>
+              <p className="text-xl font-bold mt-1">{fmtD(calc?.monthlyLossM3)} <span className="text-sm font-normal text-text-muted">m³/měsíc</span></p>
             </div>
           </div>
         ) : form && (
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cena vody (Kč/m³)</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Cena vody (Kč/m³)</label>
                 <input type="number" step="0.01" value={form.waterPricePerM3}
                   onChange={(e) => setForm({ ...form, waterPricePerM3: parseFloat(e.target.value) || 0 })}
-                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Platnost od</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Platnost od</label>
                 <input type="date" value={form.waterPriceValidFrom?.split('T')[0] ?? ''}
                   onChange={(e) => setForm({ ...form, waterPriceValidFrom: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Platnost do (prázdné = ∞)</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Platnost do (prázdné = ∞)</label>
                 <input type="date" value={form.waterPriceValidTo?.split('T')[0] ?? ''}
                   onChange={(e) => setForm({ ...form, waterPriceValidTo: e.target.value || null })}
-                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Elektřina vodárna — celkem Kč/měsíc</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Elektřina vodárna — celkem Kč/měsíc</label>
                 <input type="number" step="1" value={form.monthlyElectricityCost}
                   onChange={(e) => setForm({ ...form, monthlyElectricityCost: parseFloat(e.target.value) || 0 })}
-                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Společný základ Kč/dům/měsíc</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Společný základ Kč/dům/měsíc</label>
                 <input type="number" step="1" value={form.monthlyCommonBaseFee}
                   onChange={(e) => setForm({ ...form, monthlyCommonBaseFee: parseFloat(e.target.value) || 0 })}
-                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               </div>
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Koeficienty elektřiny (součet = 100%)</h3>
+              <h3 className="text-sm font-semibold text-text-secondary mb-2">Koeficienty elektřiny (součet = 100%)</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {activeHouses.map((h) => (
                   <div key={h.id}>
-                    <label className="block text-xs text-gray-500 mb-0.5">{h.name}</label>
+                    <label className="block text-xs text-text-muted mb-0.5">{h.name}</label>
                     <div className="flex items-center gap-1">
                       <input type="text" inputMode="decimal" value={coeffs[h.id] ?? ''}
                         onChange={(e) => setCoeffs({ ...coeffs, [h.id]: e.target.value })}
-                        placeholder="0" className="w-full border rounded px-2 py-1.5 text-sm text-right" />
-                      <span className="text-xs text-gray-400">%</span>
+                        placeholder="0" className="w-full border border-border rounded-xl px-2 py-1.5 text-sm text-right bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
+                      <span className="text-xs text-text-muted">%</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <p className={`text-xs mt-1 ${Math.abs(coeffSum - 100) > 0.1 ? 'text-red-600 font-medium' : 'text-green-600'}`}>
+              <p className={`text-xs mt-1 ${Math.abs(coeffSum - 100) > 0.1 ? 'text-danger font-medium' : 'text-success'}`}>
                 Součet: {fmtD(coeffSum)}% {Math.abs(coeffSum - 100) > 0.1 ? '(musí být 100%)' : '✓'}
               </p>
             </div>
 
             <div className="flex gap-2">
-              <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">Uložit</button>
-              <button onClick={() => setEditing(false)} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">Zrušit</button>
+              <button onClick={handleSave} className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium">Uložit</button>
+              <button onClick={() => setEditing(false)} className="bg-surface-sunken text-text-secondary px-4 py-2 rounded-xl hover:bg-surface-sunken text-sm">Zrušit</button>
             </div>
           </div>
         )}
@@ -239,86 +239,86 @@ export function AdvancesPage() {
 
       {/* ═══ Per-house advances table ═══ */}
       {calc && (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b">
+        <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
+          <div className="px-6 py-4 border-b border-border">
             <h2 className="text-lg font-semibold">Přehled záloh za jednotlivé domy</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Doporučené zálohy se počítají z průměrné spotřeby za poslední 3 odečty. Klikněte na dům pro nastavení skutečné výše.</p>
+            <p className="text-xs text-text-muted mt-0.5">Doporučené zálohy se počítají z průměrné spotřeby za poslední 3 odečty. Klikněte na dům pro nastavení skutečné výše.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b text-xs text-gray-500 uppercase">
+                <tr className="bg-surface-sunken border-b border-border text-xs text-text-muted uppercase">
                   <th className="text-left px-4 py-3">Domácnost</th>
                   <th className="text-right px-2 py-3">m³/měs</th>
                   <th className="text-right px-2 py-3">Ztráta m³</th>
                   <th className="text-right px-2 py-3">Podíl</th>
-                  <th className="text-center px-2 py-3 bg-blue-50 border-l" colSpan={2}>Voda Kč</th>
-                  <th className="text-center px-2 py-3 bg-yellow-50 border-l" colSpan={2}>Elektřina Kč</th>
-                  <th className="text-center px-2 py-3 bg-gray-100 border-l" colSpan={2}>Společný Kč</th>
-                  <th className="text-right px-3 py-3 bg-green-50 border-l font-bold">Celkem Kč</th>
+                  <th className="text-center px-2 py-3 bg-accent-light border-l border-border" colSpan={2}>Voda Kč</th>
+                  <th className="text-center px-2 py-3 bg-warning-light border-l border-border" colSpan={2}>Elektřina Kč</th>
+                  <th className="text-center px-2 py-3 bg-surface-sunken border-l border-border" colSpan={2}>Společný Kč</th>
+                  <th className="text-right px-3 py-3 bg-success-light border-l border-border font-bold">Celkem Kč</th>
                   {isAdmin && <th className="px-2 py-3"></th>}
                 </tr>
-                <tr className="bg-gray-50 border-b text-[10px] text-gray-400">
+                <tr className="bg-surface-sunken border-b border-border text-[10px] text-text-muted">
                   <th></th><th></th><th></th><th></th>
-                  <th className="px-2 py-1 bg-blue-50 border-l text-right">Dopor.</th>
-                  <th className="px-2 py-1 bg-blue-50 text-right">Aktuální</th>
-                  <th className="px-2 py-1 bg-yellow-50 border-l text-right">Dopor.</th>
-                  <th className="px-2 py-1 bg-yellow-50 text-right">Aktuální</th>
-                  <th className="px-2 py-1 bg-gray-100 border-l text-right">Dopor.</th>
-                  <th className="px-2 py-1 bg-gray-100 text-right">Aktuální</th>
-                  <th className="px-2 py-1 bg-green-50 border-l"></th>
+                  <th className="px-2 py-1 bg-accent-light border-l border-border text-right">Dopor.</th>
+                  <th className="px-2 py-1 bg-accent-light text-right">Aktuální</th>
+                  <th className="px-2 py-1 bg-warning-light border-l border-border text-right">Dopor.</th>
+                  <th className="px-2 py-1 bg-warning-light text-right">Aktuální</th>
+                  <th className="px-2 py-1 bg-surface-sunken border-l border-border text-right">Dopor.</th>
+                  <th className="px-2 py-1 bg-surface-sunken text-right">Aktuální</th>
+                  <th className="px-2 py-1 bg-success-light border-l border-border"></th>
                   {isAdmin && <th></th>}
                 </tr>
               </thead>
               <tbody>
                 {calc.houses.map((h) => (
-                  <tr key={h.houseId} className="border-b hover:bg-gray-50">
+                  <tr key={h.houseId} className="border-b border-border hover:bg-surface-sunken/50">
                     <td className="px-4 py-3">
                       <span className="font-medium">{h.houseName}</span>
-                      {h.hasOverride && <span className="ml-1 text-[10px] text-amber-600 font-medium">upraven</span>}
+                      {h.hasOverride && <span className="ml-1 text-[10px] text-warning font-medium">upraven</span>}
                     </td>
                     <td className="px-2 py-3 text-right font-mono">{fmtD(h.avgMonthlyM3)}</td>
-                    <td className="px-2 py-3 text-right font-mono text-red-500">{fmtD(h.lossShareM3)}</td>
-                    <td className="px-2 py-3 text-right font-mono text-gray-500">{fmtD(h.sharePercent)}%</td>
+                    <td className="px-2 py-3 text-right font-mono text-danger">{fmtD(h.lossShareM3)}</td>
+                    <td className="px-2 py-3 text-right font-mono text-text-muted">{fmtD(h.sharePercent)}%</td>
 
-                    <td className="px-2 py-3 text-right font-mono bg-blue-50/50 border-l text-gray-400">{fmt(h.recommended.water)}</td>
-                    <td className="px-2 py-3 text-right font-mono bg-blue-50/50 font-semibold">
+                    <td className="px-2 py-3 text-right font-mono bg-accent-light/50 border-l border-border text-text-muted">{fmt(h.recommended.water)}</td>
+                    <td className="px-2 py-3 text-right font-mono bg-accent-light/50 font-semibold">
                       {editingHouse === h.houseId
                         ? <input type="number" value={houseForm.water} onChange={(e) => setHouseForm({ ...houseForm, water: e.target.value })}
-                            className="w-16 border rounded px-1 py-0.5 text-right text-sm" />
+                            className="w-16 border border-border rounded-xl px-1 py-0.5 text-right text-sm bg-surface-raised" />
                         : fmt(h.actual.water)}
                     </td>
 
-                    <td className="px-2 py-3 text-right font-mono bg-yellow-50/50 border-l text-gray-400">{fmt(h.recommended.electricity)}</td>
-                    <td className="px-2 py-3 text-right font-mono bg-yellow-50/50 font-semibold">
+                    <td className="px-2 py-3 text-right font-mono bg-warning-light/50 border-l border-border text-text-muted">{fmt(h.recommended.electricity)}</td>
+                    <td className="px-2 py-3 text-right font-mono bg-warning-light/50 font-semibold">
                       {editingHouse === h.houseId
                         ? <input type="number" value={houseForm.elec} onChange={(e) => setHouseForm({ ...houseForm, elec: e.target.value })}
-                            className="w-16 border rounded px-1 py-0.5 text-right text-sm" />
+                            className="w-16 border border-border rounded-xl px-1 py-0.5 text-right text-sm bg-surface-raised" />
                         : fmt(h.actual.electricity)}
                     </td>
 
-                    <td className="px-2 py-3 text-right font-mono bg-gray-50 border-l text-gray-400">{fmt(h.recommended.common)}</td>
-                    <td className="px-2 py-3 text-right font-mono bg-gray-50 font-semibold">
+                    <td className="px-2 py-3 text-right font-mono bg-surface-sunken border-l border-border text-text-muted">{fmt(h.recommended.common)}</td>
+                    <td className="px-2 py-3 text-right font-mono bg-surface-sunken font-semibold">
                       {editingHouse === h.houseId
                         ? <input type="number" value={houseForm.common} onChange={(e) => setHouseForm({ ...houseForm, common: e.target.value })}
-                            className="w-16 border rounded px-1 py-0.5 text-right text-sm" />
+                            className="w-16 border border-border rounded-xl px-1 py-0.5 text-right text-sm bg-surface-raised" />
                         : fmt(h.actual.common)}
                     </td>
 
-                    <td className="px-3 py-3 text-right font-mono font-bold bg-green-50/50 border-l text-green-800">{fmt(h.actual.total)}</td>
+                    <td className="px-3 py-3 text-right font-mono font-bold bg-success-light/50 border-l border-border text-success">{fmt(h.actual.total)}</td>
 
                     {isAdmin && (
                       <td className="px-2 py-3 text-right">
                         {editingHouse === h.houseId ? (
                           <div className="flex gap-1">
-                            <button onClick={saveHouseOverride} className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Uložit</button>
-                            <button onClick={() => setEditingHouse(null)} className="text-xs text-gray-500 hover:text-gray-700">×</button>
+                            <button onClick={saveHouseOverride} className="text-xs bg-accent text-white px-2 py-1 rounded-xl hover:bg-accent-hover">Uložit</button>
+                            <button onClick={() => setEditingHouse(null)} className="text-xs text-text-muted hover:text-text-secondary">×</button>
                           </div>
                         ) : (
                           <div className="flex gap-1">
-                            <button onClick={() => startHouseEdit(h.houseId)} className="text-xs text-blue-600 hover:text-blue-800">Upravit</button>
+                            <button onClick={() => startHouseEdit(h.houseId)} className="text-xs text-accent hover:text-accent-hover">Upravit</button>
                             {h.hasOverride && (
-                              <button onClick={() => resetHouseOverride(h.houseId)} className="text-xs text-gray-400 hover:text-red-600">Reset</button>
+                              <button onClick={() => resetHouseOverride(h.houseId)} className="text-xs text-text-muted hover:text-danger">Reset</button>
                             )}
                           </div>
                         )}
@@ -328,18 +328,18 @@ export function AdvancesPage() {
                 ))}
 
                 {/* Totals */}
-                <tr className="bg-gray-50 font-semibold border-t-2">
+                <tr className="bg-surface-sunken font-semibold border-t-2">
                   <td className="px-4 py-3">Celkem</td>
                   <td className="px-2 py-3 text-right font-mono">{fmtD(calc.houses.reduce((s, h) => s + h.avgMonthlyM3, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono text-red-500">{fmtD(calc.houses.reduce((s, h) => s + h.lossShareM3, 0))}</td>
+                  <td className="px-2 py-3 text-right font-mono text-danger">{fmtD(calc.houses.reduce((s, h) => s + h.lossShareM3, 0))}</td>
                   <td className="px-2 py-3"></td>
-                  <td className="px-2 py-3 text-right font-mono bg-blue-50/50 border-l text-gray-400">{fmt(calc.houses.reduce((s, h) => s + h.recommended.water, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-blue-50/50">{fmt(calc.houses.reduce((s, h) => s + h.actual.water, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-yellow-50/50 border-l text-gray-400">{fmt(calc.houses.reduce((s, h) => s + h.recommended.electricity, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-yellow-50/50">{fmt(calc.houses.reduce((s, h) => s + h.actual.electricity, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-gray-50 border-l text-gray-400">{fmt(calc.houses.reduce((s, h) => s + h.recommended.common, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-gray-50">{fmt(calc.houses.reduce((s, h) => s + h.actual.common, 0))}</td>
-                  <td className="px-3 py-3 text-right font-mono font-bold bg-green-50/50 border-l text-green-800">
+                  <td className="px-2 py-3 text-right font-mono bg-accent-light/50 border-l border-border text-text-muted">{fmt(calc.houses.reduce((s, h) => s + h.recommended.water, 0))}</td>
+                  <td className="px-2 py-3 text-right font-mono bg-accent-light/50">{fmt(calc.houses.reduce((s, h) => s + h.actual.water, 0))}</td>
+                  <td className="px-2 py-3 text-right font-mono bg-warning-light/50 border-l border-border text-text-muted">{fmt(calc.houses.reduce((s, h) => s + h.recommended.electricity, 0))}</td>
+                  <td className="px-2 py-3 text-right font-mono bg-warning-light/50">{fmt(calc.houses.reduce((s, h) => s + h.actual.electricity, 0))}</td>
+                  <td className="px-2 py-3 text-right font-mono bg-surface-sunken border-l border-border text-text-muted">{fmt(calc.houses.reduce((s, h) => s + h.recommended.common, 0))}</td>
+                  <td className="px-2 py-3 text-right font-mono bg-surface-sunken">{fmt(calc.houses.reduce((s, h) => s + h.actual.common, 0))}</td>
+                  <td className="px-3 py-3 text-right font-mono font-bold bg-success-light/50 border-l border-border text-success">
                     {fmt(calc.houses.reduce((s, h) => s + h.actual.total, 0))}
                   </td>
                   {isAdmin && <td></td>}
@@ -350,9 +350,9 @@ export function AdvancesPage() {
         </div>
       )}
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
-        <p className="font-semibold text-amber-800 mb-1">Jak se zálohy počítají</p>
-        <ul className="text-xs text-amber-700 space-y-0.5 list-disc list-inside">
+      <div className="bg-warning-light border border-warning/20 rounded-xl p-4 text-sm">
+        <p className="font-semibold text-warning mb-1">Jak se zálohy počítají</p>
+        <ul className="text-xs text-warning space-y-0.5 list-disc list-inside">
           <li><strong>Voda:</strong> (průměrná spotřeba + poměrná ztráta) × cena za m³. Ztráta se rozděluje poměrně dle spotřeby.</li>
           <li><strong>Elektřina vodárna:</strong> celkový náklad × koeficient domu (suma koeficientů = 100%).</li>
           <li><strong>Společný základ:</strong> fixní částka za údržbu, pojištění, správu — stejná pro každý dům.</li>

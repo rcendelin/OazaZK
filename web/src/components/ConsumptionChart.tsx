@@ -13,6 +13,7 @@ import { useAuth } from '../auth/AuthContext.tsx';
 import { useApi } from '../hooks/useApi.ts';
 import { getChartData } from '../api/readings.ts';
 import { getHouses } from '../api/houses.ts';
+import { Spinner } from './Spinner.tsx';
 import type { ChartDataPoint, House } from '../types/index.ts';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
@@ -23,11 +24,8 @@ const czNumber = new Intl.NumberFormat('cs-CZ', {
 type TimeRange = 6 | 12 | 24;
 
 interface ConsumptionChartProps {
-  /** If set, locks chart to a specific house (no house selector shown) */
   fixedHouseId?: string;
-  /** Default time range in months */
   defaultRange?: TimeRange;
-  /** Whether to show house filter dropdown (admin only) */
   showHouseFilter?: boolean;
 }
 
@@ -90,9 +88,9 @@ export function ConsumptionChart({
   }, [chartData]);
 
   return (
-    <div className="rounded-lg bg-white p-5 shadow-sm">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">
+    <div className="rounded-2xl bg-surface-raised p-6 shadow-card">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-lg font-semibold text-text-primary">
           Graf spotřeby
           {chartData?.houseName ? ` — ${chartData.houseName}` : ''}
         </h3>
@@ -103,7 +101,7 @@ export function ConsumptionChart({
               onChange={(e) =>
                 setSelectedHouseId(e.target.value || undefined)
               }
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               <option value="">Celkem (všechny domy)</option>
               {houses.map((h) => (
@@ -113,16 +111,16 @@ export function ConsumptionChart({
               ))}
             </select>
           )}
-          <div className="flex rounded-md border border-gray-300">
+          <div className="flex overflow-hidden rounded-xl border border-border">
             {([6, 12, 24] as TimeRange[]).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`px-3.5 py-2 text-sm font-medium transition-all ${
                   timeRange === range
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                } ${range === 6 ? 'rounded-l-md' : ''} ${range === 24 ? 'rounded-r-md' : ''}`}
+                    ? 'bg-accent text-white'
+                    : 'bg-surface-raised text-text-secondary hover:bg-surface-sunken'
+                }`}
               >
                 {range} měs.
               </button>
@@ -132,20 +130,20 @@ export function ConsumptionChart({
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="flex items-center justify-center py-16">
+          <Spinner size="lg" />
         </div>
       )}
 
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="rounded-xl bg-danger-light p-4">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
       {!loading && !error && chartDataForRecharts.length === 0 && (
-        <div className="py-12 text-center">
-          <p className="text-sm text-gray-400">
+        <div className="py-16 text-center">
+          <p className="text-sm text-text-muted">
             Pro vybrané období nejsou k dispozici žádná data.
           </p>
         </div>
@@ -157,48 +155,54 @@ export function ConsumptionChart({
             data={chartDataForRecharts}
             margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fill: '#94a3b8' }}
               angle={-45}
               textAnchor="end"
               height={60}
             />
             <YAxis
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fill: '#94a3b8' }}
               tickFormatter={(value: number) => czNumber.format(value)}
               label={{
-                value: 'm\³',
+                value: 'm\u00B3',
                 position: 'insideTopLeft',
                 offset: -5,
-                style: { fontSize: 12 },
+                style: { fontSize: 12, fill: '#94a3b8' },
               }}
             />
             <Tooltip
+              contentStyle={{
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.06)',
+                fontSize: '13px',
+              }}
               formatter={(value) => [
-                `${czNumber.format(Number(value))} m\³`,
+                `${czNumber.format(Number(value))} m\u00B3`,
                 'Spotřeba',
               ]}
-              labelStyle={{ fontWeight: 'bold' }}
+              labelStyle={{ fontWeight: 600 }}
             />
             <Line
               type="monotone"
               dataKey="consumption"
-              stroke="#2563eb"
-              strokeWidth={2}
-              dot={{ fill: '#2563eb', r: 4 }}
-              activeDot={{ r: 6 }}
+              stroke="#0d9488"
+              strokeWidth={2.5}
+              dot={{ fill: '#0d9488', r: 4, strokeWidth: 0 }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
             {averageConsumption !== null && (
               <ReferenceLine
                 y={averageConsumption}
-                stroke="#9ca3af"
+                stroke="#94a3b8"
                 strokeDasharray="5 5"
                 label={{
                   value: `Prům. ${czNumber.format(averageConsumption)}`,
                   position: 'insideTopRight',
-                  style: { fontSize: 11, fill: '#9ca3af' },
+                  style: { fontSize: 11, fill: '#94a3b8' },
                 }}
               />
             )}

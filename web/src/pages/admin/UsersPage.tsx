@@ -8,9 +8,9 @@ import type { User, House, UserRole, AuthMethod } from '../../types/index';
 const czDate = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
 
 const roleBadge: Record<UserRole, { label: string; cls: string }> = {
-  Admin: { label: 'Admin', cls: 'bg-red-100 text-red-700' },
-  Member: { label: 'Člen', cls: 'bg-blue-100 text-blue-700' },
-  Accountant: { label: 'Účetní', cls: 'bg-green-100 text-green-700' },
+  Admin: { label: 'Admin', cls: 'bg-danger-light text-danger' },
+  Member: { label: 'Člen', cls: 'bg-accent-light text-accent' },
+  Accountant: { label: 'Účetní', cls: 'bg-success-light text-success' },
 };
 
 const authMethodLabel: Record<AuthMethod, string> = {
@@ -117,56 +117,56 @@ export function UsersPage() {
   };
 
   if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
-  if (error) return <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>;
+  if (error) return <div className="bg-danger-light text-danger p-4 rounded-2xl">{error}</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Správa uživatelů</h1>
-          <p className="text-sm text-gray-500 mt-1">Přehled a správa uživatelů portálu</p>
+          <h1 className="text-2xl font-bold text-text-primary">Správa uživatelů</h1>
+          <p className="text-sm text-text-muted mt-1">Přehled a správa uživatelů portálu</p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium"
         >
           {showCreate ? 'Zrušit' : 'Pozvat uživatele'}
         </button>
       </div>
 
       {showCreate && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
+        <div className="bg-surface-raised border border-border rounded-2xl p-6 mb-6 shadow-card">
           <h2 className="text-lg font-semibold mb-4">Nový uživatel</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Jméno *</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Jméno *</label>
               <input type="text" value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                 placeholder="Jan Novák"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Email *</label>
               <input type="email" value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 placeholder="novak@example.cz"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Role</label>
               <select value={createForm.role}
                 onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="Member">Člen</option>
                 <option value="Accountant">Účetní</option>
                 <option value="Admin">Admin</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Domácnost</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Domácnost</label>
               <select value={createForm.houseId}
                 onChange={(e) => setCreateForm({ ...createForm, houseId: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="">— nepřiřazeno —</option>
                 {houses?.filter((h) => h.isActive).map((h) => (
                   <option key={h.id} value={h.id}>{h.name}</option>
@@ -174,51 +174,51 @@ export function UsersPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Způsob přihlášení</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Způsob přihlášení</label>
               <select value={createForm.authMethod}
                 onChange={(e) => setCreateForm({ ...createForm, authMethod: e.target.value as AuthMethod })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20">
                 <option value="MagicLink">Magic link (email)</option>
                 <option value="EntraId">Microsoft (Entra ID)</option>
               </select>
             </div>
           </div>
-          {createError && <p className="text-sm text-red-600 mt-3">{createError}</p>}
+          {createError && <p className="text-sm text-danger mt-3">{createError}</p>}
           <div className="mt-4 flex gap-2">
             <button onClick={handleCreate}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">Pozvat</button>
+              className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium">Pozvat</button>
             <button onClick={() => { setShowCreate(false); setCreateForm(emptyCreateForm); setCreateError(null); }}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">Zrušit</button>
+              className="bg-surface-sunken text-text-secondary px-4 py-2 rounded-xl hover:bg-surface-sunken text-sm">Zrušit</button>
           </div>
         </div>
       )}
 
-      <div className="bg-white border rounded-lg overflow-hidden">
+      <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Jméno</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Email</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Role</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Domácnost</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Auth</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Poslední přihlášení</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-700">Akce</th>
+              <tr className="bg-surface-sunken border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Jméno</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Email</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Role</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Domácnost</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Auth</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Poslední přihlášení</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Akce</th>
               </tr>
             </thead>
             <tbody>
               {users?.map((user) =>
                 editId === user.id ? (
-                  <tr key={user.id} className="border-b bg-blue-50">
+                  <tr key={user.id} className="border-b border-border bg-accent-light">
                     <td className="px-4 py-2">
                       <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                        className="w-full border rounded px-2 py-1 text-sm" />
+                        className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" />
                     </td>
-                    <td className="px-4 py-2 text-gray-500">{user.email}</td>
+                    <td className="px-4 py-2 text-text-muted">{user.email}</td>
                     <td className="px-4 py-2">
                       <select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value as UserRole })}
-                        className="border rounded px-2 py-1 text-sm">
+                        className="border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised">
                         <option value="Member">Člen</option>
                         <option value="Accountant">Účetní</option>
                         <option value="Admin">Admin</option>
@@ -226,14 +226,14 @@ export function UsersPage() {
                     </td>
                     <td className="px-4 py-2">
                       <select value={editForm.houseId} onChange={(e) => setEditForm({ ...editForm, houseId: e.target.value })}
-                        className="border rounded px-2 py-1 text-sm">
+                        className="border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised">
                         <option value="">— nepřiřazeno —</option>
                         {houses?.filter((h) => h.isActive).map((h) => (
                           <option key={h.id} value={h.id}>{h.name}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-2 text-gray-500">{authMethodLabel[user.authMethod]}</td>
+                    <td className="px-4 py-2 text-text-muted">{authMethodLabel[user.authMethod]}</td>
                     <td className="px-4 py-2">
                       <label className="flex items-center gap-2 text-xs">
                         <input type="checkbox" checked={editForm.notificationsEnabled}
@@ -244,40 +244,40 @@ export function UsersPage() {
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex gap-1 justify-end">
-                        <button onClick={handleUpdate} className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Uložit</button>
-                        <button onClick={() => setEditId(null)} className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-200">Zrušit</button>
+                        <button onClick={handleUpdate} className="bg-accent text-white px-3 py-1 rounded-xl text-xs hover:bg-accent-hover">Uložit</button>
+                        <button onClick={() => setEditId(null)} className="bg-surface-sunken text-text-secondary px-3 py-1 rounded-xl text-xs hover:bg-surface-sunken">Zrušit</button>
                       </div>
-                      {editError && <p className="text-xs text-red-600 mt-1">{editError}</p>}
+                      {editError && <p className="text-xs text-danger mt-1">{editError}</p>}
                     </td>
                   </tr>
                 ) : (
-                  <tr key={user.id} className="border-b hover:bg-gray-50">
+                  <tr key={user.id} className="border-b border-border hover:bg-surface-sunken/50">
                     <td className="px-4 py-3 font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3 text-text-secondary">{user.email}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge[user.role].cls}`}>
                         {roleBadge[user.role].label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{houseName(user.houseId)}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{authMethodLabel[user.authMethod]}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
+                    <td className="px-4 py-3 text-text-secondary">{houseName(user.houseId)}</td>
+                    <td className="px-4 py-3 text-text-muted text-xs">{authMethodLabel[user.authMethod]}</td>
+                    <td className="px-4 py-3 text-text-muted text-xs">
                       {user.lastLogin ? czDate.format(new Date(user.lastLogin)) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => startEdit(user)} className="text-blue-600 hover:text-blue-800 text-xs font-medium">Upravit</button>
+                      <button onClick={() => startEdit(user)} className="text-accent hover:text-accent-hover text-xs font-medium">Upravit</button>
                     </td>
                   </tr>
                 ),
               )}
               {(!users || users.length === 0) && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Žádní uživatelé</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-text-muted">Žádní uživatelé</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
-      <p className="text-xs text-gray-400 mt-4">Celkem uživatelů: {users?.length ?? 0}</p>
+      <p className="text-xs text-text-muted mt-4">Celkem uživatelů: {users?.length ?? 0}</p>
     </div>
   );
 }

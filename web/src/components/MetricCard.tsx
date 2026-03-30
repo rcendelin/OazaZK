@@ -8,16 +8,10 @@ interface MetricCardProps {
   trend?: 'up' | 'down' | 'neutral';
 }
 
-const trendColors: Record<string, string> = {
-  up: 'text-red-500',
-  down: 'text-green-500',
-  neutral: 'text-gray-400',
-};
-
-const trendArrows: Record<string, string> = {
-  up: '\u2191',
-  down: '\u2193',
-  neutral: '\u2192',
+const trendConfig = {
+  up: { color: 'text-danger', bg: 'bg-danger-light', arrow: '\u2191' },
+  down: { color: 'text-success', bg: 'bg-success-light', arrow: '\u2193' },
+  neutral: { color: 'text-text-muted', bg: 'bg-surface-sunken', arrow: '\u2192' },
 };
 
 export function MetricCard({
@@ -28,24 +22,26 @@ export function MetricCard({
   trend,
 }: MetricCardProps) {
   return (
-    <div className="rounded-lg bg-white p-5 shadow-sm">
+    <div className="group rounded-2xl bg-surface-raised p-5 shadow-card transition-shadow duration-200 hover:shadow-card-hover">
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <p className="text-[13px] font-medium text-text-muted">{title}</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <p className="text-2xl font-bold tracking-tight text-text-primary">{value}</p>
             {trend && (
-              <span className={`text-sm font-medium ${trendColors[trend]}`}>
-                {trendArrows[trend]}
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${trendConfig[trend].bg} ${trendConfig[trend].color}`}>
+                {trendConfig[trend].arrow}
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="mt-1 text-sm text-gray-400">{subtitle}</p>
+            <p className="mt-1.5 text-[13px] text-text-muted">{subtitle}</p>
           )}
         </div>
         {icon && (
-          <div className="ml-3 shrink-0 text-gray-400">{icon}</div>
+          <div className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-light text-accent">
+            {icon}
+          </div>
         )}
       </div>
     </div>

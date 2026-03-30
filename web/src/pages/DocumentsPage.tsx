@@ -31,10 +31,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  stanovy: 'bg-blue-100 text-blue-700',
-  zapisy: 'bg-green-100 text-green-700',
-  smlouvy: 'bg-purple-100 text-purple-700',
-  ostatni: 'bg-gray-100 text-gray-700',
+  stanovy: 'bg-accent-light text-accent',
+  zapisy: 'bg-success-light text-success',
+  smlouvy: 'bg-purple-50 text-purple-600',
+  ostatni: 'bg-surface-sunken text-text-secondary',
 };
 
 const formatDate = (dateStr: string): string =>
@@ -124,11 +124,11 @@ export function DocumentsPage() {
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dokumenty</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Dokumenty</h1>
         {isAdmin && (
           <button
             onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="inline-flex items-center rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
           >
             Nahrat dokument
           </button>
@@ -136,7 +136,7 @@ export function DocumentsPage() {
       </div>
 
       {/* Category tabs */}
-      <div className="mt-6 border-b border-gray-200">
+      <div className="mt-6 border-b border-border">
         <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Kategorie">
           {CATEGORIES.map((cat) => (
             <button
@@ -144,8 +144,8 @@ export function DocumentsPage() {
               onClick={() => setActiveCategory(cat.key)}
               className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
                 activeCategory === cat.key
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-text-muted hover:border-border-strong hover:text-text-secondary'
               }`}
             >
               {cat.label}
@@ -156,13 +156,13 @@ export function DocumentsPage() {
 
       {/* Error messages */}
       {error && (
-        <div className="mt-4 rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mt-4 rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
       {downloadError && (
-        <div className="mt-4 rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{downloadError}</p>
+        <div className="mt-4 rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{downloadError}</p>
         </div>
       )}
 
@@ -176,7 +176,7 @@ export function DocumentsPage() {
       {/* Empty state */}
       {!loading && !error && documents && documents.length === 0 && (
         <div className="mt-8 text-center">
-          <p className="text-gray-500">Zadne dokumenty v teto kategorii.</p>
+          <p className="text-text-muted">Zadne dokumenty v teto kategorii.</p>
         </div>
       )}
 
@@ -184,30 +184,30 @@ export function DocumentsPage() {
       {!loading && documents && documents.length > 0 && (
         <>
           <div className="mt-6 hidden overflow-x-auto md:block">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-surface-sunken">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Nazev dokumentu
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Kategorie
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Datum nahrani
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Velikost
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Verze
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Akce
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className="divide-y divide-border bg-surface-raised">
                 {documents.map((doc) => (
                   <DocumentRow
                     key={doc.id}
@@ -232,25 +232,25 @@ export function DocumentsPage() {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="rounded-lg bg-white p-4 shadow-sm"
+                className="rounded-2xl bg-surface-raised p-4 shadow-card"
               >
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-text-primary">
                       {doc.name}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          CATEGORY_COLORS[doc.category] ?? 'bg-gray-100 text-gray-700'
+                          CATEGORY_COLORS[doc.category] ?? 'bg-surface-sunken text-text-secondary'
                         }`}
                       >
                         {CATEGORY_LABELS[doc.category] ?? doc.category}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-text-muted">
                         {formatDate(doc.uploadedAt)}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-text-muted">
                         {formatFileSize(doc.fileSizeBytes)}
                       </span>
                     </div>
@@ -259,13 +259,13 @@ export function DocumentsPage() {
                 <div className="mt-3 flex flex-wrap gap-3">
                   <button
                     onClick={() => void handleDownload(doc)}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                    className="text-sm font-medium text-accent hover:text-accent-hover"
                   >
                     Stahnout
                   </button>
                   <button
                     onClick={() => void handleToggleVersions(doc)}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-800"
+                    className="text-sm font-medium text-text-secondary hover:text-text-primary"
                   >
                     {expandedDocId === doc.id ? 'Skryt verze' : 'Verze'}
                   </button>
@@ -273,13 +273,13 @@ export function DocumentsPage() {
                     <>
                       <button
                         onClick={() => setVersionUploadTarget(doc)}
-                        className="text-sm font-medium text-green-600 hover:text-green-800"
+                        className="text-sm font-medium text-success hover:text-emerald-600"
                       >
                         Nova verze
                       </button>
                       <button
                         onClick={() => setDeleteTarget(doc)}
-                        className="text-sm font-medium text-red-600 hover:text-red-800"
+                        className="text-sm font-medium text-danger hover:text-danger"
                       >
                         Smazat
                       </button>
@@ -288,19 +288,19 @@ export function DocumentsPage() {
                 </div>
                 {/* Mobile version list */}
                 {expandedDocId === doc.id && (
-                  <div className="mt-3 border-t border-gray-100 pt-3">
+                  <div className="mt-3 border-t border-border pt-3">
                     {versionsLoading && <Spinner />}
                     {!versionsLoading && versions.length === 0 && (
-                      <p className="text-xs text-gray-400">Zadne verze</p>
+                      <p className="text-xs text-text-muted">Zadne verze</p>
                     )}
                     {!versionsLoading && versions.map((v) => (
                       <div key={v.versionNumber} className="flex items-center justify-between py-1">
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-text-muted">
                           v{v.versionNumber} - {formatDate(v.uploadedAt)} - {formatFileSize(v.fileSizeBytes)}
                         </span>
                         <button
                           onClick={() => void handleDownloadVersion(doc, v.versionNumber)}
-                          className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                          className="text-xs font-medium text-accent hover:text-accent-hover"
                         >
                           Stahnout
                         </button>
@@ -386,11 +386,11 @@ function DocumentRow({
 }: DocumentRowProps) {
   return (
     <>
-      <tr className="hover:bg-gray-50">
-        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+      <tr className="hover:bg-surface-sunken/50">
+        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-text-primary">
           <button
             onClick={onToggleVersions}
-            className="text-left hover:text-blue-600"
+            className="text-left hover:text-accent"
           >
             {doc.name}
           </button>
@@ -398,22 +398,22 @@ function DocumentRow({
         <td className="whitespace-nowrap px-4 py-3 text-sm">
           <span
             className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-              CATEGORY_COLORS[doc.category] ?? 'bg-gray-100 text-gray-700'
+              CATEGORY_COLORS[doc.category] ?? 'bg-surface-sunken text-text-secondary'
             }`}
           >
             {CATEGORY_LABELS[doc.category] ?? doc.category}
           </span>
         </td>
-        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-text-muted">
           {formatDate(doc.uploadedAt)}
         </td>
-        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-text-muted">
           {formatFileSize(doc.fileSizeBytes)}
         </td>
-        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+        <td className="whitespace-nowrap px-4 py-3 text-sm text-text-muted">
           <button
             onClick={onToggleVersions}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-accent hover:text-accent-hover"
           >
             {isExpanded ? 'Skryt' : 'Zobrazit'}
           </button>
@@ -421,7 +421,7 @@ function DocumentRow({
         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
           <button
             onClick={onDownload}
-            className="font-medium text-blue-600 hover:text-blue-800"
+            className="font-medium text-accent hover:text-accent-hover"
           >
             Stahnout
           </button>
@@ -429,13 +429,13 @@ function DocumentRow({
             <>
               <button
                 onClick={onUploadVersion}
-                className="ml-4 font-medium text-green-600 hover:text-green-800"
+                className="ml-4 font-medium text-success hover:text-emerald-600"
               >
                 Nova verze
               </button>
               <button
                 onClick={onDelete}
-                className="ml-4 font-medium text-red-600 hover:text-red-800"
+                className="ml-4 font-medium text-danger hover:text-danger"
               >
                 Smazat
               </button>
@@ -445,19 +445,19 @@ function DocumentRow({
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="bg-gray-50 px-8 py-3">
+          <td colSpan={6} className="bg-surface-sunken px-8 py-3">
             {versionsLoading && (
               <div className="flex justify-center py-2">
                 <Spinner />
               </div>
             )}
             {!versionsLoading && versions.length === 0 && (
-              <p className="text-sm text-gray-400">Zadne verze k zobrazeni</p>
+              <p className="text-sm text-text-muted">Zadne verze k zobrazeni</p>
             )}
             {!versionsLoading && versions.length > 0 && (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-500">
+                  <tr className="text-xs text-text-muted">
                     <th className="pb-1 text-left font-medium">Verze</th>
                     <th className="pb-1 text-left font-medium">Datum</th>
                     <th className="pb-1 text-left font-medium">Velikost</th>
@@ -466,14 +466,14 @@ function DocumentRow({
                 </thead>
                 <tbody>
                   {versions.map((v) => (
-                    <tr key={v.versionNumber} className="border-t border-gray-200">
-                      <td className="py-1.5 text-gray-700">v{v.versionNumber}</td>
-                      <td className="py-1.5 text-gray-500">{formatDate(v.uploadedAt)}</td>
-                      <td className="py-1.5 text-gray-500">{formatFileSize(v.fileSizeBytes)}</td>
+                    <tr key={v.versionNumber} className="border-t border-border">
+                      <td className="py-1.5 text-text-secondary">v{v.versionNumber}</td>
+                      <td className="py-1.5 text-text-muted">{formatDate(v.uploadedAt)}</td>
+                      <td className="py-1.5 text-text-muted">{formatFileSize(v.fileSizeBytes)}</td>
                       <td className="py-1.5 text-right">
                         <button
                           onClick={() => onDownloadVersion(v.versionNumber)}
-                          className="font-medium text-blue-600 hover:text-blue-800"
+                          className="font-medium text-accent hover:text-accent-hover"
                         >
                           Stahnout
                         </button>
@@ -539,18 +539,18 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
       aria-modal="true"
     >
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className="relative z-10 mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">Nahrat dokument</h2>
+      <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-surface-raised p-6 shadow-dialog">
+        <h2 className="text-lg font-semibold text-text-primary">Nahrat dokument</h2>
 
         <div className="mt-4 space-y-4">
           {/* Document name */}
           <div>
             <label
               htmlFor="doc-name"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-text-secondary"
             >
               Nazev dokumentu
             </label>
@@ -559,7 +559,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               placeholder="Nazev dokumentu"
             />
           </div>
@@ -568,7 +568,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
           <div>
             <label
               htmlFor="doc-category"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-text-secondary"
             >
               Kategorie
             </label>
@@ -576,7 +576,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               id="doc-category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               <option value="stanovy">Stanovy</option>
               <option value="zapisy">Zapisy</option>
@@ -587,18 +587,18 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
 
           {/* File upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-text-secondary">
               Soubor
             </label>
             <div className="mt-1">
               {file ? (
-                <div className="flex items-center justify-between rounded-md border border-gray-300 px-3 py-2">
-                  <span className="truncate text-sm text-gray-700">
+                <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
+                  <span className="truncate text-sm text-text-secondary">
                     {file.name} ({formatFileSize(file.size)})
                   </span>
                   <button
                     onClick={() => setFile(null)}
-                    className="ml-2 text-sm text-red-600 hover:text-red-800"
+                    className="ml-2 text-sm text-danger hover:text-danger"
                   >
                     Odebrat
                   </button>
@@ -615,8 +615,8 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
 
           {/* Error */}
           {uploadError && (
-            <div className="rounded-md bg-red-50 p-3">
-              <p className="text-sm text-red-700">{uploadError}</p>
+            <div className="rounded-xl bg-danger-light p-3">
+              <p className="text-sm text-danger">{uploadError}</p>
             </div>
           )}
         </div>
@@ -626,14 +626,14 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
           <button
             onClick={onClose}
             disabled={uploading}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50"
           >
             Zrusit
           </button>
           <button
             onClick={() => void handleSubmit()}
             disabled={uploading || !file || !name.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? 'Nahravam...' : 'Nahrat'}
           </button>
@@ -690,28 +690,28 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
       aria-modal="true"
     >
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className="relative z-10 mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-gray-900">
+      <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-surface-raised p-6 shadow-dialog">
+        <h2 className="text-lg font-semibold text-text-primary">
           Nahrat novou verzi: {doc.name}
         </h2>
 
         <div className="mt-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-text-secondary">
               Soubor
             </label>
             <div className="mt-1">
               {file ? (
-                <div className="flex items-center justify-between rounded-md border border-gray-300 px-3 py-2">
-                  <span className="truncate text-sm text-gray-700">
+                <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2">
+                  <span className="truncate text-sm text-text-secondary">
                     {file.name} ({formatFileSize(file.size)})
                   </span>
                   <button
                     onClick={() => setFile(null)}
-                    className="ml-2 text-sm text-red-600 hover:text-red-800"
+                    className="ml-2 text-sm text-danger hover:text-danger"
                   >
                     Odebrat
                   </button>
@@ -727,8 +727,8 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
           </div>
 
           {uploadError && (
-            <div className="rounded-md bg-red-50 p-3">
-              <p className="text-sm text-red-700">{uploadError}</p>
+            <div className="rounded-xl bg-danger-light p-3">
+              <p className="text-sm text-danger">{uploadError}</p>
             </div>
           )}
         </div>
@@ -737,14 +737,14 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
           <button
             onClick={onClose}
             disabled={uploading}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50"
           >
             Zrusit
           </button>
           <button
             onClick={() => void handleSubmit()}
             disabled={uploading || !file}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? 'Nahravam...' : 'Nahrat verzi'}
           </button>
