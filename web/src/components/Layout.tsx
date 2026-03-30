@@ -166,7 +166,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* User card */}
       <div className="border-t border-white/10 px-3 py-4">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-teal-400 text-sm font-bold text-white">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-indigo-400 text-sm font-bold text-white">
             {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           <div className="min-w-0 flex-1">

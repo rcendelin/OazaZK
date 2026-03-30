@@ -155,28 +155,28 @@ export function ConsumptionChart({
             data={chartDataForRecharts}
             margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 12, fill: '#94a3b8' }}
+              tick={{ fontSize: 12, fill: '#a1a1aa' }}
               angle={-45}
               textAnchor="end"
               height={60}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: '#94a3b8' }}
+              tick={{ fontSize: 12, fill: '#a1a1aa' }}
               tickFormatter={(value: number) => czNumber.format(value)}
               label={{
                 value: 'm\u00B3',
                 position: 'insideTopLeft',
                 offset: -5,
-                style: { fontSize: 12, fill: '#94a3b8' },
+                style: { fontSize: 12, fill: '#a1a1aa' },
               }}
             />
             <Tooltip
               contentStyle={{
                 borderRadius: '12px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #e4e4e7',
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.06)',
                 fontSize: '13px',
               }}
@@ -189,20 +189,20 @@ export function ConsumptionChart({
             <Line
               type="monotone"
               dataKey="consumption"
-              stroke="#0d9488"
+              stroke="#4f46e5"
               strokeWidth={2.5}
-              dot={{ fill: '#0d9488', r: 4, strokeWidth: 0 }}
+              dot={{ fill: '#4f46e5', r: 4, strokeWidth: 0 }}
               activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
             {averageConsumption !== null && (
               <ReferenceLine
                 y={averageConsumption}
-                stroke="#94a3b8"
+                stroke="#a1a1aa"
                 strokeDasharray="5 5"
                 label={{
                   value: `Prům. ${czNumber.format(averageConsumption)}`,
                   position: 'insideTopRight',
-                  style: { fontSize: 11, fill: '#94a3b8' },
+                  style: { fontSize: 11, fill: '#a1a1aa' },
                 }}
               />
             )}
