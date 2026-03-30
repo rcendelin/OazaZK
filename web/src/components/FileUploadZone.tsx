@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { UploadCloud } from 'lucide-react';
 
 interface FileUploadZoneProps {
   onFileSelected: (file: File) => void;
@@ -62,7 +63,6 @@ export function FileUploadZone({
       if (file && file.size <= MAX_FILE_SIZE) {
         onFileSelected(file);
       }
-      // Reset input so same file can be re-selected
       if (inputRef.current) {
         inputRef.current.value = '';
       }
@@ -82,31 +82,25 @@ export function FileUploadZone({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onClick={handleClick}
-      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 transition-colors ${
+      className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 transition-all duration-200 ${
         disabled
-          ? 'cursor-not-allowed border-gray-200 bg-gray-50'
+          ? 'cursor-not-allowed border-border bg-surface-sunken opacity-60'
           : isDragOver
-            ? 'border-blue-400 bg-blue-50'
-            : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
+            ? 'border-accent bg-accent-light/50 scale-[1.01]'
+            : 'border-border-strong bg-surface-raised hover:border-accent hover:bg-accent-light/20'
       }`}
     >
-      <svg
-        className="mb-3 h-10 w-10 text-gray-400"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth="1.5"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-        />
-      </svg>
-      <p className="text-sm font-medium text-gray-700">
+      <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${
+        isDragOver ? 'bg-accent text-white' : 'bg-surface-sunken text-text-muted'
+      }`}>
+        <UploadCloud size={28} />
+      </div>
+      <p className="text-sm font-medium text-text-primary">
         Přetáhněte soubor sem nebo klikněte
       </p>
-      <p className="mt-1 text-xs text-gray-500">Pouze soubory .xlsx</p>
+      <p className="mt-1.5 text-xs text-text-muted">
+        Maximální velikost 20 MB
+      </p>
       <input
         ref={inputRef}
         type="file"

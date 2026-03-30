@@ -45,27 +45,27 @@ export function MagicLinkVerifyPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 px-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-lg">
-        <h1 className="text-xl font-bold text-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-accent-light to-surface-sunken px-4">
+      <div className="w-full max-w-md rounded-2xl bg-surface-raised p-8 text-center shadow-dialog">
+        <h1 className="text-xl font-bold text-text-primary">
           Ověření přihlášení
         </h1>
 
         {isVerifying && (
           <div className="mt-6 flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-            <p className="text-sm text-gray-600">Ověřuji přihlašovací odkaz...</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+            <p className="text-sm text-text-secondary">Ověřuji přihlašovací odkaz...</p>
           </div>
         )}
 
         {error && (
           <div className="mt-6 space-y-4">
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-xl bg-danger-light p-3 text-sm text-danger">
               {error}
             </div>
             <Link
               to="/login"
-              className="inline-block text-sm text-blue-600 underline hover:text-blue-800"
+              className="inline-block text-sm text-accent underline hover:text-accent-hover"
             >
               Zpět na přihlášení
             </Link>

@@ -92,14 +92,14 @@ function AdminBillingView({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vyúčtování</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-text-primary">Vyúčtování</h1>
+          <p className="mt-1 text-sm text-text-secondary">
             Správa zúčtovacích období a vyúčtování
           </p>
         </div>
         <button
           onClick={() => setShowCreateForm((prev) => !prev)}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         >
           {showCreateForm ? 'Zavřít formulář' : 'Nové zúčtovací období'}
         </button>
@@ -118,14 +118,14 @@ function AdminBillingView({
       {/* Loading */}
       {periodsLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
         </div>
       )}
 
       {/* Error */}
       {periodsError && (
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-700">{periodsError}</p>
+        <div className="rounded-xl bg-danger-light p-4">
+          <p className="text-sm text-danger">{periodsError}</p>
         </div>
       )}
 
@@ -133,8 +133,8 @@ function AdminBillingView({
       {!periodsLoading && !periodsError && periods && (
         <>
           {periods.length === 0 ? (
-            <div className="rounded-md bg-gray-50 py-12 text-center">
-              <p className="text-sm text-gray-500">
+            <div className="rounded-2xl bg-surface-sunken py-12 text-center">
+              <p className="text-sm text-text-muted">
                 Zatím nebylo vytvořeno žádné zúčtovací období.
               </p>
             </div>
@@ -191,15 +191,15 @@ function CreatePeriodForm({ onCreated }: { onCreated: () => void }) {
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+      className="rounded-2xl border border-border bg-surface-raised p-6 shadow-card"
     >
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">
+      <h2 className="mb-4 text-lg font-semibold text-text-primary">
         Nové zúčtovací období
       </h2>
 
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mb-4 rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
@@ -207,7 +207,7 @@ function CreatePeriodForm({ onCreated }: { onCreated: () => void }) {
         <div>
           <label
             htmlFor="period-name"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-text-secondary"
           >
             Název
           </label>
@@ -218,13 +218,13 @@ function CreatePeriodForm({ onCreated }: { onCreated: () => void }) {
             value={form.name}
             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="2. pololetí 2025"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div>
           <label
             htmlFor="period-from"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-text-secondary"
           >
             Datum od
           </label>
@@ -236,13 +236,13 @@ function CreatePeriodForm({ onCreated }: { onCreated: () => void }) {
             onChange={(e) =>
               setForm((prev) => ({ ...prev, dateFrom: e.target.value }))
             }
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div>
           <label
             htmlFor="period-to"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-text-secondary"
           >
             Datum do
           </label>
@@ -254,7 +254,7 @@ function CreatePeriodForm({ onCreated }: { onCreated: () => void }) {
             onChange={(e) =>
               setForm((prev) => ({ ...prev, dateTo: e.target.value }))
             }
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           />
         </div>
       </div>
@@ -263,7 +263,7 @@ function CreatePeriodForm({ onCreated }: { onCreated: () => void }) {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Vytváření...' : 'Vytvořit'}
         </button>
@@ -288,31 +288,31 @@ function PeriodCard({
   onPeriodClosed,
 }: PeriodCardProps) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="rounded-2xl border border-border bg-surface-raised shadow-card">
       {/* Header */}
       <button
         onClick={onSelect}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50"
+        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-surface-sunken/50"
       >
         <div className="flex items-center gap-4">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-text-primary">
               {period.name}
             </h3>
-            <p className="mt-0.5 text-sm text-gray-500">
+            <p className="mt-0.5 text-sm text-text-muted">
               {formatDate(period.dateFrom)} – {formatDate(period.dateTo)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           {period.totalInvoiceAmount !== null && (
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-text-secondary">
               {formatCZK(period.totalInvoiceAmount)} Kč
             </span>
           )}
           <StatusBadge status={period.status} />
           <svg
-            className={`h-5 w-5 text-gray-400 transition-transform ${
+            className={`h-5 w-5 text-text-muted transition-transform ${
               isSelected ? 'rotate-180' : ''
             }`}
             fill="none"
@@ -331,7 +331,7 @@ function PeriodCard({
 
       {/* Expanded detail */}
       {isSelected && (
-        <div className="border-t border-gray-200 px-6 py-4">
+        <div className="border-t border-border px-6 py-4">
           {period.status === 'Open' ? (
             <OpenPeriodDetail
               period={period}
@@ -351,7 +351,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isOpen ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+        isOpen ? 'bg-accent-light text-accent' : 'bg-success-light text-success'
       }`}
     >
       {isOpen ? 'Otevřené' : 'Uzavřené'}
@@ -424,7 +424,7 @@ function OpenPeriodDetail({
         <div className="sm:max-w-xs">
           <label
             htmlFor="method-select"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-text-secondary"
           >
             Metoda rozdělení ztrát
           </label>
@@ -432,7 +432,7 @@ function OpenPeriodDetail({
             id="method-select"
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           >
             <option value="Equal">Rovnoměrně</option>
             <option value="ProportionalToConsumption">Dle spotřeby</option>
@@ -441,21 +441,21 @@ function OpenPeriodDetail({
         <button
           onClick={() => void handleCalculate()}
           disabled={calculating}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {calculating ? 'Výpočet...' : 'Vypočítat vyúčtování'}
         </button>
       </div>
 
       {calcError && (
-        <div className="rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{calcError}</p>
+        <div className="rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{calcError}</p>
         </div>
       )}
 
       {closeError && (
-        <div className="rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{closeError}</p>
+        <div className="rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{closeError}</p>
         </div>
       )}
 
@@ -491,7 +491,7 @@ function OpenPeriodDetail({
             <button
               onClick={() => setShowCloseConfirm(true)}
               disabled={closing}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {closing
                 ? 'Uzavírání...'
@@ -572,30 +572,30 @@ function ClosedPeriodDetail({ period }: { period: BillingPeriodResponse }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-4 border-accent border-t-transparent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-3">
-        <p className="text-sm text-red-700">{error}</p>
+      <div className="rounded-xl bg-danger-light p-3">
+        <p className="text-sm text-danger">{error}</p>
       </div>
     );
   }
 
   if (!settlements || settlements.length === 0) {
     return (
-      <p className="text-sm text-gray-500">Žádná vyúčtování pro toto období.</p>
+      <p className="text-sm text-text-muted">Žádná vyúčtování pro toto období.</p>
     );
   }
 
   return (
     <div className="space-y-4">
       {downloadError && (
-        <div className="rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{downloadError}</p>
+        <div className="rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{downloadError}</p>
         </div>
       )}
       <ClosedSettlementTable
@@ -605,7 +605,7 @@ function ClosedPeriodDetail({ period }: { period: BillingPeriodResponse }) {
       <div className="flex justify-end">
         <button
           onClick={handleDownloadAll}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         >
           Stáhnout vše (ZIP)
         </button>
@@ -634,61 +634,61 @@ function SettlementTable({
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto rounded-2xl border border-border">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-surface-sunken">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
               Dům
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Spotřeba m³
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Ztráta m³
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Podíl %
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Částka Kč
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Zálohy Kč
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Výsledek Kč
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
+        <tbody className="divide-y divide-border bg-surface-raised">
           {houses.map((house) => (
-            <tr key={house.houseId} className="hover:bg-gray-50">
-              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+            <tr key={house.houseId} className="hover:bg-surface-sunken/50">
+              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-text-primary">
                 {house.houseName}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatNumber(house.consumptionM3)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatNumber(house.lossAllocatedM3)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatPercent(house.sharePercent)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatCZK(house.calculatedAmount)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatCZK(house.totalAdvances)}
               </td>
               <td
                 className={`whitespace-nowrap px-4 py-3 text-right text-sm font-mono font-semibold ${
                   house.balance > 0
-                    ? 'text-red-600'
+                    ? 'text-danger'
                     : house.balance < 0
-                      ? 'text-green-600'
-                      : 'text-gray-700'
+                      ? 'text-success'
+                      : 'text-text-secondary'
                 }`}
               >
                 {formatCZK(house.balance)}
@@ -702,26 +702,26 @@ function SettlementTable({
             </tr>
           ))}
           {/* Totals row */}
-          <tr className="bg-gray-50 font-bold">
-            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
+          <tr className="bg-surface-sunken font-bold">
+            <td className="whitespace-nowrap px-4 py-3 text-sm text-text-primary">
               Celkem
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-900">
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatNumber(totals.consumption)}
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-900">
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatNumber(totals.loss)}
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-900">
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatPercent(totals.share)}
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-900">
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatCZK(totals.amount)}
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-900">
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatCZK(totals.advances)}
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-900">
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatCZK(totals.balance)}
             </td>
           </tr>
@@ -741,64 +741,64 @@ function ClosedSettlementTable({
   onDownloadPdf: (houseId: string, houseName?: string) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto rounded-2xl border border-border">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-surface-sunken">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
               Dům
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Spotřeba m³
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Ztráta m³
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Podíl %
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Částka Kč
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Zálohy Kč
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Výsledek Kč
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               PDF
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
+        <tbody className="divide-y divide-border bg-surface-raised">
           {settlements.map((s) => (
-            <tr key={s.houseId} className="hover:bg-gray-50">
-              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">
+            <tr key={s.houseId} className="hover:bg-surface-sunken/50">
+              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-text-primary">
                 {s.houseName}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatNumber(s.consumptionM3)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatNumber(s.lossAllocatedM3)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatPercent(s.sharePercent)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatCZK(s.calculatedAmount)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-gray-700">
+              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
                 {formatCZK(s.totalAdvances)}
               </td>
               <td
                 className={`whitespace-nowrap px-4 py-3 text-right text-sm font-mono font-semibold ${
                   s.balance > 0
-                    ? 'text-red-600'
+                    ? 'text-danger'
                     : s.balance < 0
-                      ? 'text-green-600'
-                      : 'text-gray-700'
+                      ? 'text-success'
+                      : 'text-text-secondary'
                 }`}
               >
                 {formatCZK(s.balance)}
@@ -812,7 +812,7 @@ function ClosedSettlementTable({
               <td className="whitespace-nowrap px-4 py-3 text-right">
                 <button
                   onClick={() => onDownloadPdf(s.houseId, s.houseName)}
-                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                  className="text-sm text-accent hover:text-accent-hover hover:underline"
                 >
                   Stáhnout
                 </button>
@@ -846,29 +846,29 @@ function MemberBillingView({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Vyúčtování</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-2xl font-bold text-text-primary">Vyúčtování</h1>
+        <p className="mt-1 text-sm text-text-secondary">
           Přehled vašeho vyúčtování za uzavřená období
         </p>
       </div>
 
       {periodsLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
         </div>
       )}
 
       {periodsError && (
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-700">{periodsError}</p>
+        <div className="rounded-xl bg-danger-light p-4">
+          <p className="text-sm text-danger">{periodsError}</p>
         </div>
       )}
 
       {!periodsLoading && !periodsError && (
         <>
           {closedPeriods.length === 0 ? (
-            <div className="rounded-md bg-gray-50 py-12 text-center">
-              <p className="text-sm text-gray-500">
+            <div className="rounded-2xl bg-surface-sunken py-12 text-center">
+              <p className="text-sm text-text-muted">
                 Zatím není k dispozici žádné uzavřené vyúčtování.
               </p>
             </div>
@@ -899,23 +899,23 @@ function MemberPeriodCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="rounded-2xl border border-border bg-surface-raised shadow-card">
       <button
         onClick={() => setIsExpanded((prev) => !prev)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50"
+        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-surface-sunken/50"
       >
         <div>
-          <h3 className="text-base font-semibold text-gray-900">
+          <h3 className="text-base font-semibold text-text-primary">
             {period.name}
           </h3>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-text-muted">
             {formatDate(period.dateFrom)} – {formatDate(period.dateTo)}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={period.status} />
           <svg
-            className={`h-5 w-5 text-gray-400 transition-transform ${
+            className={`h-5 w-5 text-text-muted transition-transform ${
               isExpanded ? 'rotate-180' : ''
             }`}
             fill="none"
@@ -933,7 +933,7 @@ function MemberPeriodCard({
       </button>
 
       {isExpanded && (
-        <div className="border-t border-gray-200 px-6 py-4">
+        <div className="border-t border-border px-6 py-4">
           <MemberSettlementDetail periodId={period.id} houseId={houseId} />
         </div>
       )}
@@ -959,15 +959,15 @@ function MemberSettlementDetail({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-4 border-accent border-t-transparent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-3">
-        <p className="text-sm text-red-700">{error}</p>
+      <div className="rounded-xl bg-danger-light p-3">
+        <p className="text-sm text-danger">{error}</p>
       </div>
     );
   }
@@ -977,7 +977,7 @@ function MemberSettlementDetail({
 
   if (!mySettlement) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-text-muted">
         Vyúčtování pro vaši domácnost nebylo nalezeno.
       </p>
     );
@@ -1011,8 +1011,8 @@ function MemberSettlementDetail({
   return (
     <div className="space-y-4">
       {downloadError && (
-        <div className="rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{downloadError}</p>
+        <div className="rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{downloadError}</p>
         </div>
       )}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -1026,10 +1026,10 @@ function MemberSettlementDetail({
           value={`${formatCZK(mySettlement.balance)} Kč`}
           valueClassName={
             mySettlement.balance > 0
-              ? 'text-red-600'
+              ? 'text-danger'
               : mySettlement.balance < 0
-                ? 'text-green-600'
-                : 'text-gray-900'
+                ? 'text-success'
+                : 'text-text-primary'
           }
           note={
             mySettlement.balance > 0
@@ -1043,7 +1043,7 @@ function MemberSettlementDetail({
       <div className="flex justify-end">
         <button
           onClick={() => void handleDownloadPdf()}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         >
           Stáhnout vyúčtování (PDF)
         </button>
@@ -1065,11 +1065,11 @@ function DetailItem({
 }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className={`mt-0.5 text-lg font-semibold ${valueClassName ?? 'text-gray-900'}`}>
+      <p className="text-xs font-medium text-text-muted">{label}</p>
+      <p className={`mt-0.5 text-lg font-semibold ${valueClassName ?? 'text-text-primary'}`}>
         {value}
       </p>
-      {note && <p className="text-xs text-gray-500">{note}</p>}
+      {note && <p className="text-xs text-text-muted">{note}</p>}
     </div>
   );
 }
@@ -1087,16 +1087,16 @@ function MetricCard({
 }) {
   return (
     <div
-      className={`rounded-lg border p-4 ${
+      className={`rounded-2xl border p-4 shadow-card ${
         variant === 'warning'
-          ? 'border-amber-200 bg-amber-50'
-          : 'border-gray-200 bg-white'
+          ? 'border-warning/20 bg-warning-light'
+          : 'border-border bg-surface-raised'
       }`}
     >
-      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <p className="text-sm font-medium text-text-muted">{label}</p>
       <p
         className={`mt-1 text-xl font-semibold ${
-          variant === 'warning' ? 'text-amber-700' : 'text-gray-900'
+          variant === 'warning' ? 'text-warning' : 'text-text-primary'
         }`}
       >
         {value}

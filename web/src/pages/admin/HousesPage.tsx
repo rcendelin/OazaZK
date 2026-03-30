@@ -15,9 +15,9 @@ interface HouseFormData {
 const emptyForm: HouseFormData = { name: '', address: '', contactPerson: '', email: '' };
 
 const roleBadge: Record<string, { label: string; cls: string }> = {
-  Admin: { label: 'Admin', cls: 'bg-red-100 text-red-700' },
-  Member: { label: 'Člen', cls: 'bg-blue-100 text-blue-700' },
-  Accountant: { label: 'Účetní', cls: 'bg-green-100 text-green-700' },
+  Admin: { label: 'Admin', cls: 'bg-danger-light text-danger' },
+  Member: { label: 'Člen', cls: 'bg-accent-light text-accent' },
+  Accountant: { label: 'Účetní', cls: 'bg-success-light text-success' },
 };
 
 export function HousesPage() {
@@ -109,151 +109,151 @@ export function HousesPage() {
   };
 
   if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
-  if (error) return <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>;
+  if (error) return <div className="bg-danger-light text-danger p-4 rounded-2xl">{error}</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Správa domácností</h1>
-          <p className="text-sm text-gray-500 mt-1">Přehled a správa domácností v Oáze</p>
+          <h1 className="text-2xl font-bold text-text-primary">Správa domácností</h1>
+          <p className="text-sm text-text-muted mt-1">Přehled a správa domácností v Oáze</p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium"
         >
           {showCreate ? 'Zrušit' : 'Přidat domácnost'}
         </button>
       </div>
 
       {showCreate && (
-        <div className="bg-white border rounded-lg p-6 mb-6">
+        <div className="bg-surface-raised border border-border rounded-2xl p-6 mb-6 shadow-card">
           <h2 className="text-lg font-semibold mb-4">Nová domácnost</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Název *</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Název *</label>
               <input type="text" value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                 placeholder="např. Novákovi (150)"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Email *</label>
               <input type="email" value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 placeholder="novak@example.cz"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adresa</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Adresa</label>
               <input type="text" value={createForm.address}
                 onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
                 placeholder="Zadní Kopanina 150, Praha 5"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kontaktní osoba</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Kontaktní osoba</label>
               <input type="text" value={createForm.contactPerson}
                 onChange={(e) => setCreateForm({ ...createForm, contactPerson: e.target.value })}
                 placeholder="Jan Novák"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
           </div>
-          {createError && <p className="text-sm text-red-600 mt-3">{createError}</p>}
+          {createError && <p className="text-sm text-danger mt-3">{createError}</p>}
           <div className="mt-4 flex gap-2">
             <button onClick={handleCreate}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">Vytvořit</button>
+              className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium">Vytvořit</button>
             <button onClick={() => { setShowCreate(false); setCreateForm(emptyForm); setCreateError(null); }}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">Zrušit</button>
+              className="bg-surface-sunken text-text-secondary px-4 py-2 rounded-xl hover:bg-surface-sunken text-sm">Zrušit</button>
           </div>
         </div>
       )}
 
-      <div className="bg-white border rounded-lg overflow-hidden">
+      <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Název</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Adresa</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Kontaktní osoba</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Email</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Členové</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Stav</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-700">Akce</th>
+              <tr className="bg-surface-sunken border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Název</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Adresa</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Kontaktní osoba</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Email</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Členové</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Stav</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Akce</th>
               </tr>
             </thead>
             <tbody>
               {houses?.map((house) =>
                 editId === house.id ? (
-                  <tr key={`edit-${house.id}`} className="border-b bg-blue-50">
-                    <td className="px-4 py-2"><input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input type="text" value={editForm.contactPerson} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full border rounded px-2 py-1 text-sm" /></td>
-                    <td className="px-4 py-2 text-gray-400 text-xs">{usersForHouse(house.id).length}</td>
+                  <tr key={`edit-${house.id}`} className="border-b border-border bg-accent-light">
+                    <td className="px-4 py-2"><input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
+                    <td className="px-4 py-2"><input type="text" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
+                    <td className="px-4 py-2"><input type="text" value={editForm.contactPerson} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
+                    <td className="px-4 py-2"><input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
+                    <td className="px-4 py-2 text-text-muted text-xs">{usersForHouse(house.id).length}</td>
                     <td className="px-4 py-2">
-                      <select value={editForm.isActive ? 'true' : 'false'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })} className="border rounded px-2 py-1 text-sm">
+                      <select value={editForm.isActive ? 'true' : 'false'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })} className="border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised">
                         <option value="true">Aktivní</option>
                         <option value="false">Neaktivní</option>
                       </select>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex gap-1 justify-end">
-                        <button onClick={handleUpdate} className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Uložit</button>
-                        <button onClick={() => setEditId(null)} className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-200">Zrušit</button>
+                        <button onClick={handleUpdate} className="bg-accent text-white px-3 py-1 rounded-xl text-xs hover:bg-accent-hover">Uložit</button>
+                        <button onClick={() => setEditId(null)} className="bg-surface-sunken text-text-secondary px-3 py-1 rounded-xl text-xs hover:bg-surface-sunken">Zrušit</button>
                       </div>
-                      {editError && <p className="text-xs text-red-600 mt-1">{editError}</p>}
+                      {editError && <p className="text-xs text-danger mt-1">{editError}</p>}
                     </td>
                   </tr>
                 ) : (
                   <React.Fragment key={house.id}>
-                  <tr className="border-b hover:bg-gray-50">
+                  <tr className="border-b border-border hover:bg-surface-sunken/50">
                     <td className="px-4 py-3 font-medium">{house.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{house.address}</td>
-                    <td className="px-4 py-3 text-gray-600">{house.contactPerson}</td>
-                    <td className="px-4 py-3 text-gray-600">{house.email}</td>
+                    <td className="px-4 py-3 text-text-secondary">{house.address}</td>
+                    <td className="px-4 py-3 text-text-secondary">{house.contactPerson}</td>
+                    <td className="px-4 py-3 text-text-secondary">{house.email}</td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => setExpandedId(expandedId === house.id ? null : house.id)}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                        className="text-accent hover:text-accent-hover text-xs font-medium"
                       >
                         {usersForHouse(house.id).length} {usersForHouse(house.id).length === 1 ? 'uživatel' : usersForHouse(house.id).length >= 2 && usersForHouse(house.id).length <= 4 ? 'uživatelé' : 'uživatelů'}
                         {expandedId === house.id ? ' ▲' : ' ▼'}
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${house.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${house.isActive ? 'bg-success-light text-success' : 'bg-surface-sunken text-text-muted'}`}>
                         {house.isActive ? 'Aktivní' : 'Neaktivní'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex gap-1 justify-end">
-                        <button onClick={() => startEdit(house)} className="text-blue-600 hover:text-blue-800 text-xs font-medium">Upravit</button>
-                        <button onClick={() => toggleActive(house)} className={`text-xs font-medium ${house.isActive ? 'text-amber-600 hover:text-amber-800' : 'text-green-600 hover:text-green-800'}`}>
+                        <button onClick={() => startEdit(house)} className="text-accent hover:text-accent-hover text-xs font-medium">Upravit</button>
+                        <button onClick={() => toggleActive(house)} className={`text-xs font-medium ${house.isActive ? 'text-warning hover:text-warning' : 'text-success hover:text-emerald-600'}`}>
                           {house.isActive ? 'Deaktivovat' : 'Aktivovat'}
                         </button>
                       </div>
                     </td>
                   </tr>
                   {expandedId === house.id && (
-                    <tr key={`${house.id}-members`} className="bg-gray-50">
+                    <tr key={`${house.id}-members`} className="bg-surface-sunken">
                       <td colSpan={7} className="px-6 py-3">
-                        <p className="text-xs font-semibold text-gray-500 mb-2">Členové domácnosti {house.name}</p>
+                        <p className="text-xs font-semibold text-text-muted mb-2">Členové domácnosti {house.name}</p>
                         {usersForHouse(house.id).length === 0 ? (
-                          <p className="text-xs text-gray-400">Žádní přiřazení uživatelé</p>
+                          <p className="text-xs text-text-muted">Žádní přiřazení uživatelé</p>
                         ) : (
                           <div className="flex flex-wrap gap-3">
                             {usersForHouse(house.id).map((u) => (
-                              <div key={u.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border text-xs">
-                                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-medium text-xs">
+                              <div key={u.id} className="flex items-center gap-2 bg-surface-raised rounded-xl px-3 py-2 border border-border text-xs">
+                                <div className="w-6 h-6 rounded-full bg-accent-light text-accent flex items-center justify-center font-medium text-xs">
                                   {u.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
                                   <span className="font-medium">{u.name}</span>
-                                  <span className="text-gray-400 ml-1">({u.email})</span>
+                                  <span className="text-text-muted ml-1">({u.email})</span>
                                 </div>
-                                <span className={`px-1.5 py-0.5 rounded-full text-xs ${roleBadge[u.role]?.cls ?? 'bg-gray-100 text-gray-600'}`}>
+                                <span className={`px-1.5 py-0.5 rounded-full text-xs ${roleBadge[u.role]?.cls ?? 'bg-surface-sunken text-text-secondary'}`}>
                                   {roleBadge[u.role]?.label ?? u.role}
                                 </span>
                               </div>
@@ -267,13 +267,13 @@ export function HousesPage() {
                 ),
               )}
               {(!houses || houses.length === 0) && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Žádné domácnosti</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-text-muted">Žádné domácnosti</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
-      <p className="text-xs text-gray-400 mt-4">Celkem domácností: {houses?.length ?? 0}</p>
+      <p className="text-xs text-text-muted mt-4">Celkem domácností: {houses?.length ?? 0}</p>
     </div>
   );
 }

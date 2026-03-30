@@ -154,18 +154,18 @@ export function ReadingsOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Odečty</h1>
-        <p className="mt-1 text-sm text-gray-600">Přehled odečtů vodoměrů</p>
+        <h1 className="text-2xl font-bold text-text-primary">Odečty</h1>
+        <p className="mt-1 text-sm text-text-muted">Přehled odečtů vodoměrů</p>
       </div>
 
       {/* Period filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Období</label>
-          <div className="flex rounded-md border border-gray-300 overflow-hidden">
+          <label className="block text-sm font-medium text-text-secondary mb-1">Období</label>
+          <div className="flex rounded-xl border border-border-strong overflow-hidden">
             {presetButtons.map((btn) => (
               <button key={btn.key} onClick={() => setPreset(btn.key)}
-                className={`px-3 py-2 text-sm font-medium whitespace-nowrap ${preset === btn.key ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                className={`px-3 py-2 text-sm font-medium whitespace-nowrap ${preset === btn.key ? 'bg-accent text-white' : 'bg-surface-raised text-text-secondary hover:bg-surface-sunken/50'}`}>
                 {btn.label}
               </button>
             ))}
@@ -174,34 +174,34 @@ export function ReadingsOverviewPage() {
         {preset === 'custom' && (
           <div className="flex items-end gap-2">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Od</label>
-              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="border rounded-md px-2 py-2 text-sm" />
+              <label className="block text-xs text-text-muted mb-1">Od</label>
+              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="border border-border rounded-xl px-2 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Do</label>
-              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="border rounded-md px-2 py-2 text-sm" />
+              <label className="block text-xs text-text-muted mb-1">Do</label>
+              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="border border-border rounded-xl px-2 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
           </div>
         )}
         <div className="flex gap-2 self-end">
           <button onClick={() => setShowMainMeter((p) => !p)}
-            className={`rounded-md px-4 py-2 text-sm font-medium ring-1 transition-colors ${showMainMeter ? 'bg-blue-600 text-white ring-blue-600' : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-50'}`}>
+            className={`rounded-xl px-4 py-2 text-sm font-medium border transition-colors ${showMainMeter ? 'bg-accent text-white border-accent' : 'bg-surface-raised text-text-secondary border-border-strong hover:bg-surface-sunken/50'}`}>
             {showMainMeter ? 'Skrýt společný' : 'Zobrazit společný'}
           </button>
           <button onClick={() => setShowChart((p) => !p)}
-            className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
+            className="rounded-xl bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary border border-border-strong hover:bg-surface-sunken/50">
             {showChart ? 'Skrýt graf' : 'Zobrazit graf'}
           </button>
         </div>
       </div>
 
       {loading && <div className="flex justify-center py-12"><Spinner size="lg" /></div>}
-      {error && <div className="rounded-md bg-red-50 p-4"><p className="text-sm text-red-700">{error}</p></div>}
+      {error && <div className="rounded-xl bg-danger-light p-4"><p className="text-sm text-danger">{error}</p></div>}
 
       {/* Multi-line chart */}
       {showChart && !loading && chartData.length > 0 && (
-        <div className="rounded-lg bg-white p-5 border">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Stav vodoměrů (m³)</h3>
+        <div className="rounded-2xl bg-surface-raised p-5 border border-border shadow-card">
+          <h3 className="text-lg font-semibold text-text-primary mb-4">Stav vodoměrů (m³)</h3>
           <ResponsiveContainer width="100%" height={350}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -241,23 +241,23 @@ export function ReadingsOverviewPage() {
           {/* Summary metrics */}
           {latestPerMeter.size > 0 && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-lg border bg-white p-4">
-                <p className="text-xs text-gray-500">Hlavní vodoměr</p>
-                <p className="text-xl font-bold">{mainLatest?.value != null ? czNum(mainLatest.value) : '—'} <span className="text-sm font-normal text-gray-400">m³</span></p>
+              <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
+                <p className="text-xs text-text-muted">Hlavní vodoměr</p>
+                <p className="text-xl font-bold">{mainLatest?.value != null ? czNum(mainLatest.value) : '—'} <span className="text-sm font-normal text-text-muted">m³</span></p>
               </div>
-              <div className="rounded-lg border bg-white p-4">
-                <p className="text-xs text-gray-500">Spotřeba hlavní</p>
-                <p className="text-xl font-bold">{mainConsumption != null ? czNum(mainConsumption) : '—'} <span className="text-sm font-normal text-gray-400">m³</span></p>
+              <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
+                <p className="text-xs text-text-muted">Spotřeba hlavní</p>
+                <p className="text-xl font-bold">{mainConsumption != null ? czNum(mainConsumption) : '—'} <span className="text-sm font-normal text-text-muted">m³</span></p>
               </div>
-              <div className="rounded-lg border bg-white p-4">
-                <p className="text-xs text-gray-500">Součet individuální</p>
-                <p className="text-xl font-bold">{czNum(totalIndividualConsumption)} <span className="text-sm font-normal text-gray-400">m³</span></p>
+              <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
+                <p className="text-xs text-text-muted">Součet individuální</p>
+                <p className="text-xl font-bold">{czNum(totalIndividualConsumption)} <span className="text-sm font-normal text-text-muted">m³</span></p>
               </div>
               {isAdmin && (
-                <div className="rounded-lg border bg-white p-4">
-                  <p className="text-xs text-gray-500">Ztráta na síti</p>
-                  <p className={`text-xl font-bold ${loss != null && loss > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {loss != null ? czNum(loss) : '—'} <span className="text-sm font-normal text-gray-400">m³</span>
+                <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
+                  <p className="text-xs text-text-muted">Ztráta na síti</p>
+                  <p className={`text-xl font-bold ${loss != null && loss > 0 ? 'text-danger' : 'text-success'}`}>
+                    {loss != null ? czNum(loss) : '—'} <span className="text-sm font-normal text-text-muted">m³</span>
                   </p>
                 </div>
               )}
@@ -266,14 +266,14 @@ export function ReadingsOverviewPage() {
 
           {/* Pivot table: rows = meters, columns = dates */}
           {allDates.length > 0 ? (
-            <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
               <div className="overflow-x-auto">
                 <table className="text-sm border-collapse">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-medium text-gray-700 border-b border-r min-w-[200px]">Vodoměr</th>
+                    <tr className="bg-surface-sunken">
+                      <th className="sticky left-0 z-10 bg-surface-sunken px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-r border-border min-w-[200px]">Vodoměr</th>
                       {allDates.map((date) => (
-                        <th key={date} className="px-2 py-2 text-center font-medium text-gray-500 border-b whitespace-nowrap min-w-[80px]">
+                        <th key={date} className="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border whitespace-nowrap min-w-[80px]">
                           <div className="text-xs">{new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(new Date(date))}</div>
                         </th>
                       ))}
@@ -284,26 +284,26 @@ export function ReadingsOverviewPage() {
                       const isMain = meter.type === 'Main';
                       const meterReadings = readingMap.get(meter.id);
                       return (
-                        <tr key={meter.id} className={isMain ? 'bg-blue-50' : 'hover:bg-gray-50'}>
-                          <td className={`sticky left-0 z-10 px-3 py-2 border-b border-r ${isMain ? 'bg-blue-50' : 'bg-white'}`}>
+                        <tr key={meter.id} className={isMain ? 'bg-accent-light' : 'hover:bg-surface-sunken/50'}>
+                          <td className={`sticky left-0 z-10 px-3 py-2 border-b border-r border-border ${isMain ? 'bg-accent-light' : 'bg-surface-raised'}`}>
                             <div className="flex items-center gap-2">
                               <span className={`inline-block w-3 h-3 rounded-full`} style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                               <div>
-                                <div className="font-medium text-gray-900">{meter.name || meter.meterNumber}</div>
-                                <div className="text-xs text-gray-400">{meter.meterNumber}{meter.houseName ? ` · ${meter.houseName}` : ''}</div>
+                                <div className="font-medium text-text-primary">{meter.name || meter.meterNumber}</div>
+                                <div className="text-xs text-text-muted">{meter.meterNumber}{meter.houseName ? ` · ${meter.houseName}` : ''}</div>
                               </div>
                             </div>
                           </td>
                           {allDates.map((date) => {
                             const reading = meterReadings?.get(date);
                             if (!reading) {
-                              return <td key={date} className="px-2 py-2 border-b text-center text-gray-200">—</td>;
+                              return <td key={date} className="px-2 py-2 border-b border-border text-center text-text-muted">—</td>;
                             }
                             return (
-                              <td key={date} className="px-2 py-2 border-b text-center">
-                                <span className="font-mono text-xs font-medium text-gray-900">{czNum(reading.value)}</span>
+                              <td key={date} className="px-2 py-2 border-b border-border text-center">
+                                <span className="font-mono text-xs font-medium text-text-primary">{czNum(reading.value)}</span>
                                 {reading.consumption != null && reading.consumption > 0 && (
-                                  <div className="text-xs text-gray-400">+{czNum(reading.consumption)}</div>
+                                  <div className="text-xs text-text-muted">+{czNum(reading.consumption)}</div>
                                 )}
                               </td>
                             );
@@ -316,12 +316,12 @@ export function ReadingsOverviewPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-gray-50 rounded-lg p-12 text-center">
-              <p className="text-gray-400">Pro vybrané období nebyly nalezeny žádné odečty.</p>
+            <div className="bg-surface-sunken rounded-2xl p-12 text-center">
+              <p className="text-text-muted">Pro vybrané období nebyly nalezeny žádné odečty.</p>
             </div>
           )}
 
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-text-muted">
             {visibleMeters.length} vodoměrů × {allDates.length} měření. Barva bodu v grafu odpovídá barvě vodoměru v tabulce.
           </p>
         </>

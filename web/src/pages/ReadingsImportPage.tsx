@@ -26,11 +26,11 @@ function ValidationMessages({
   return (
     <div className="space-y-3">
       {errors.length > 0 && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4">
-          <h4 className="text-sm font-semibold text-red-800">Chyby ({errors.length})</h4>
+        <div className="rounded-xl border border-danger/20 bg-danger-light p-4">
+          <h4 className="text-sm font-semibold text-danger">Chyby ({errors.length})</h4>
           <ul className="mt-2 space-y-1">
             {errors.map((msg, i) => (
-              <li key={i} className="text-sm text-red-700">
+              <li key={i} className="text-sm text-danger">
                 {msg.row !== null && `Řádek ${msg.row}: `}{msg.message}
               </li>
             ))}
@@ -38,11 +38,11 @@ function ValidationMessages({
         </div>
       )}
       {warnings.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
-          <h4 className="text-sm font-semibold text-amber-800">Upozornění ({warnings.length})</h4>
+        <div className="rounded-xl border border-warning/20 bg-warning-light p-4">
+          <h4 className="text-sm font-semibold text-warning">Upozornění ({warnings.length})</h4>
           <ul className="mt-2 space-y-1">
             {warnings.map((msg, i) => (
-              <li key={i} className="text-sm text-amber-700">
+              <li key={i} className="text-sm text-warning">
                 {msg.row !== null && `Řádek ${msg.row}: `}{msg.message}
               </li>
             ))}
@@ -59,9 +59,9 @@ function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="overflow-x-auto rounded-2xl border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+        <thead className="bg-surface-sunken text-xs font-semibold uppercase tracking-wider text-text-muted">
           <tr>
             <th className="px-4 py-3">Datum</th>
             {meterIds.map((meterId) => (
@@ -69,16 +69,16 @@ function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-border">
           {preview.rows.map((row, rowIdx) => (
-            <tr key={rowIdx} className="hover:bg-gray-50">
-              <td className="px-4 py-3 font-medium text-gray-900">
+            <tr key={rowIdx} className="hover:bg-surface-sunken/50">
+              <td className="px-4 py-3 font-medium text-text-primary">
                 {new Intl.DateTimeFormat('cs-CZ').format(new Date(row.readingDate))}
               </td>
               {meterIds.map((meterId) => {
                 const value = row.meterValues[meterId];
                 return (
-                  <td key={meterId} className="px-4 py-3 text-gray-600">
+                  <td key={meterId} className="px-4 py-3 text-text-secondary">
                     {value !== undefined ? czNumber.format(value) : '—'}
                   </td>
                 );
@@ -166,40 +166,40 @@ function ManualEntry() {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Datum odečtu</label>
+        <label className="block text-sm font-medium text-text-secondary mb-1">Datum odečtu</label>
         <input
           type="date"
           value={readingDate}
           onChange={(e) => setReadingDate(e.target.value)}
-          className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20"
         />
       </div>
 
-      <div className="bg-white border rounded-lg overflow-hidden">
+      <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Typ</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Identifikátor</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Název</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Domácnost</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700 w-40">Stav vodoměru (m³)</th>
+              <tr className="bg-surface-sunken border-b border-border">
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Typ</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Identifikátor</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Název</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Domácnost</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted w-40">Stav vodoměru (m³)</th>
               </tr>
             </thead>
             <tbody>
               {sortedMeters.map((meter) => (
-                <tr key={meter.id} className={`border-b ${meter.type === 'Main' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                <tr key={meter.id} className={`border-b border-border ${meter.type === 'Main' ? 'bg-accent-light' : 'hover:bg-surface-sunken/50'}`}>
                   <td className="px-4 py-2">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${meter.type === 'Main' ? 'bg-blue-200 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${meter.type === 'Main' ? 'bg-accent-light text-accent' : 'bg-surface-sunken text-text-secondary'}`}>
                       {meter.type === 'Main' ? 'Hlavní' : 'Individuální'}
                     </span>
                   </td>
                   <td className="px-4 py-2">
-                    <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">{meter.meterNumber}</code>
+                    <code className="bg-surface-sunken px-1.5 py-0.5 rounded text-xs">{meter.meterNumber}</code>
                   </td>
                   <td className="px-4 py-2 font-medium">{meter.name}</td>
-                  <td className="px-4 py-2 text-gray-600">{meter.houseName ?? '—'}</td>
+                  <td className="px-4 py-2 text-text-secondary">{meter.houseName ?? '—'}</td>
                   <td className="px-4 py-2">
                     <input
                       type="text"
@@ -207,13 +207,13 @@ function ManualEntry() {
                       value={values[meter.id] ?? ''}
                       onChange={(e) => handleValueChange(meter.id, e.target.value)}
                       placeholder="0,0"
-                      className="w-full border rounded px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full border border-border rounded-xl px-2 py-1.5 text-sm text-right bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20"
                     />
                   </td>
                 </tr>
               ))}
               {sortedMeters.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Žádné vodoměry. Přidejte je ve Správě vodoměrů.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-text-muted">Žádné vodoměry. Přidejte je ve Správě vodoměrů.</td></tr>
               )}
             </tbody>
           </table>
@@ -221,13 +221,13 @@ function ManualEntry() {
       </div>
 
       {saveError && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-700">{saveError}</p>
+        <div className="rounded-xl border border-danger/20 bg-danger-light p-3">
+          <p className="text-sm text-danger">{saveError}</p>
         </div>
       )}
       {saveSuccess && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3">
-          <p className="text-sm text-green-700">{saveSuccess}</p>
+        <div className="rounded-xl border border-success/20 bg-success-light p-3">
+          <p className="text-sm text-success">{saveSuccess}</p>
         </div>
       )}
 
@@ -235,19 +235,19 @@ function ManualEntry() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+          className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium disabled:opacity-50"
         >
           {saving ? <span className="flex items-center gap-2"><Spinner size="sm" /> Ukládám...</span> : 'Uložit odečty'}
         </button>
         <button
           onClick={() => { setValues({}); setSaveError(null); setSaveSuccess(null); }}
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm"
+          className="bg-surface-sunken text-text-secondary px-4 py-2 rounded-xl hover:bg-surface-sunken text-sm"
         >
           Vymazat
         </button>
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-text-muted">
         Zadejte kumulativní stav vodoměru (nikoliv spotřebu). Čárka nebo tečka jako desetinný oddělovač.
         Nevyplněné vodoměry budou přeskočeny.
       </p>
@@ -315,20 +315,20 @@ export function ReadingsImportPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Import odečtů</h1>
-      <p className="mt-1 text-sm text-gray-500">Zadejte odečty vodoměrů — ze souboru nebo ručně</p>
+      <h1 className="text-2xl font-bold text-text-primary">Import odečtů</h1>
+      <p className="mt-1 text-sm text-text-muted">Zadejte odečty vodoměrů — ze souboru nebo ručně</p>
 
       {/* Tabs */}
-      <div className="mt-4 flex border-b border-gray-200">
+      <div className="mt-4 flex border-b border-border">
         <button
           onClick={() => setTab('file')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'file' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'file' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
         >
           Import ze souboru
         </button>
         <button
           onClick={() => setTab('manual')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'manual' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'manual' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
         >
           Ruční zadání
         </button>
@@ -345,25 +345,25 @@ export function ReadingsImportPage() {
       {tab === 'file' && (
         <div>
           {state === 'success' && (
-            <div className="mt-6 rounded-md border border-green-200 bg-green-50 p-4">
+            <div className="mt-6 rounded-xl border border-success/20 bg-success-light p-4">
               <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <svg className="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-sm font-medium text-green-800">
+                <p className="text-sm font-medium text-success">
                   Import byl úspěšný. Importováno {successCount ?? ''} odečtů.
                 </p>
               </div>
               <button onClick={handleReset}
-                className="mt-3 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">
+                className="mt-3 rounded-xl bg-success px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">
                 Importovat další
               </button>
             </div>
           )}
 
           {error && (
-            <div className="mt-6 rounded-md border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mt-6 rounded-xl border border-danger/20 bg-danger-light p-4">
+              <p className="text-sm text-danger">{error}</p>
             </div>
           )}
 
@@ -371,10 +371,10 @@ export function ReadingsImportPage() {
             <div className="mt-6 space-y-4">
               <FileUploadZone onFileSelected={handleFileSelected} disabled={state === 'uploading'} />
               {selectedFile && (
-                <div className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-4 py-3">
-                  <span className="text-sm font-medium text-gray-700">{selectedFile.name}</span>
+                <div className="flex items-center justify-between rounded-xl border border-border bg-surface-raised px-4 py-3">
+                  <span className="text-sm font-medium text-text-secondary">{selectedFile.name}</span>
                   <button onClick={handleUpload} disabled={state === 'uploading'}
-                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                    className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50">
                     {state === 'uploading' ? <span className="flex items-center gap-2"><Spinner size="sm" /> Nahrávám...</span> : 'Importovat'}
                   </button>
                 </div>
@@ -386,19 +386,19 @@ export function ReadingsImportPage() {
             <div className="mt-6 space-y-6">
               <ValidationMessages errors={preview.errors} warnings={preview.warnings} />
               <div>
-                <h2 className="mb-3 text-lg font-semibold text-gray-900">Náhled importu</h2>
+                <h2 className="mb-3 text-lg font-semibold text-text-primary">Náhled importu</h2>
                 <PreviewTable preview={preview} />
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={handleReset} disabled={state === 'confirming'}
-                  className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-50">
+                  className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50 disabled:opacity-50">
                   Zrušit
                 </button>
                 <button onClick={() => void handleConfirm()} disabled={state === 'confirming' || hasErrors}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                  className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50">
                   {state === 'confirming' ? <span className="flex items-center gap-2"><Spinner size="sm" /> Potvrzuji...</span> : 'Potvrdit import'}
                 </button>
-                {hasErrors && <p className="text-sm text-red-600">Opravte chyby před potvrzením importu</p>}
+                {hasErrors && <p className="text-sm text-danger">Opravte chyby před potvrzením importu</p>}
               </div>
             </div>
           )}

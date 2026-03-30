@@ -42,11 +42,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_BADGE_COLORS: Record<string, string> = {
-  voda: 'bg-blue-100 text-blue-700',
-  elektro: 'bg-yellow-100 text-yellow-700',
-  udrzba: 'bg-orange-100 text-orange-700',
-  pojisteni: 'bg-purple-100 text-purple-700',
-  jine: 'bg-gray-100 text-gray-700',
+  voda: 'bg-accent-light text-accent',
+  elektro: 'bg-warning-light text-warning',
+  udrzba: 'bg-orange-50 text-orange-600',
+  pojisteni: 'bg-purple-50 text-purple-600',
+  jine: 'bg-surface-sunken text-text-secondary',
 };
 
 const TYPE_LABELS: Record<FinancialRecordType, string> = {
@@ -138,21 +138,21 @@ export function FinancePage() {
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Hospodaření</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Hospodaření</h1>
         <div className="flex flex-wrap gap-2">
           {canExport && (
             <>
               <button
                 onClick={() => void handleExportPdf()}
                 disabled={exportingPdf}
-                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="inline-flex items-center rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50 disabled:opacity-50"
               >
                 {exportingPdf ? 'Exportuji...' : 'Export PDF'}
               </button>
               <button
                 onClick={() => void handleExportExcel()}
                 disabled={exportingExcel}
-                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="inline-flex items-center rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50 disabled:opacity-50"
               >
                 {exportingExcel ? 'Exportuji...' : 'Export Excel'}
               </button>
@@ -161,7 +161,7 @@ export function FinancePage() {
           {isAdmin && (
             <button
               onClick={() => setShowForm(!showForm)}
-              className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="inline-flex items-center rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
             >
               {showForm ? 'Zavřít formulář' : 'Přidat záznam'}
             </button>
@@ -171,8 +171,8 @@ export function FinancePage() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-md bg-red-50 p-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mt-4 rounded-xl bg-danger-light p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
@@ -197,14 +197,14 @@ export function FinancePage() {
       {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div>
-          <label htmlFor="year-select" className="mr-2 text-sm font-medium text-gray-700">
+          <label htmlFor="year-select" className="mr-2 text-sm font-medium text-text-secondary">
             Rok:
           </label>
           <select
             id="year-select"
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-xl border border-border bg-surface-raised px-3 py-1.5 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           >
             {YEAR_OPTIONS.map((y) => (
               <option key={y} value={y}>
@@ -214,14 +214,14 @@ export function FinancePage() {
           </select>
         </div>
         <div>
-          <label htmlFor="category-select" className="mr-2 text-sm font-medium text-gray-700">
+          <label htmlFor="category-select" className="mr-2 text-sm font-medium text-text-secondary">
             Kategorie:
           </label>
           <select
             id="category-select"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-xl border border-border bg-surface-raised px-3 py-1.5 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           >
             {FINANCE_CATEGORIES.map((cat) => (
               <option key={cat.key} value={cat.key}>
@@ -241,7 +241,7 @@ export function FinancePage() {
 
       {!recordsLoading && records && records.length === 0 && (
         <div className="mt-8 text-center">
-          <p className="text-gray-500">Žádné záznamy pro vybrané období.</p>
+          <p className="text-text-muted">Žádné záznamy pro vybrané období.</p>
         </div>
       )}
 
@@ -267,16 +267,16 @@ function SummaryCards({ summary }: { summary: FinanceSummaryResponse }) {
         value={formatCZK(summary.totalExpenses)}
         subtitle={`Rok ${String(summary.year)}`}
       />
-      <div className="rounded-lg bg-white p-5 shadow-sm">
-        <p className="text-sm font-medium text-gray-500">Bilance</p>
+      <div className="rounded-2xl bg-surface-raised p-5 shadow-card">
+        <p className="text-sm font-medium text-text-muted">Bilance</p>
         <p
           className={`mt-1 text-2xl font-bold ${
-            summary.balance >= 0 ? 'text-green-600' : 'text-red-600'
+            summary.balance >= 0 ? 'text-success' : 'text-danger'
           }`}
         >
           {formatCZK(summary.balance)}
         </p>
-        <p className="mt-1 text-sm text-gray-400">Rok {summary.year}</p>
+        <p className="mt-1 text-sm text-text-muted">Rok {summary.year}</p>
       </div>
     </div>
   );
@@ -294,38 +294,38 @@ function RecordsTable({ records }: { records: FinanceResponse[] }) {
     <>
       {/* Desktop table */}
       <div className="mt-6 hidden overflow-x-auto md:block">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-surface-sunken">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Datum
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Typ
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Kategorie
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Popis
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Částka
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-border bg-surface-raised">
             {sorted.map((rec) => (
-              <tr key={rec.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+              <tr key={rec.id} className="hover:bg-surface-sunken/50">
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-text-muted">
                   {formatDate(rec.date)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-sm">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                       rec.type === 'Income'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
+                        ? 'bg-success-light text-success'
+                        : 'bg-danger-light text-danger'
                     }`}
                   >
                     {TYPE_LABELS[rec.type]}
@@ -334,18 +334,18 @@ function RecordsTable({ records }: { records: FinanceResponse[] }) {
                 <td className="whitespace-nowrap px-4 py-3 text-sm">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      CATEGORY_BADGE_COLORS[rec.category] ?? 'bg-gray-100 text-gray-700'
+                      CATEGORY_BADGE_COLORS[rec.category] ?? 'bg-surface-sunken text-text-secondary'
                     }`}
                   >
                     {CATEGORY_LABELS[rec.category] ?? rec.category}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                <td className="px-4 py-3 text-sm text-text-secondary">
                   {rec.description}
                 </td>
                 <td
                   className={`whitespace-nowrap px-4 py-3 text-right text-sm font-medium ${
-                    rec.type === 'Income' ? 'text-green-600' : 'text-red-600'
+                    rec.type === 'Income' ? 'text-success' : 'text-danger'
                   }`}
                 >
                   {rec.type === 'Income' ? '+' : '-'}{formatCZK(rec.amount)}
@@ -359,37 +359,37 @@ function RecordsTable({ records }: { records: FinanceResponse[] }) {
       {/* Mobile cards */}
       <div className="mt-6 space-y-3 md:hidden">
         {sorted.map((rec) => (
-          <div key={rec.id} className="rounded-lg bg-white p-4 shadow-sm">
+          <div key={rec.id} className="rounded-2xl bg-surface-raised p-4 shadow-card">
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-text-primary">
                   {rec.description}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                       rec.type === 'Income'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
+                        ? 'bg-success-light text-success'
+                        : 'bg-danger-light text-danger'
                     }`}
                   >
                     {TYPE_LABELS[rec.type]}
                   </span>
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      CATEGORY_BADGE_COLORS[rec.category] ?? 'bg-gray-100 text-gray-700'
+                      CATEGORY_BADGE_COLORS[rec.category] ?? 'bg-surface-sunken text-text-secondary'
                     }`}
                   >
                     {CATEGORY_LABELS[rec.category] ?? rec.category}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-text-muted">
                     {formatDate(rec.date)}
                   </span>
                 </div>
               </div>
               <p
                 className={`ml-3 text-sm font-medium ${
-                  rec.type === 'Income' ? 'text-green-600' : 'text-red-600'
+                  rec.type === 'Income' ? 'text-success' : 'text-danger'
                 }`}
               >
                 {rec.type === 'Income' ? '+' : '-'}{formatCZK(rec.amount)}
@@ -461,12 +461,12 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
   };
 
   return (
-    <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900">Nový záznam</h2>
+    <div className="mt-6 rounded-2xl bg-surface-raised p-6 shadow-card">
+      <h2 className="text-lg font-semibold text-text-primary">Nový záznam</h2>
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
         {/* Type radio */}
         <div>
-          <span className="block text-sm font-medium text-gray-700">Typ</span>
+          <span className="block text-sm font-medium text-text-secondary">Typ</span>
           <div className="mt-1 flex gap-4">
             <label className="inline-flex items-center">
               <input
@@ -475,9 +475,9 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
                 value="Income"
                 checked={type === 'Income'}
                 onChange={() => setType('Income')}
-                className="text-blue-600 focus:ring-blue-500"
+                className="text-accent focus:ring-accent"
               />
-              <span className="ml-2 text-sm text-gray-700">Příjem</span>
+              <span className="ml-2 text-sm text-text-secondary">Příjem</span>
             </label>
             <label className="inline-flex items-center">
               <input
@@ -486,23 +486,23 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
                 value="Expense"
                 checked={type === 'Expense'}
                 onChange={() => setType('Expense')}
-                className="text-blue-600 focus:ring-blue-500"
+                className="text-accent focus:ring-accent"
               />
-              <span className="ml-2 text-sm text-gray-700">Výdaj</span>
+              <span className="ml-2 text-sm text-text-secondary">Výdaj</span>
             </label>
           </div>
         </div>
 
         {/* Category */}
         <div>
-          <label htmlFor="fin-category" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="fin-category" className="block text-sm font-medium text-text-secondary">
             Kategorie
           </label>
           <select
             id="fin-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-64"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:w-64"
           >
             <option value="voda">Voda</option>
             <option value="elektro">Elektro</option>
@@ -514,7 +514,7 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
 
         {/* Amount */}
         <div>
-          <label htmlFor="fin-amount" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="fin-amount" className="block text-sm font-medium text-text-secondary">
             Částka (Kč)
           </label>
           <input
@@ -524,13 +524,13 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0,00"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-48"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:w-48"
           />
         </div>
 
         {/* Date */}
         <div>
-          <label htmlFor="fin-date" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="fin-date" className="block text-sm font-medium text-text-secondary">
             Datum
           </label>
           <input
@@ -538,13 +538,13 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-48"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:w-48"
           />
         </div>
 
         {/* Description */}
         <div>
-          <label htmlFor="fin-description" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="fin-description" className="block text-sm font-medium text-text-secondary">
             Popis
           </label>
           <textarea
@@ -552,15 +552,15 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             placeholder="Popis záznamu"
           />
         </div>
 
         {/* Error */}
         {formError && (
-          <div className="rounded-md bg-red-50 p-3">
-            <p className="text-sm text-red-700">{formError}</p>
+          <div className="rounded-xl bg-danger-light p-3">
+            <p className="text-sm text-danger">{formError}</p>
           </div>
         )}
 
@@ -569,7 +569,7 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? 'Ukládám...' : 'Uložit'}
           </button>
@@ -577,7 +577,7 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
             type="button"
             onClick={onCancel}
             disabled={submitting}
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50"
           >
             Zrušit
           </button>
