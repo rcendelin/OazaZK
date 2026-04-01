@@ -49,11 +49,18 @@ public static class DependencyInjection
         services.AddSingleton<IBlobStorageService, BlobStorageService>();
 
         // Email service (Azure Communication Services)
+        // Azure Functions maps env var double-underscore (__) to colon (:) in configuration
         services.Configure<AcsSettings>(options =>
         {
-            options.ConnectionString = configuration["AzureCommunicationServices__ConnectionString"] ?? string.Empty;
-            options.FromEmail = configuration["AzureCommunicationServices__FromEmail"] ?? string.Empty;
-            options.FromName = configuration["AzureCommunicationServices__FromName"] ?? string.Empty;
+            options.ConnectionString = configuration["AzureCommunicationServices:ConnectionString"]
+                ?? configuration["AzureCommunicationServices__ConnectionString"]
+                ?? string.Empty;
+            options.FromEmail = configuration["AzureCommunicationServices:FromEmail"]
+                ?? configuration["AzureCommunicationServices__FromEmail"]
+                ?? string.Empty;
+            options.FromName = configuration["AzureCommunicationServices:FromName"]
+                ?? configuration["AzureCommunicationServices__FromName"]
+                ?? string.Empty;
         });
         services.AddSingleton<IEmailService, AcsEmailService>();
 
