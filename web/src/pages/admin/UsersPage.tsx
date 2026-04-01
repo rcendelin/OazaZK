@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { useApi } from '../../hooks/useApi';
-import { getUsers, createUser, updateUser } from '../../api/users';
+import { getUsers, createUser, updateUser, deleteUser } from '../../api/users';
 import { getHouses } from '../../api/houses';
 import { Spinner } from '../../components/Spinner';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { User, House, UserRole, AuthMethod } from '../../types/index';
 
 const czDate = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
@@ -53,6 +54,9 @@ export function UsersPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({ name: '', role: 'Member', houseId: '', notificationsEnabled: true });
   const [editError, setEditError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const houseName = (houseId: string | null): string => {
     if (!houseId || !houses) return '—';
@@ -113,6 +117,21 @@ export function UsersPage() {
       setEditError(err instanceof Error ? err.message : 'Uložení selhalo.');
     } finally {
       submittingRef.current = false;
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await deleteUser(deleteTarget.id);
+      setDeleteTarget(null);
+      refetch();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Smazání selhalo.');
+      setDeleteTarget(null);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -265,7 +284,10 @@ export function UsersPage() {
                       {user.lastLogin ? czDate.format(new Date(user.lastLogin)) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => startEdit(user)} className="text-accent hover:text-accent-hover text-xs font-medium">Upravit</button>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => startEdit(user)} className="text-accent hover:text-accent-hover text-xs font-medium">Upravit</button>
+                        <button onClick={() => setDeleteTarget(user)} className="text-danger hover:text-red-700 text-xs font-medium">Smazat</button>
+                      </div>
                     </td>
                   </tr>
                 ),
@@ -278,6 +300,16 @@ export function UsersPage() {
         </div>
       </div>
       <p className="text-xs text-text-muted mt-4">Celkem uživatelů: {users?.length ?? 0}</p>
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Smazat uživatele"
+        message={`Opravdu chcete smazat uživatele „${deleteTarget?.name ?? ''}" (${deleteTarget?.email ?? ''})?`}
+        confirmLabel={deleteLoading ? 'Mažu...' : 'Smazat'}
+        confirmVariant="danger"
+        onConfirm={() => void handleDeleteConfirm()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
