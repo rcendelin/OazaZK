@@ -71,8 +71,8 @@ public class AcsEmailService : IEmailService
     {
         if (string.IsNullOrWhiteSpace(_settings.ConnectionString))
         {
-            _logger.LogWarning("Azure Communication Services connection string is not configured. Email will not be sent.");
-            return;
+            _logger.LogWarning("Azure Communication Services connection string is not configured. Email to {Email} will not be sent.", toEmail);
+            throw new InvalidOperationException("Azure Communication Services connection string is not configured.");
         }
 
         var client = new EmailClient(_settings.ConnectionString);
