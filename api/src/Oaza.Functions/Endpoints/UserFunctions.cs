@@ -234,6 +234,43 @@ public class UserFunctions
         }
     }
 
+    [Function("DeleteUser")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> DeleteUserAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "users/{id}")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _userRepository.GetAsync(PartitionKeys.User, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("User", id);
+            }
+
+            // Prevent admin from deleting themselves
+            var currentUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid as string : null;
+            if (currentUserId == id)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Nemůžete smazat sami sebe.");
+            }
+
+            await _userRepository.DeleteAsync(PartitionKeys.User, id);
+
+            _logger.LogInformation("User {UserId} ({Email}) deleted.", id, existing.Email);
+
+            return req.CreateResponse(HttpStatusCode.NoContent);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(
         HttpRequestData req, HttpStatusCode statusCode, T body)
     {

@@ -20,3 +20,6 @@ export const updateUser = (id: string, data: {
   notificationsEnabled?: boolean;
 }): Promise<User> =>
   apiClient.put<User>(`/users/${encodeURIComponent(id)}`, data);
+
+export const deleteUser = (id: string): Promise<void> =>
+  apiClient.delete(`/users/${encodeURIComponent(id)}`);
