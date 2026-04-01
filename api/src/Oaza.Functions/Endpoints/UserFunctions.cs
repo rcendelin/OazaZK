@@ -12,6 +12,8 @@ using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
+using Microsoft.Extensions.Configuration;
+using Oaza.Application.Interfaces;
 using Oaza.Functions.Attributes;
 
 namespace Oaza.Functions.Endpoints;
@@ -19,6 +21,8 @@ namespace Oaza.Functions.Endpoints;
 public class UserFunctions
 {
     private readonly IUserRepository _userRepository;
+    private readonly IEmailService _emailService;
+    private readonly string _appUrl;
     private readonly ILogger<UserFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -27,9 +31,15 @@ public class UserFunctions
         PropertyNameCaseInsensitive = true,
     };
 
-    public UserFunctions(IUserRepository userRepository, ILogger<UserFunctions> logger)
+    public UserFunctions(
+        IUserRepository userRepository,
+        IEmailService emailService,
+        IConfiguration configuration,
+        ILogger<UserFunctions> logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _appUrl = configuration["AppUrl"] ?? "https://oaza.cendelinovi.cz";
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -105,6 +115,49 @@ public class UserFunctions
             await _userRepository.UpsertAsync(user);
 
             _logger.LogInformation("User {UserId} created: {Email} with role {Role}.", user.Id, user.Email, user.Role);
+
+            // Send invitation email (don't block user creation on email failure)
+            try
+            {
+                var loginUrl = $"{_appUrl}/login";
+                var subject = "Pozvánka do portálu Oáza Zadní Kopanina";
+
+                var plainText = $"""
+                    Dobrý den {user.Name},
+
+                    byli jste přidáni do portálu Oáza Zadní Kopanina jako {(user.Role == UserRole.Admin ? "administrátor" : user.Role == UserRole.Accountant ? "účetní" : "člen")}.
+
+                    Pro přihlášení navštivte: {loginUrl}
+
+                    S pozdravem,
+                    Portál Oáza Zadní Kopanina
+                    """;
+
+                var html = $"""
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #4f46e5;">Pozvánka do portálu Oáza</h2>
+                        <p>Dobrý den {System.Net.WebUtility.HtmlEncode(user.Name)},</p>
+                        <p>byli jste přidáni do portálu Oáza Zadní Kopanina jako <strong>{(user.Role == UserRole.Admin ? "administrátor" : user.Role == UserRole.Accountant ? "účetní" : "člen")}</strong>.</p>
+                        <p style="text-align: center; margin: 32px 0;">
+                            <a href="{System.Net.WebUtility.HtmlEncode(loginUrl)}"
+                               style="background-color: #4f46e5; color: white; padding: 12px 32px;
+                                      text-decoration: none; border-radius: 6px; font-weight: bold;
+                                      display: inline-block;">
+                                Přihlásit se
+                            </a>
+                        </p>
+                        <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 24px 0;" />
+                        <p style="color: #a1a1aa; font-size: 12px;">Portál Oáza Zadní Kopanina</p>
+                    </div>
+                    """;
+
+                await _emailService.SendEmailAsync(user.Email, user.Name, subject, plainText, html);
+                _logger.LogInformation("Invitation email sent to {Email}.", user.Email);
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogError(emailEx, "Failed to send invitation email to {Email}. User was created successfully.", user.Email);
+            }
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.Created,
                 EntityMapper.ToResponse(user));
