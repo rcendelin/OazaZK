@@ -88,6 +88,67 @@ public class CalculateSettlementUseCaseTests
     }
 
     [Fact]
+    public async Task CalculateAsync_ReadingsOutsidePeriod_UsesClosestReadingsWithinBounds()
+    {
+        // Arrange: meters have readings before the period start and after the period
+        // end. Consumption must use the latest reading <= start and the latest <= end
+        // (the post-period reading must be ignored).
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A", "house-2", "House B");
+        SetupMeters("main-meter", "meter-1", "house-1", "meter-2", "house-2");
+
+        var beforeStart = PeriodStart.AddDays(-20);
+        var insidePeriod = new DateTime(2025, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+        var afterEnd = PeriodEnd.AddDays(20);
+
+        // Main: 100 (<=start) -> 160 (<=end); 999 (after end) must be ignored => 60
+        SetupReadings("main-meter", (beforeStart, 100m), (insidePeriod, 160m), (afterEnd, 999m));
+        SetupReadings("meter-1", (beforeStart, 50m), (insidePeriod, 80m));   // 30
+        SetupReadings("meter-2", (beforeStart, 20m), (insidePeriod, 50m));   // 30
+
+        SetupInvoices(1000m);
+        SetupAdvances("house-1", 0m);
+        SetupAdvances("house-2", 0m);
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert
+        result.MainMeterConsumption.Should().Be(60m);
+        result.TotalHouseConsumption.Should().Be(60m);
+        result.TotalLoss.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task CalculateAsync_NoReadingBeforeStart_FallsBackToEarliestReading()
+    {
+        // Arrange: every reading is strictly after the period start, so the baseline
+        // start reading falls back to the earliest available reading.
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A", "house-2", "House B");
+        SetupMeters("main-meter", "meter-1", "house-1", "meter-2", "house-2");
+
+        var early = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var late = new DateTime(2025, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+        SetupReadings("main-meter", (early, 200m), (late, 260m)); // 60
+        SetupReadings("meter-1", (early, 50m), (late, 80m));      // 30
+        SetupReadings("meter-2", (early, 20m), (late, 50m));      // 30
+
+        SetupInvoices(1000m);
+        SetupAdvances("house-1", 0m);
+        SetupAdvances("house-2", 0m);
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert: earliest reading used as the start baseline
+        result.MainMeterConsumption.Should().Be(60m);
+        result.TotalHouseConsumption.Should().Be(60m);
+    }
+
+    [Fact]
     public async Task CalculateAsync_ProportionalLossAllocation_AllocatesProportionally()
     {
         // Arrange
