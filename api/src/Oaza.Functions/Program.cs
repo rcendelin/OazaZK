@@ -76,6 +76,14 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IAdvancePaymentRepository>(),
                 sp.GetRequiredService<ILogger<CalculateSettlementUseCase>>()));
 
+        // Use cases: Billing period close (persist settlements + lock period)
+        services.AddSingleton<CloseBillingPeriodUseCase>(sp =>
+            new CloseBillingPeriodUseCase(
+                sp.GetRequiredService<CalculateSettlementUseCase>(),
+                sp.GetRequiredService<IBillingPeriodRepository>(),
+                sp.GetRequiredService<ISettlementRepository>(),
+                sp.GetRequiredService<ILogger<CloseBillingPeriodUseCase>>()));
+
         // Use cases: Settlement PDF generation
         services.AddSingleton<GenerateSettlementPdfUseCase>(sp =>
             new GenerateSettlementPdfUseCase(
