@@ -132,7 +132,46 @@ public class ImportReadingsUseCaseTests
         // Assert
         result.Errors.Should().HaveCount(1);
         result.Errors[0].Type.Should().Be("error");
-        result.Errors[0].Message.Should().Contain("Duplicate reading");
+        result.Errors[0].Message.Should().Contain("already exists");
+    }
+
+    [Fact]
+    public async Task ParseAndValidateAsync_SameMonthDifferentDay_ReturnsError()
+    {
+        // Arrange: existing reading on 2026-01-05, import a new one on 2026-01-20.
+        // The duplicate rule is per MONTH, so the preview must flag this (previously
+        // it slipped through preview and only failed at confirm time).
+        var meters = new List<WaterMeter> { _mainMeter };
+        SetupMeters(meters);
+
+        _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-main"))
+            .ReturnsAsync(new List<MeterReading>
+            {
+                new()
+                {
+                    MeterId = "meter-main",
+                    ReadingDate = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                    Value = 90m,
+                    Source = ReadingSource.Manual,
+                    ImportedAt = DateTime.UtcNow,
+                    ImportedBy = "user-1"
+                }
+            });
+
+        var stream = CreateExcelStream(
+            dates: new[] { new DateTime(2026, 1, 20) },
+            meterRows: new[]
+            {
+                new MeterRow("MAIN-001", new object[] { 100m })
+            });
+
+        // Act
+        var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
+
+        // Assert
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Type.Should().Be("error");
+        result.Errors[0].Message.Should().Contain("already exists");
     }
 
     [Fact]
