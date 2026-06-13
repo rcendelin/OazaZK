@@ -39,19 +39,14 @@ public class InvoiceFunctions
     }
 
     [Function("GetInvoices")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
     public async Task<HttpResponseData> GetInvoicesAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "invoices")] HttpRequestData req,
         FunctionContext context)
     {
         try
         {
-            // Only Admin and Accountant can access invoices
-            var user = GetAuthenticatedUser(context);
-            if (user.Role != UserRole.Admin && user.Role != UserRole.Accountant)
-            {
-                return await WriteErrorResponseAsync(req, 403, "Insufficient permissions.");
-            }
-
+            // Role enforced centrally by [RequireRole] via AuthorizationMiddleware.
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var yearParam = queryParams["year"];
 
