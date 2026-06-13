@@ -2,6 +2,13 @@
 
 > Vygenerováno 2026-06-13. Metoda: 7 paralelních analytických agentů, každý měřil **skutečný kód proti `CLAUDE.md`** (autoritativní spec), následně adversariální ověření nálezů na úroveň `soubor:řádek`. Doplněno o reálný build / test / lint na tomto stroji.
 
+> **Stav remediace (2026-06-13, větev `develop`, vše nasazeno do DEV se zelenou CI):**
+> - ✅ **Fáze 0 — build:** floaty NuGet pinovány, SDK uzamčen na .NET 8, Blob SAS API zmigrováno, FE lint opraven + lint gate v CI. Build i 99 testů zelené.
+> - ✅ **Fáze 1 — bezpečnost/korektnost:** #4 self-delete, #5 RBAC advance-settings, #6 metoda alokace ztráty, #7 import duplicit per-měsíc, #8 JWT `sub` (`MapInboundClaims=false`) — s regresními testy.
+> - ✅ **Fáze 2 — testy:** hraniční/fallback testy vyúčtování, **Azurite integrační testy** repozitářů (běží i v CI), `CloseBillingPeriodUseCase` vytažen a otestován, SampleTest placeholdery odstraněny. Celkem **106 testů**.
+> - ✅ **Fáze 3 — hygiena:** `CLAUDE.md` + `DEPLOYMENT-DEV.md` sjednoceny s realitou (ACS, hash tokenů, `DocumentVersion`/`AdvanceSettings`, extra endpointy), `GET /invoices` přes `[RequireRole]`.
+> - ⏳ **Vědomě odloženo (nízká priorita):** zaokrouhlovací reziduum vyúčtování, validátory do DI, exhaustivní validátorové testy, FE kosmetika (sidebar 200px, code-splitting, catch-all route, duplicitní `staticwebapp.config.json`), SAS-vs-proxy download, Node 20 → 24 v CI.
+
 ---
 
 ## 1. Co to je

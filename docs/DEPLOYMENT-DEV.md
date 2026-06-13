@@ -113,7 +113,7 @@ az functionapp config appsettings set \
     "ENABLE_SEED=true"
 ```
 
-> **Entra ID a SendGrid** nastavíme až po krocích 4 a 6. Prozatím je necháme prázdné — portál bude fungovat s magic link auth (po nastavení SendGrid) a bez Entra ID.
+> **Entra ID a ACS Email** nastavíme až po krocích 4 a 6. Prozatím je necháme prázdné — portál bude fungovat s magic link auth (po nastavení ACS Email) a bez Entra ID.
 
 ### 3.3 Stáhni Publish Profile
 
@@ -237,26 +237,29 @@ Frontend bude volat Functions App přímo přes `VITE_API_BASE_URL` env proměnn
 
 ---
 
-## Krok 6 — SendGrid (volitelné pro DEV)
+## Krok 6 — Azure Communication Services / Email (volitelné pro DEV)
 
-> SendGrid je potřeba pro magic link přihlášení a notifikace. Pokud chceš DEV testovat jen s Entra ID, tento krok můžeš přeskočit.
+> Azure Communication Services (ACS) Email je potřeba pro magic link přihlášení a notifikace. Pokud chceš DEV testovat jen s Entra ID, tento krok můžeš přeskočit.
 
-1. Jdi na [sendgrid.com](https://app.sendgrid.com/signup) a vytvoř Free účet
-2. **Settings → API Keys → Create API Key** (Full Access)
-3. Zapiš API key
+1. Vytvoř **Email Communication Service** a připojenou doménu (Azure Managed Domain stačí pro DEV):
+```bash
+az communication email create --name acs-email-oaza-dev --resource-group rg-oaza-dev --location global --data-location europe
+az communication email domain create --domain-name AzureManagedDomain --email-service-name acs-email-oaza-dev --resource-group rg-oaza-dev --location global --domain-management AzureManaged
+```
+2. Vytvoř **Communication Service** a propoj ji s e-mailovou doménou; zkopíruj connection string a adresu odesílatele `DoNotReply@<azure-managed-domain>`.
 
-Nastav do Functions:
+Nastav do Functions (Azure Functions mapuje `__` na `:` v konfiguraci):
 ```bash
 az functionapp config appsettings set \
   --name func-oaza-dev \
   --resource-group rg-oaza-dev \
   --settings \
-    "SendGrid__ApiKey=<SENDGRID_API_KEY>" \
-    "SendGrid__FromEmail=portal-dev@cendelinovi.cz" \
-    "SendGrid__FromName=Oáza ZK DEV"
+    "AzureCommunicationServices__ConnectionString=<ACS_CONNECTION_STRING>" \
+    "AzureCommunicationServices__FromEmail=DoNotReply@<azure-managed-domain>" \
+    "AzureCommunicationServices__FromName=Oáza ZK DEV"
 ```
 
-> **Sender verification:** V SendGrid → Settings → Sender Authentication ověř odesílatele (`portal-dev@cendelinovi.cz`) nebo celou doménu.
+> **Pozn.:** Dřívější verze používala SendGrid; projekt přešel na ACS (commit `f80a036`). `SendGrid__*` app settings se už nečtou.
 
 ---
 
@@ -593,7 +596,7 @@ rg-oaza-dev/
 │   ├── Table Storage            # Users, Houses, WaterMeters, ...
 │   └── Blob Storage             # documents, invoices, settlements, finance
 ├── func-oaza-dev                # Azure Functions (Consumption, Linux)
-│   └── App Settings             # Connection strings, JWT, Entra ID, SendGrid
+│   └── App Settings             # Connection strings, JWT, Entra ID, ACS Email
 └── swa-oaza-dev                 # Static Web Apps (Free)
     └── Custom domain            # oaza-dev.cendelinovi.cz
     # Frontend volá Functions přímo přes CORS (VITE_API_BASE_URL)
@@ -608,7 +611,7 @@ rg-oaza-dev/
 | Static Web Apps | Free | 0 Kč |
 | Functions | Consumption | ~0 Kč |
 | Storage Account | LRS | ~2–5 Kč |
-| SendGrid | Free (100/den) | 0 Kč |
+| ACS Email | pay-as-you-go (nízký objem) | ~0 Kč |
 | Entra ID | Free tier | 0 Kč |
 | **Celkem** | | **~2–5 Kč/měsíc** |
 

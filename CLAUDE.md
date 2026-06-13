@@ -161,10 +161,13 @@ public class User
     public string? HouseId { get; set; }       // FK to House (null for admin without house)
     public AuthMethod AuthMethod { get; set; } // EntraId, MagicLink
     public string? EntraObjectId { get; set; } // Entra ID object ID (nullable)
-    public string? MagicLinkToken { get; set; }
+    public string? MagicLinkTokenHash { get; set; }            // SHA-256 hash of the token (never stored plaintext)
     public DateTime? MagicLinkExpiry { get; set; }
     public DateTime? LastLogin { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
+    public int MagicLinkRequestCount { get; set; }             // rate limit: requests in the current window
+    public DateTime? MagicLinkRequestWindowStart { get; set; } // rate limit: start of the 1h sliding window
+    public int MagicLinkFailedAttempts { get; set; }           // lockout after 5 failed verifications
 }
 
 // Oaza.Domain/Entities/House.cs
@@ -285,6 +288,17 @@ public enum BillingPeriodStatus { Open, Closed }
 public enum FinancialRecordType { Income, Expense }
 public enum LossAllocationMethod { Equal, ProportionalToConsumption }
 ```
+
+### Implementation additions (beyond the initial spec)
+
+The code has grown past this document; the following exist in the implementation but were not in the original data model / endpoint tables:
+
+- **`DocumentVersion`** entity + `DocumentVersions` table + repository — per-document version history (keeps the last 10 versions). PartitionKey = documentId, RowKey = zero-padded version number. Endpoints: `POST/GET /documents/{id}/versions`, `GET /documents/{id}/versions/{version}/download`.
+- **`AdvanceSettings`** singleton entity (PartitionKey `SETTINGS`, RowKey `advances`, table `AdvanceSettings`) — advance-payment pricing: water price/validity, monthly electricity cost + per-house coefficients, common base fee, per-house overrides, and a `LossAllocationMethod`. Endpoints: `GET/PUT /advance-settings`, `GET /advance-settings/calculate` (admins/accountants see all houses; members see only their own).
+- **`User`** stores the magic-link token **hashed** (`MagicLinkTokenHash`, SHA-256) plus rate-limit/lockout counters (see above).
+- **`WaterMeter.Name`** — optional display label.
+- **Extra endpoints:** `DELETE /users/{id}`, `GET /readings/all`, `GET /finance/balance`, `POST /seed` (gated by `ENABLE_SEED`).
+- **Email** is Azure Communication Services (not SendGrid).
 
 ## API endpoints
 
