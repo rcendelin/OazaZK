@@ -21,7 +21,7 @@ function dateToKey(d: string): string { return d.split('T')[0]; }
 function filterByRange(readings: ReadingResponse[], preset: PeriodPreset, customFrom: string, customTo: string): ReadingResponse[] {
   const now = new Date();
   let from: Date;
-  let to: Date = customTo ? new Date(customTo) : now;
+  const to: Date = customTo ? new Date(customTo) : now;
 
   switch (preset) {
     case '1m': from = new Date(now.getFullYear(), now.getMonth() - 1, 1); break;
@@ -41,6 +41,7 @@ function filterByRange(readings: ReadingResponse[], preset: PeriodPreset, custom
 export function ReadingsOverviewPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
+  const houseId = user?.houseId;
 
   const [preset, setPreset] = useState<PeriodPreset>('all');
   const [customFrom, setCustomFrom] = useState('');
@@ -58,23 +59,23 @@ export function ReadingsOverviewPage() {
     if (!allReadings) return [];
     let list = filterByRange(allReadings, preset, customFrom, customTo);
     // For member: filter to own house + main meter
-    if (!isAdmin && user?.houseId) {
-      const myMeterIds = new Set(meters?.filter((m) => m.houseId === user.houseId || m.type === 'Main').map((m) => m.id) ?? []);
+    if (!isAdmin && houseId) {
+      const myMeterIds = new Set(meters?.filter((m) => m.houseId === houseId || m.type === 'Main').map((m) => m.id) ?? []);
       list = list.filter((r) => myMeterIds.has(r.meterId));
     }
     return list;
-  }, [allReadings, preset, customFrom, customTo, isAdmin, user?.houseId, meters]);
+  }, [allReadings, preset, customFrom, customTo, isAdmin, houseId, meters]);
 
   // Sorted meters
   const sortedMeters = useMemo(() => {
     if (!meters) return [];
-    const relevant = isAdmin ? meters : meters.filter((m) => m.houseId === user?.houseId || m.type === 'Main');
+    const relevant = isAdmin ? meters : meters.filter((m) => m.houseId === houseId || m.type === 'Main');
     return [...relevant].sort((a, b) => {
       if (a.type === 'Main' && b.type !== 'Main') return -1;
       if (a.type !== 'Main' && b.type === 'Main') return 1;
       return (a.name || a.meterNumber).localeCompare(b.name || b.meterNumber, 'cs');
     });
-  }, [meters, isAdmin, user?.houseId]);
+  }, [meters, isAdmin, houseId]);
 
   // Meters visible in chart/table (filtered by showMainMeter toggle)
   const visibleMeters = useMemo(() => {
