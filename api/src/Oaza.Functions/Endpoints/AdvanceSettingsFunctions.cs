@@ -49,8 +49,14 @@ public class AdvanceSettingsFunctions
     {
         try
         {
-            GetAuthenticatedUser(context);
+            var user = GetAuthenticatedUser(context);
             var settings = await LoadSettingsAsync();
+            // Members may not see other households' per-house pricing details.
+            if (user.Role == UserRole.Member)
+            {
+                settings.ElectricityCoefficients = new Dictionary<string, decimal>();
+                settings.HouseOverrides = new Dictionary<string, HouseAdvanceOverride>();
+            }
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
         }
         catch (AppException ex) { return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message); }
@@ -109,7 +115,7 @@ public class AdvanceSettingsFunctions
     {
         try
         {
-            GetAuthenticatedUser(context);
+            var user = GetAuthenticatedUser(context);
             var settings = await LoadSettingsAsync();
 
             var allMeters = await _meterRepository.GetByPartitionKeyAsync("METER");
@@ -157,17 +163,34 @@ public class AdvanceSettingsFunctions
 
             var monthlyLoss = Math.Max(0, mainMonthly - totalConsumption);
 
-            // Build per-house result
+            // Build per-house result. Members only see their own household;
+            // admins and accountants see every house.
+            var canSeeAllHouses = user.Role is UserRole.Admin or UserRole.Accountant;
             var houses = new List<object>();
             foreach (var house in activeHouses)
             {
+                if (!canSeeAllHouses && house.Id != user.HouseId) continue;
+
                 var consumption = houseConsumptions.GetValueOrDefault(house.Id, 0);
                 var share = totalConsumption > 0 ? consumption / totalConsumption : 1m / activeHouses.Count;
 
-                // Loss distributed equally across all active houses
-                var lossShare = activeHouses.Count > 0
-                    ? monthlyLoss / activeHouses.Count
-                    : 0m;
+                // Loss allocation honors the configured method (default: proportional
+                // to consumption), mirroring CalculateSettlementUseCase.AllocateLoss.
+                decimal lossShare;
+                if (monthlyLoss <= 0 || activeHouses.Count == 0)
+                {
+                    lossShare = 0m;
+                }
+                else if (string.Equals(settings.LossAllocationMethod, "Equal", StringComparison.OrdinalIgnoreCase))
+                {
+                    lossShare = monthlyLoss / activeHouses.Count;
+                }
+                else
+                {
+                    lossShare = totalConsumption > 0
+                        ? monthlyLoss * (consumption / totalConsumption)
+                        : monthlyLoss / activeHouses.Count;
+                }
 
                 var totalWaterM3 = consumption + lossShare;
 
