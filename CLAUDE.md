@@ -512,10 +512,10 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 
 ### Git conventions
 
-- **Branch strategy:** `develop` → test/DEV (`deploy-dev.yml` → `func-oaza-dev`); `main` → production (`deploy.yml` → `func-oaza-prod`). _(Repo default je aktuálně `master` — pro prod auto-deploy sjednotit s `main`.)_
+- **Branch strategy:** `develop` → test/DEV (`deploy-dev.yml` → `func-oaza-dev`); `master` → production (`deploy.yml` → `func-oaza-prod`).
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
-- **No force push to main**
+- **No force push to master**
 
 ## Azure resource naming
 
