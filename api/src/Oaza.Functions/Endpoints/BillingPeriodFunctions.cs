@@ -152,6 +152,63 @@ public class BillingPeriodFunctions
         }
     }
 
+    [Function("UpdateBillingPeriod")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> UpdateBillingPeriodAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "billing-periods/{id}")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _billingPeriodRepository.GetAsync(PartitionKeys.Period, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("BillingPeriod", id);
+            }
+
+            if (existing.Status != BillingPeriodStatus.Open)
+            {
+                return await WriteErrorResponseAsync(req, 409, "Uzavřené období nelze upravit.");
+            }
+
+            var request = await JsonSerializer.DeserializeAsync<CreateBillingPeriodRequest>(req.Body, JsonOptions);
+            if (request is null)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+            }
+
+            var validator = new CreateBillingPeriodRequestValidator();
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return await WriteValidationErrorResponseAsync(req, validationResult);
+            }
+
+            existing.Name = request.Name;
+            existing.DateFrom = DateTime.SpecifyKind(request.DateFrom, DateTimeKind.Utc);
+            existing.DateTo = DateTime.SpecifyKind(request.DateTo, DateTimeKind.Utc);
+
+            await _billingPeriodRepository.UpsertAsync(existing);
+
+            _logger.LogInformation("Billing period {PeriodId} updated: {Name} ({From:d}–{To:d}).",
+                existing.Id, existing.Name, existing.DateFrom, existing.DateTo);
+
+            var invoices = await _invoiceRepository.GetByPeriodAsync(existing.DateFrom, existing.DateTo);
+            var totalAmount = invoices.Sum(i => i.Amount);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
+                EntityMapper.ToResponse(existing, totalAmount));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
     [Function("CalculateSettlement")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CalculateSettlementAsync(

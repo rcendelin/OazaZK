@@ -14,6 +14,15 @@ export const createBillingPeriod = (
 ): Promise<BillingPeriodResponse> =>
   apiClient.post<BillingPeriodResponse>('/billing-periods', data);
 
+export const updateBillingPeriod = (
+  id: string,
+  data: CreateBillingPeriodRequest,
+): Promise<BillingPeriodResponse> =>
+  apiClient.put<BillingPeriodResponse>(
+    `/billing-periods/${encodeURIComponent(id)}`,
+    data,
+  );
+
 export const calculateSettlement = (
   periodId: string,
   method: string,

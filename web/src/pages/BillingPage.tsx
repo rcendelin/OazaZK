@@ -4,6 +4,7 @@ import { useApi } from '../hooks/useApi';
 import {
   getBillingPeriods,
   createBillingPeriod,
+  updateBillingPeriod,
   calculateSettlement,
   closeBillingPeriod,
   getSettlements,
@@ -382,6 +383,50 @@ function OpenPeriodDetail({
   const [closeError, setCloseError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(period.name);
+  const [editFrom, setEditFrom] = useState(period.dateFrom.split('T')[0]);
+  const [editTo, setEditTo] = useState(period.dateTo.split('T')[0]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const startEdit = () => {
+    setEditName(period.name);
+    setEditFrom(period.dateFrom.split('T')[0]);
+    setEditTo(period.dateTo.split('T')[0]);
+    setEditError(null);
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (inFlight.current) return;
+    if (!editName.trim() || !editFrom || !editTo) {
+      setEditError('Vyplňte název a období.');
+      return;
+    }
+    if (new Date(editFrom) >= new Date(editTo)) {
+      setEditError('Datum od musí být před datem do.');
+      return;
+    }
+    inFlight.current = true;
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateBillingPeriod(period.id, {
+        name: editName.trim(),
+        dateFrom: editFrom,
+        dateTo: editTo,
+      });
+      setEditing(false);
+      onPeriodClosed(); // reload the periods list
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Uložení období selhalo.');
+    } finally {
+      setSavingEdit(false);
+      inFlight.current = false;
+    }
+  };
+
   const handleCalculate = async () => {
     if (inFlight.current) return;
     inFlight.current = true;
@@ -422,6 +467,69 @@ function OpenPeriodDetail({
 
   return (
     <div className="space-y-4">
+      {/* Edit period (name + date range) */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-text-secondary">
+          Období: {formatDate(period.dateFrom)} – {formatDate(period.dateTo)}
+        </p>
+        <button
+          onClick={() => (editing ? setEditing(false) : startEdit())}
+          className="text-sm font-medium text-accent hover:text-accent-hover"
+        >
+          {editing ? 'Zrušit úpravu' : 'Upravit období'}
+        </button>
+      </div>
+
+      {editing && (
+        <div className="rounded-xl border border-border bg-surface-sunken/30 p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Název</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Datum od</label>
+              <input
+                type="date"
+                value={editFrom}
+                onChange={(e) => setEditFrom(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Datum do</label>
+              <input
+                type="date"
+                value={editTo}
+                onChange={(e) => setEditTo(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+          </div>
+          {editError && <p className="mt-2 text-sm text-danger">{editError}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => void handleSaveEdit()}
+              disabled={savingEdit}
+              className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+            >
+              {savingEdit ? 'Ukládání...' : 'Uložit období'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-xl bg-surface-sunken px-4 py-2 text-sm text-text-secondary hover:bg-surface-sunken"
+            >
+              Zrušit
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Calculate controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:max-w-xs">
