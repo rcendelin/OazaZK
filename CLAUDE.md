@@ -79,6 +79,8 @@ oaza/
 
 ### NuGet packages
 
+**Verze pinuj explicitně — žádné floating wildcardy (`12.*`).** Floaty driftnou na `Azure.Core 1.55` (vyžaduje `Microsoft.Extensions.* >=10`) a rozbijou build proti pinům `8.*`. Verze jsou nyní pevné a `global.json` zamyká SDK na .NET 8 (`rollForward: latestFeature`).
+
 ```xml
 <!-- Oaza.Infrastructure -->
 <PackageReference Include="Azure.Data.Tables" />
@@ -506,10 +508,11 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 - **Date formatting:** Use `Intl.DateTimeFormat('cs-CZ')` for Czech locale
 - **Number formatting:** Use `Intl.NumberFormat('cs-CZ')` — comma as decimal separator
 - **No console.log in production** — use proper error boundaries
+- **Lint je CI gate (přísná React Compiler pravidla):** `npm run lint` musí projít. Pozor na `react-hooks/preserve-manual-memoization` (deps `useMemo`/`useCallback` musí přesně sedět) a `set-state-in-effect`. Build = `tsc -b && vite build` (Vite v8/rolldown).
 
 ### Git conventions
 
-- **Branch strategy:** `main` = production (auto-deploy)
+- **Branch strategy:** `develop` → test/DEV (`deploy-dev.yml` → `func-oaza-dev`); `main` → production (`deploy.yml` → `func-oaza-prod`). _(Repo default je aktuálně `master` — pro prod auto-deploy sjednotit s `main`.)_
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
 - **No force push to main**
@@ -576,7 +579,8 @@ AppUrl=https://oaza.cendelinovi.cz
 - **Unit tests:** Domain logic (settlement calculation, loss allocation, validation rules) in `Oaza.Application.Tests`
 - **Integration tests:** Table Storage repository operations in `Oaza.Infrastructure.Tests` (use Azurite local emulator)
 - **No E2E automation** — manual E2E testing (15 users, not worth the investment)
-- Run tests: `dotnet test` from `api/` directory
+- Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 8.0.x.
+- Integrační testy potřebují Azurite: `docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`. Používají `[SkippableFact]` (skip když chybí); CI běží Azurite jako service container.
 
 ## Development workflow
 
