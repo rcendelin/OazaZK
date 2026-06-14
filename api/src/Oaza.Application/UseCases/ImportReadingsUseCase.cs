@@ -190,84 +190,11 @@ public class ImportReadingsUseCase
                     continue;
                 }
 
-                // Duplicate check: same meter + same MONTH in DB (one reading per
-                // meter per month), consistent with ConfirmImportAsync and manual entry.
-                var duplicate = existingReadings.FirstOrDefault(r =>
-                    r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
-                if (duplicate is not null)
+                // Validate (duplicate / negative / anomaly) — shared with the clipboard import.
+                if (!TryValidateReading(meter, readingDate, value, existingReadings,
+                        seenMeterDates, rowNum, errors, warnings))
                 {
-                    errors.Add(new ImportValidationMessage
-                    {
-                        Type = "error",
-                        Message = $"A reading for meter '{meter.MeterNumber}' already exists for {readingDate:MM/yyyy} (on {duplicate.ReadingDate:d.M.yyyy}, value {duplicate.Value}).",
-                        Row = rowNum,
-                        MeterId = meter.Id
-                    });
                     continue;
-                }
-
-                // Same-file duplicate: same meter + same month within the upload
-                if (!seenMeterDates.Add((meter.Id, new DateTime(readingDate.Year, readingDate.Month, 1))))
-                {
-                    errors.Add(new ImportValidationMessage
-                    {
-                        Type = "error",
-                        Message = $"Duplicate in file for meter '{meter.MeterNumber}' in {readingDate:MM/yyyy}.",
-                        Row = rowNum,
-                        MeterId = meter.Id
-                    });
-                    continue;
-                }
-
-                // Negative consumption check
-                var previousReading = existingReadings
-                    .Where(r => r.ReadingDate < readingDate)
-                    .OrderByDescending(r => r.ReadingDate)
-                    .FirstOrDefault();
-
-                if (previousReading is not null && value < previousReading.Value)
-                {
-                    errors.Add(new ImportValidationMessage
-                    {
-                        Type = "error",
-                        Message = $"Negative consumption for '{meter.MeterNumber}': {value} < previous {previousReading.Value}.",
-                        Row = rowNum,
-                        MeterId = meter.Id
-                    });
-                    continue;
-                }
-
-                // Anomaly detection
-                if (previousReading is not null)
-                {
-                    var consumption = value - previousReading.Value;
-                    var recentReadings = existingReadings
-                        .OrderByDescending(r => r.ReadingDate)
-                        .Take(7).OrderBy(r => r.ReadingDate).ToList();
-
-                    if (recentReadings.Count >= 2)
-                    {
-                        var deltas = new List<decimal>();
-                        for (var i = 1; i < recentReadings.Count; i++)
-                        {
-                            var d = recentReadings[i].Value - recentReadings[i - 1].Value;
-                            if (d > 0) deltas.Add(d);
-                        }
-                        if (deltas.Count > 0)
-                        {
-                            var avg = deltas.Average();
-                            if (avg > 0 && consumption > 2 * avg)
-                            {
-                                warnings.Add(new ImportValidationMessage
-                                {
-                                    Type = "warning",
-                                    Message = $"Anomaly for '{meter.MeterNumber}' on {readingDate:d.M.yyyy}: {consumption:F1} m³ > 2× avg ({avg:F1} m³).",
-                                    Row = rowNum,
-                                    MeterId = meter.Id
-                                });
-                            }
-                        }
-                    }
                 }
 
                 // Add reading
@@ -394,7 +321,275 @@ public class ImportReadingsUseCase
         return count;
     }
 
-    // MapColumnsToMeters removed — transposed format uses rows for meters, not columns.
+    /// <summary>
+    /// Parses a tab-separated meter-reader clipboard export and validates the readings
+    /// for a single reading date chosen by the admin. Meters are matched by their
+    /// RadioAddress (the "Address" column); the reading is the "Value 1" column (m³).
+    /// Does NOT save anything — confirm via ConfirmImportAsync.
+    /// </summary>
+    public async Task<ImportPreviewResponse> ParseClipboardAndValidateAsync(
+        string pastedText, DateTime readingDate, string importedBy)
+    {
+        var errors = new List<ImportValidationMessage>();
+        var warnings = new List<ImportValidationMessage>();
+        var previewRows = new List<ImportPreviewRow>();
+        var readings = new List<MeterReading>();
+
+        ImportPreviewResponse Result() => new()
+        {
+            Rows = previewRows,
+            Errors = errors,
+            Warnings = warnings,
+            ImportSessionId = string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(pastedText))
+        {
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "Vložený text je prázdný." });
+            return Result();
+        }
+
+        readingDate = DateTime.SpecifyKind(readingDate.Date, DateTimeKind.Utc);
+
+        var allMeters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
+        if (allMeters.Count == 0)
+        {
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "No meters configured in the system. Please create meters first." });
+            return Result();
+        }
+
+        // Meter lookup by physical RadioAddress
+        var meterByAddress = allMeters
+            .Where(m => !string.IsNullOrWhiteSpace(m.RadioAddress))
+            .GroupBy(m => m.RadioAddress!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var lines = pastedText.Replace("\r\n", "\n").Replace("\r", "\n")
+            .Split('\n')
+            .Where(l => l.Trim().Length > 0)
+            .ToList();
+
+        if (lines.Count < 2)
+        {
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "Vložte hlavičku a alespoň jeden řádek s odečtem (odděleno tabulátory)." });
+            return Result();
+        }
+
+        // Header → column indices (tab-separated)
+        var header = lines[0].Split('\t').Select(h => h.Trim()).ToList();
+        int IndexOf(string name) => header.FindIndex(h => string.Equals(h, name, StringComparison.OrdinalIgnoreCase));
+
+        var addressCol = IndexOf("Address");
+        if (addressCol < 0)
+        {
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "V hlavičce chybí sloupec 'Address'. Zkopírujte data včetně řádku s názvy sloupců (odděleno tabulátory)." });
+            return Result();
+        }
+
+        var valueCol = IndexOf("Value 1");
+        if (valueCol < 0) valueCol = IndexOf("Value");
+        if (valueCol < 0)
+        {
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "V hlavičce chybí sloupec 'Value 1' (odečet v m³)." });
+            return Result();
+        }
+
+        // Pre-load existing readings
+        var existingReadingsByMeter = new Dictionary<string, IReadOnlyList<MeterReading>>();
+        foreach (var meter in allMeters)
+        {
+            existingReadingsByMeter[meter.Id] = await _readingRepository.GetByMeterIdAsync(meter.Id);
+        }
+
+        var now = DateTime.UtcNow;
+        var seenMeterDates = new HashSet<(string meterId, DateTime date)>();
+        var values = new Dictionary<string, decimal>();
+
+        for (var i = 1; i < lines.Count; i++)
+        {
+            var rowNum = i + 1;
+            var cells = lines[i].Split('\t');
+            if (cells.Length <= Math.Max(addressCol, valueCol)) continue;
+
+            var address = cells[addressCol].Trim();
+            if (string.IsNullOrEmpty(address)) continue;
+
+            if (!meterByAddress.TryGetValue(address, out var meter))
+            {
+                errors.Add(new ImportValidationMessage
+                {
+                    Type = "error",
+                    Message = $"Adresa měřáku '{address}' není přiřazena žádnému měřáku. Vyplňte ji v Admin → Měřáky.",
+                    Row = rowNum
+                });
+                continue;
+            }
+
+            if (!TryParseDecimal(cells[valueCol], out var value))
+            {
+                errors.Add(new ImportValidationMessage
+                {
+                    Type = "error",
+                    Message = $"Nelze přečíst odečet pro adresu '{address}': '{cells[valueCol].Trim()}'.",
+                    Row = rowNum,
+                    MeterId = meter.Id
+                });
+                continue;
+            }
+
+            if (!TryValidateReading(meter, readingDate, value, existingReadingsByMeter[meter.Id],
+                    seenMeterDates, rowNum, errors, warnings))
+            {
+                continue;
+            }
+
+            readings.Add(new MeterReading
+            {
+                MeterId = meter.Id,
+                ReadingDate = readingDate,
+                Value = value,
+                Source = ReadingSource.Import,
+                ImportedAt = now,
+                ImportedBy = importedBy
+            });
+            values[meter.Id] = value;
+        }
+
+        if (values.Count > 0)
+        {
+            previewRows.Add(new ImportPreviewRow { ReadingDate = readingDate, MeterValues = values });
+        }
+
+        // Warn about meters with an address that were not in the pasted text
+        var importedMeterIds = readings.Select(r => r.MeterId).ToHashSet();
+        foreach (var meter in allMeters.Where(m => !string.IsNullOrWhiteSpace(m.RadioAddress) && !importedMeterIds.Contains(m.Id)))
+        {
+            warnings.Add(new ImportValidationMessage
+            {
+                Type = "warning",
+                Message = $"Měřák '{meter.MeterNumber}' (adresa {meter.RadioAddress}) nebyl ve vloženém textu."
+            });
+        }
+
+        var sessionId = Guid.NewGuid().ToString();
+        _sessionCache.Store(sessionId, new ImportSessionData
+        {
+            Readings = readings,
+            Errors = errors,
+            Warnings = warnings,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = importedBy
+        });
+
+        _logger.LogInformation(
+            "Clipboard import preview: {ReadingCount} readings, {ErrorCount} errors, {WarningCount} warnings. Session: {SessionId}.",
+            readings.Count, errors.Count, warnings.Count, sessionId);
+
+        return new ImportPreviewResponse
+        {
+            Rows = previewRows,
+            Errors = errors,
+            Warnings = warnings,
+            ImportSessionId = sessionId
+        };
+    }
+
+    /// <summary>
+    /// Validates a single reading (duplicate per month, negative consumption, anomaly).
+    /// Shared by the Excel and clipboard imports. Appends messages and returns false if
+    /// the reading must be skipped.
+    /// </summary>
+    private static bool TryValidateReading(
+        WaterMeter meter,
+        DateTime readingDate,
+        decimal value,
+        IReadOnlyList<MeterReading> existingReadings,
+        HashSet<(string meterId, DateTime date)> seenMeterDates,
+        int? rowNum,
+        List<ImportValidationMessage> errors,
+        List<ImportValidationMessage> warnings)
+    {
+        // Duplicate check: same meter + same MONTH in DB (one reading per meter per month).
+        var duplicate = existingReadings.FirstOrDefault(r =>
+            r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
+        if (duplicate is not null)
+        {
+            errors.Add(new ImportValidationMessage
+            {
+                Type = "error",
+                Message = $"A reading for meter '{meter.MeterNumber}' already exists for {readingDate:MM/yyyy} (on {duplicate.ReadingDate:d.M.yyyy}, value {duplicate.Value}).",
+                Row = rowNum,
+                MeterId = meter.Id
+            });
+            return false;
+        }
+
+        // Same-batch duplicate: same meter + same month within the import.
+        if (!seenMeterDates.Add((meter.Id, new DateTime(readingDate.Year, readingDate.Month, 1))))
+        {
+            errors.Add(new ImportValidationMessage
+            {
+                Type = "error",
+                Message = $"Duplicate in file for meter '{meter.MeterNumber}' in {readingDate:MM/yyyy}.",
+                Row = rowNum,
+                MeterId = meter.Id
+            });
+            return false;
+        }
+
+        // Negative consumption check.
+        var previousReading = existingReadings
+            .Where(r => r.ReadingDate < readingDate)
+            .OrderByDescending(r => r.ReadingDate)
+            .FirstOrDefault();
+
+        if (previousReading is not null && value < previousReading.Value)
+        {
+            errors.Add(new ImportValidationMessage
+            {
+                Type = "error",
+                Message = $"Negative consumption for '{meter.MeterNumber}': {value} < previous {previousReading.Value}.",
+                Row = rowNum,
+                MeterId = meter.Id
+            });
+            return false;
+        }
+
+        // Anomaly detection (warning only).
+        if (previousReading is not null)
+        {
+            var consumption = value - previousReading.Value;
+            var recentReadings = existingReadings
+                .OrderByDescending(r => r.ReadingDate)
+                .Take(7).OrderBy(r => r.ReadingDate).ToList();
+
+            if (recentReadings.Count >= 2)
+            {
+                var deltas = new List<decimal>();
+                for (var i = 1; i < recentReadings.Count; i++)
+                {
+                    var d = recentReadings[i].Value - recentReadings[i - 1].Value;
+                    if (d > 0) deltas.Add(d);
+                }
+                if (deltas.Count > 0)
+                {
+                    var avg = deltas.Average();
+                    if (avg > 0 && consumption > 2 * avg)
+                    {
+                        warnings.Add(new ImportValidationMessage
+                        {
+                            Type = "warning",
+                            Message = $"Anomaly for '{meter.MeterNumber}' on {readingDate:d.M.yyyy}: {consumption:F1} m³ > 2× avg ({avg:F1} m³).",
+                            Row = rowNum,
+                            MeterId = meter.Id
+                        });
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
 
     private static bool TryParseCellValue(IXLCell cell, out decimal value)
     {
@@ -406,7 +601,13 @@ public class ImportReadingsUseCase
             return true;
         }
 
-        var text = cell.GetString().Trim();
+        return TryParseDecimal(cell.GetString(), out value);
+    }
+
+    private static bool TryParseDecimal(string? text, out decimal value)
+    {
+        value = 0;
+        text = text?.Trim();
         if (string.IsNullOrEmpty(text))
         {
             return false;
@@ -415,19 +616,9 @@ public class ImportReadingsUseCase
         // Remove spaces (Czech format may have space as thousands separator: "1 542,7")
         text = text.Replace(" ", "");
 
-        // Try Czech format first (comma as decimal separator)
-        if (decimal.TryParse(text, NumberStyles.Number, CzechCulture, out value))
-        {
-            return true;
-        }
-
-        // Try invariant format as fallback
-        if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
-        {
-            return true;
-        }
-
-        return false;
+        // Try Czech format first (comma as decimal separator), then invariant.
+        return decimal.TryParse(text, NumberStyles.Number, CzechCulture, out value)
+            || decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
     }
 
     private static bool TryParseCzechDate(string dateStr, out DateTime date)

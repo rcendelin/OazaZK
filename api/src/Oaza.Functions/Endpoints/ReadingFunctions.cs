@@ -119,6 +119,41 @@ public class ReadingFunctions
         }
     }
 
+    [Function("ImportReadingsClipboard")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> ImportReadingsClipboardAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "readings/import/clipboard")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+
+            var request = await JsonSerializer.DeserializeAsync<ClipboardImportRequest>(req.Body, JsonOptions);
+            if (request is null || string.IsNullOrWhiteSpace(request.Text))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Chybí vložený text.");
+            }
+            if (request.ReadingDate == default)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Vyberte datum odečtu.");
+            }
+
+            var result = await _importUseCase.ParseClipboardAndValidateAsync(request.Text, request.ReadingDate, user.Id);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, result);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during clipboard import.");
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred during import.");
+        }
+    }
+
     [Function("GetReadings")]
     public async Task<HttpResponseData> GetReadingsAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings")] HttpRequestData req,

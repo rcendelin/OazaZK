@@ -94,6 +94,7 @@ public static class TableEntityMapper
             { "Name", meter.Name },
             { "Type", meter.Type.ToString() },
             { "HouseId", meter.HouseId },
+            { "RadioAddress", meter.RadioAddress },
             { "InstallationDate", DateTime.SpecifyKind(meter.InstallationDate, DateTimeKind.Utc) }
         };
     }
@@ -107,6 +108,7 @@ public static class TableEntityMapper
             Name = entity.GetString("Name") ?? string.Empty,
             Type = Enum.TryParse<MeterType>(entity.GetString("Type"), out var meterType) ? meterType : MeterType.Individual,
             HouseId = entity.GetString("HouseId"),
+            RadioAddress = entity.GetString("RadioAddress"),
             InstallationDate = entity.GetDateTimeOffset("InstallationDate")?.UtcDateTime ?? DateTime.MinValue
         };
     }

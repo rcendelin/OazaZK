@@ -33,6 +33,7 @@ export interface WaterMeter {
   type: MeterType;
   houseId: string | null;
   houseName: string | null;
+  radioAddress: string | null;
   installationDate: string;
 }
 

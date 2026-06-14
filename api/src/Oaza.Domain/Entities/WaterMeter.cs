@@ -10,4 +10,10 @@ public class WaterMeter
     public MeterType Type { get; set; }
     public string? HouseId { get; set; }
     public DateTime InstallationDate { get; set; }
+
+    /// <summary>
+    /// Physical radio address of the meter (e.g. wM-Bus "Address" 22040724) used to
+    /// match readings imported from a meter-reader clipboard export.
+    /// </summary>
+    public string? RadioAddress { get; set; }
 }

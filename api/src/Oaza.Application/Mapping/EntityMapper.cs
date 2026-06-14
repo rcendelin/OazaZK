@@ -29,6 +29,7 @@ public static class EntityMapper
             Type = meter.Type.ToString(),
             HouseId = meter.HouseId,
             HouseName = houseName,
+            RadioAddress = meter.RadioAddress,
             InstallationDate = meter.InstallationDate,
         };
     }

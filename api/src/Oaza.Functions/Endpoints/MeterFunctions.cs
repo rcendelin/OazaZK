@@ -89,6 +89,7 @@ public class MeterFunctions
                 Name = request.Name,
                 Type = meterType,
                 HouseId = request.HouseId,
+                RadioAddress = string.IsNullOrWhiteSpace(request.RadioAddress) ? null : request.RadioAddress.Trim(),
                 InstallationDate = DateTime.UtcNow,
             };
 
@@ -139,6 +140,7 @@ public class MeterFunctions
             existing.MeterNumber = request.MeterNumber;
             existing.Name = request.Name;
             existing.HouseId = request.HouseId;
+            existing.RadioAddress = string.IsNullOrWhiteSpace(request.RadioAddress) ? null : request.RadioAddress.Trim();
 
             await _meterRepository.UpsertAsync(existing);
 
