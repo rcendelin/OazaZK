@@ -16,18 +16,18 @@ import { Spinner } from '../components/Spinner';
 import type { DocumentResponse, DocumentVersionResponse } from '../types';
 
 const CATEGORIES = [
-  { key: '', label: 'Vse' },
+  { key: '', label: 'Vše' },
   { key: 'stanovy', label: 'Stanovy' },
-  { key: 'zapisy', label: 'Zapisy' },
+  { key: 'zapisy', label: 'Zápisy' },
   { key: 'smlouvy', label: 'Smlouvy' },
-  { key: 'ostatni', label: 'Ostatni' },
+  { key: 'ostatni', label: 'Ostatní' },
 ] as const;
 
 const CATEGORY_LABELS: Record<string, string> = {
   stanovy: 'Stanovy',
-  zapisy: 'Zapisy',
+  zapisy: 'Zápisy',
   smlouvy: 'Smlouvy',
-  ostatni: 'Ostatni',
+  ostatni: 'Ostatní',
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -76,7 +76,7 @@ export function DocumentsPage() {
       setDownloadError(null);
       await downloadDocument(doc.id, doc.name, getAccessToken);
     } catch {
-      setDownloadError('Stahovani se nezdarilo');
+      setDownloadError('Stahování se nezdařilo');
     }
   };
 
@@ -88,7 +88,7 @@ export function DocumentsPage() {
       setDeleteTarget(null);
       refetch();
     } catch {
-      setDownloadError('Smazani se nezdarilo');
+      setDownloadError('Smazání se nezdařilo');
     } finally {
       setDeleteLoading(false);
     }
@@ -117,7 +117,7 @@ export function DocumentsPage() {
       setDownloadError(null);
       await downloadDocumentVersion(doc.id, version, doc.name, getAccessToken);
     } catch {
-      setDownloadError('Stahovani verze se nezdarilo');
+      setDownloadError('Stahování verze se nezdařilo');
     }
   };
 
@@ -130,7 +130,7 @@ export function DocumentsPage() {
             onClick={() => setShowUploadModal(true)}
             className="inline-flex items-center rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
           >
-            Nahrat dokument
+            Nahrát dokument
           </button>
         )}
       </div>
@@ -176,7 +176,7 @@ export function DocumentsPage() {
       {/* Empty state */}
       {!loading && !error && documents && documents.length === 0 && (
         <div className="mt-8 text-center">
-          <p className="text-text-muted">Zadne dokumenty v teto kategorii.</p>
+          <p className="text-text-muted">Žádné dokumenty v této kategorii.</p>
         </div>
       )}
 
@@ -188,13 +188,13 @@ export function DocumentsPage() {
               <thead className="bg-surface-sunken">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
-                    Nazev dokumentu
+                    Název dokumentu
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Kategorie
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
-                    Datum nahrani
+                    Datum nahrání
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted">
                     Velikost
@@ -261,13 +261,13 @@ export function DocumentsPage() {
                     onClick={() => void handleDownload(doc)}
                     className="text-sm font-medium text-accent hover:text-accent-hover"
                   >
-                    Stahnout
+                    Stáhnout
                   </button>
                   <button
                     onClick={() => void handleToggleVersions(doc)}
                     className="text-sm font-medium text-text-secondary hover:text-text-primary"
                   >
-                    {expandedDocId === doc.id ? 'Skryt verze' : 'Verze'}
+                    {expandedDocId === doc.id ? 'Skrýt verze' : 'Verze'}
                   </button>
                   {isAdmin && (
                     <>
@@ -275,7 +275,7 @@ export function DocumentsPage() {
                         onClick={() => setVersionUploadTarget(doc)}
                         className="text-sm font-medium text-success hover:text-emerald-600"
                       >
-                        Nova verze
+                        Nová verze
                       </button>
                       <button
                         onClick={() => setDeleteTarget(doc)}
@@ -291,7 +291,7 @@ export function DocumentsPage() {
                   <div className="mt-3 border-t border-border pt-3">
                     {versionsLoading && <Spinner />}
                     {!versionsLoading && versions.length === 0 && (
-                      <p className="text-xs text-text-muted">Zadne verze</p>
+                      <p className="text-xs text-text-muted">Žádné verze</p>
                     )}
                     {!versionsLoading && versions.map((v) => (
                       <div key={v.versionNumber} className="flex items-center justify-between py-1">
@@ -302,7 +302,7 @@ export function DocumentsPage() {
                           onClick={() => void handleDownloadVersion(doc, v.versionNumber)}
                           className="text-xs font-medium text-accent hover:text-accent-hover"
                         >
-                          Stahnout
+                          Stáhnout
                         </button>
                       </div>
                     ))}
@@ -348,7 +348,7 @@ export function DocumentsPage() {
         isOpen={deleteTarget !== null}
         title="Smazat dokument"
         message={`Opravdu chcete smazat dokument "${deleteTarget?.name ?? ''}"?`}
-        confirmLabel={deleteLoading ? 'Mazu...' : 'Smazat'}
+        confirmLabel={deleteLoading ? 'Mažu...' : 'Smazat'}
         confirmVariant="danger"
         onConfirm={() => void handleDeleteConfirm()}
         onCancel={() => setDeleteTarget(null)}
@@ -415,7 +415,7 @@ function DocumentRow({
             onClick={onToggleVersions}
             className="text-accent hover:text-accent-hover"
           >
-            {isExpanded ? 'Skryt' : 'Zobrazit'}
+            {isExpanded ? 'Skrýt' : 'Zobrazit'}
           </button>
         </td>
         <td className="whitespace-nowrap px-4 py-3 text-right text-sm">
@@ -423,7 +423,7 @@ function DocumentRow({
             onClick={onDownload}
             className="font-medium text-accent hover:text-accent-hover"
           >
-            Stahnout
+            Stáhnout
           </button>
           {isAdmin && (
             <>
@@ -431,7 +431,7 @@ function DocumentRow({
                 onClick={onUploadVersion}
                 className="ml-4 font-medium text-success hover:text-emerald-600"
               >
-                Nova verze
+                Nová verze
               </button>
               <button
                 onClick={onDelete}
@@ -452,7 +452,7 @@ function DocumentRow({
               </div>
             )}
             {!versionsLoading && versions.length === 0 && (
-              <p className="text-sm text-text-muted">Zadne verze k zobrazeni</p>
+              <p className="text-sm text-text-muted">Žádné verze k zobrazení</p>
             )}
             {!versionsLoading && versions.length > 0 && (
               <table className="w-full text-sm">
@@ -475,7 +475,7 @@ function DocumentRow({
                           onClick={() => onDownloadVersion(v.versionNumber)}
                           className="font-medium text-accent hover:text-accent-hover"
                         >
-                          Stahnout
+                          Stáhnout
                         </button>
                       </td>
                     </tr>
@@ -525,7 +525,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
       await uploadDocument(file, name.trim(), category, getAccessToken);
       onUploaded();
     } catch {
-      setUploadError('Nahravani se nezdarilo');
+      setUploadError('Nahrávání se nezdařilo');
     } finally {
       setUploading(false);
       submittingRef.current = false;
@@ -543,7 +543,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
         onClick={onClose}
       />
       <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-surface-raised p-6 shadow-dialog">
-        <h2 className="text-lg font-semibold text-text-primary">Nahrat dokument</h2>
+        <h2 className="text-lg font-semibold text-text-primary">Nahrát dokument</h2>
 
         <div className="mt-4 space-y-4">
           {/* Document name */}
@@ -552,7 +552,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               htmlFor="doc-name"
               className="block text-sm font-medium text-text-secondary"
             >
-              Nazev dokumentu
+              Název dokumentu
             </label>
             <input
               id="doc-name"
@@ -560,7 +560,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-              placeholder="Nazev dokumentu"
+              placeholder="Název dokumentu"
             />
           </div>
 
@@ -579,9 +579,9 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               <option value="stanovy">Stanovy</option>
-              <option value="zapisy">Zapisy</option>
+              <option value="zapisy">Zápisy</option>
               <option value="smlouvy">Smlouvy</option>
-              <option value="ostatni">Ostatni</option>
+              <option value="ostatni">Ostatní</option>
             </select>
           </div>
 
@@ -628,14 +628,14 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
             disabled={uploading}
             className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50"
           >
-            Zrusit
+            Zrušit
           </button>
           <button
             onClick={() => void handleSubmit()}
             disabled={uploading || !file || !name.trim()}
             className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {uploading ? 'Nahravam...' : 'Nahrat'}
+            {uploading ? 'Nahrávám...' : 'Nahrát'}
           </button>
         </div>
       </div>
@@ -676,7 +676,7 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
       await uploadDocumentVersion(doc.id, file, getAccessToken);
       onUploaded();
     } catch {
-      setUploadError('Nahravani verze se nezdarilo');
+      setUploadError('Nahrávání verze se nezdařilo');
     } finally {
       setUploading(false);
       submittingRef.current = false;
@@ -695,7 +695,7 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
       />
       <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-surface-raised p-6 shadow-dialog">
         <h2 className="text-lg font-semibold text-text-primary">
-          Nahrat novou verzi: {doc.name}
+          Nahrát novou verzi: {doc.name}
         </h2>
 
         <div className="mt-4 space-y-4">
@@ -739,14 +739,14 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
             disabled={uploading}
             className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50"
           >
-            Zrusit
+            Zrušit
           </button>
           <button
             onClick={() => void handleSubmit()}
             disabled={uploading || !file}
             className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {uploading ? 'Nahravam...' : 'Nahrat verzi'}
+            {uploading ? 'Nahrávám...' : 'Nahrát verzi'}
           </button>
         </div>
       </div>

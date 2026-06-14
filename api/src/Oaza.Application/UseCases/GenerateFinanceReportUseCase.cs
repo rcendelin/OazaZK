@@ -16,9 +16,9 @@ public class GenerateFinanceReportUseCase
     {
         { "voda", "Voda" },
         { "elektro", "Elektro" },
-        { "udrzba", "Udrzba" },
-        { "pojisteni", "Pojisteni" },
-        { "jine", "Jine" },
+        { "udrzba", "Údržba" },
+        { "pojisteni", "Pojištění" },
+        { "jine", "Jiné" },
     };
 
     public GenerateFinanceReportUseCase(ILogger<GenerateFinanceReportUseCase> logger)
@@ -46,7 +46,7 @@ public class GenerateFinanceReportUseCase
         var sortedRecords = records.OrderBy(r => r.Date).ToList();
 
         var document = new PdfDocument();
-        document.Info.Title = $"Hospodareni - {year}";
+        document.Info.Title = $"Hospodaření - {year}";
         var page = document.AddPage();
         page.Size = PdfSharpCore.PageSize.A4;
         var gfx = XGraphics.FromPdfPage(page);
@@ -69,9 +69,9 @@ public class GenerateFinanceReportUseCase
         double contentWidth = rightEdge - leftMargin;
 
         // Header
-        gfx.DrawString("Oaza Zadni Kopanina", fontTitle, new XSolidBrush(blue), leftMargin, y);
+        gfx.DrawString("Oáza Zadní Kopanina", fontTitle, new XSolidBrush(blue), leftMargin, y);
         y += 24;
-        gfx.DrawString($"Hospodareni za rok {year}", fontSubtitle, new XSolidBrush(gray), leftMargin, y);
+        gfx.DrawString($"Hospodaření za rok {year}", fontSubtitle, new XSolidBrush(gray), leftMargin, y);
         y += 16;
         gfx.DrawLine(new XPen(blue, 1), leftMargin, y, rightEdge, y);
         y += 20;
@@ -79,15 +79,15 @@ public class GenerateFinanceReportUseCase
         // Summary table
         gfx.DrawString("Souhrn", fontSection, new XSolidBrush(blue), leftMargin, y);
         y += 16;
-        DrawRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Polozka", "Castka", fontBold, true);
-        DrawRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkove prijmy", FormatCurrency(totalIncome), fontNormal, false);
-        DrawRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkove vydaje", FormatCurrency(totalExpenses), fontNormal, false);
+        DrawRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Položka", "Částka", fontBold, true);
+        DrawRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkové příjmy", FormatCurrency(totalIncome), fontNormal, false);
+        DrawRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkové výdaje", FormatCurrency(totalExpenses), fontNormal, false);
         var balColor = balance >= 0 ? XColor.FromArgb(22, 163, 74) : XColor.FromArgb(220, 38, 38);
         DrawRow(gfx, leftMargin, ref y, contentWidth, lightGray, balColor, "Bilance", FormatCurrency(balance), fontBold, false);
 
         // Category breakdown
         y += 16;
-        gfx.DrawString("Rozdeleni dle kategorii", fontSection, new XSolidBrush(blue), leftMargin, y);
+        gfx.DrawString("Rozdělení dle kategorií", fontSection, new XSolidBrush(blue), leftMargin, y);
         y += 16;
 
         // Category header
@@ -104,7 +104,7 @@ public class GenerateFinanceReportUseCase
 
         // Detail records
         y += 16;
-        gfx.DrawString("Detailni zaznamy", fontSection, new XSolidBrush(blue), leftMargin, y);
+        gfx.DrawString("Detailní záznamy", fontSection, new XSolidBrush(blue), leftMargin, y);
         y += 16;
 
         var detColWidths = new[] { contentWidth * 0.15, contentWidth * 0.10, contentWidth * 0.15, contentWidth * 0.40, contentWidth * 0.20 };
@@ -122,7 +122,7 @@ public class GenerateFinanceReportUseCase
                 DrawDetailHeader(gfx, leftMargin, ref y, detColWidths, blue, fontBold);
             }
 
-            var typeLabel = record.Type == FinancialRecordType.Income ? "Prijem" : "Vydaj";
+            var typeLabel = record.Type == FinancialRecordType.Income ? "Příjem" : "Výdaj";
             var categoryLabel = CategoryLabels.TryGetValue(record.Category, out var cl) ? cl : record.Category;
             var desc = record.Description.Length > 40 ? record.Description[..40] + "..." : record.Description;
 
@@ -135,8 +135,8 @@ public class GenerateFinanceReportUseCase
         y = page.Height - 40;
         gfx.DrawLine(new XPen(XColors.LightGray, 0.5), leftMargin, y, rightEdge, y);
         y += 12;
-        gfx.DrawString($"Datum vystaveni: {DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
-        var footerText = "Vygenerovano portalem Oaza Zadni Kopanina";
+        gfx.DrawString($"Datum vystavení: {DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
+        var footerText = "Vygenerováno portálem Oáza Zadní Kopanina";
         var footerWidth = gfx.MeasureString(footerText, fontSmall).Width;
         gfx.DrawString(footerText, fontSmall, XBrushes.Gray, rightEdge - footerWidth, y);
 
@@ -159,7 +159,7 @@ public class GenerateFinanceReportUseCase
 
     private static void DrawCategoryHeader(XGraphics gfx, double x, ref double y, double[] widths, XColor bg, XFont font)
     {
-        var headers = new[] { "Kategorie", "Prijmy", "Vydaje", "Bilance" };
+        var headers = new[] { "Kategorie", "Příjmy", "Výdaje", "Bilance" };
         var cx = x;
         for (var i = 0; i < 4; i++)
         {
@@ -186,7 +186,7 @@ public class GenerateFinanceReportUseCase
 
     private static void DrawDetailHeader(XGraphics gfx, double x, ref double y, double[] widths, XColor bg, XFont font)
     {
-        var headers = new[] { "Datum", "Typ", "Kategorie", "Popis", "Castka" };
+        var headers = new[] { "Datum", "Typ", "Kategorie", "Popis", "Částka" };
         var cx = x;
         for (var i = 0; i < 5; i++)
         {
@@ -212,5 +212,5 @@ public class GenerateFinanceReportUseCase
     }
 
     private static string FormatCurrency(decimal value) =>
-        value.ToString("N2", CzechCulture) + " Kc";
+        value.ToString("N2", CzechCulture) + " Kč";
 }

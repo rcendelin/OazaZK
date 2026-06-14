@@ -13,17 +13,17 @@ public class GenerateFinanceExcelUseCase
 
     private static readonly string[] CzechMonthNames =
     {
-        "Leden", "Unor", "Brezen", "Duben", "Kveten", "Cerven",
-        "Cervenec", "Srpen", "Zari", "Rijen", "Listopad", "Prosinec"
+        "Leden", "Únor", "Březen", "Duben", "Květen", "Červen",
+        "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"
     };
 
     private static readonly Dictionary<string, string> CategoryLabels = new(StringComparer.OrdinalIgnoreCase)
     {
         { "voda", "Voda" },
         { "elektro", "Elektro" },
-        { "udrzba", "Udrzba" },
-        { "pojisteni", "Pojisteni" },
-        { "jine", "Jine" },
+        { "udrzba", "Údržba" },
+        { "pojisteni", "Pojištění" },
+        { "jine", "Jiné" },
     };
 
     public GenerateFinanceExcelUseCase(ILogger<GenerateFinanceExcelUseCase> logger)
@@ -50,14 +50,14 @@ public class GenerateFinanceExcelUseCase
 
     private static void ComposeRecordsSheet(XLWorkbook workbook, IReadOnlyList<FinancialRecord> records)
     {
-        var ws = workbook.Worksheets.Add("Zaznamy");
+        var ws = workbook.Worksheets.Add("Záznamy");
 
         // Header row
         ws.Cell(1, 1).Value = "Datum";
         ws.Cell(1, 2).Value = "Typ";
         ws.Cell(1, 3).Value = "Kategorie";
         ws.Cell(1, 4).Value = "Popis";
-        ws.Cell(1, 5).Value = "Castka";
+        ws.Cell(1, 5).Value = "Částka";
 
         var headerRange = ws.Range(1, 1, 1, 5);
         headerRange.Style.Font.Bold = true;
@@ -72,7 +72,7 @@ public class GenerateFinanceExcelUseCase
             var row = i + 2;
 
             ws.Cell(row, 1).Value = record.Date.ToString("dd.MM.yyyy");
-            ws.Cell(row, 2).Value = record.Type == FinancialRecordType.Income ? "Prijem" : "Vydaj";
+            ws.Cell(row, 2).Value = record.Type == FinancialRecordType.Income ? "Příjem" : "Výdaj";
             ws.Cell(row, 3).Value = CategoryLabels.TryGetValue(record.Category, out var label) ? label : record.Category;
             ws.Cell(row, 4).Value = record.Description;
             ws.Cell(row, 5).Value = record.Amount;
@@ -118,7 +118,7 @@ public class GenerateFinanceExcelUseCase
             var categoryLabel = CategoryLabels.TryGetValue(category, out var label) ? label : category;
 
             // Income row
-            ws.Cell(currentRow, 1).Value = $"{categoryLabel} - Prijem";
+            ws.Cell(currentRow, 1).Value = $"{categoryLabel} - Příjem";
             decimal incomeTotal = 0;
             for (var m = 1; m <= 12; m++)
             {
@@ -135,7 +135,7 @@ public class GenerateFinanceExcelUseCase
             currentRow++;
 
             // Expense row
-            ws.Cell(currentRow, 1).Value = $"{categoryLabel} - Vydaj";
+            ws.Cell(currentRow, 1).Value = $"{categoryLabel} - Výdaj";
             decimal expenseTotal = 0;
             for (var m = 1; m <= 12; m++)
             {
@@ -154,7 +154,7 @@ public class GenerateFinanceExcelUseCase
 
         // Totals row
         currentRow++;
-        ws.Cell(currentRow, 1).Value = "CELKEM Prijmy";
+        ws.Cell(currentRow, 1).Value = "CELKEM Příjmy";
         ws.Cell(currentRow, 1).Style.Font.Bold = true;
         decimal grandIncomeTotal = 0;
         for (var m = 1; m <= 12; m++)
@@ -172,7 +172,7 @@ public class GenerateFinanceExcelUseCase
         ws.Cell(currentRow, 14).Style.Font.Bold = true;
         currentRow++;
 
-        ws.Cell(currentRow, 1).Value = "CELKEM Vydaje";
+        ws.Cell(currentRow, 1).Value = "CELKEM Výdaje";
         ws.Cell(currentRow, 1).Style.Font.Bold = true;
         decimal grandExpenseTotal = 0;
         for (var m = 1; m <= 12; m++)

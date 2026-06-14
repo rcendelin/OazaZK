@@ -115,7 +115,7 @@ export function FinancePage() {
     try {
       await exportFinancePdf(selectedYear, getAccessToken);
     } catch {
-      setExportError('Export PDF se nezdaril');
+      setExportError('Export PDF se nezdařil');
     } finally {
       setExportingPdf(false);
     }
@@ -127,7 +127,7 @@ export function FinancePage() {
     try {
       await exportFinanceExcel(selectedYear, getAccessToken);
     } catch {
-      setExportError('Export Excel se nezdaril');
+      setExportError('Export Excel se nezdařil');
     } finally {
       setExportingExcel(false);
     }
