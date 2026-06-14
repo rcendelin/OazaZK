@@ -116,4 +116,61 @@ public class CalculateHouseSaldoUseCaseTests
         s.TotalSaldo.Should().Be(-100m);
         s.Periods.Should().ContainSingle(p => p.PeriodName == "Nezařazené platby");
     }
+
+    [Fact]
+    public async Task CalculateAsync_Payout_ReducesOverpayment_AsNetAdjustment()
+    {
+        _billingRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Period))
+            .ReturnsAsync(new List<BillingPeriod>());
+
+        _advanceRepo.Setup(r => r.GetByHouseIdAsync("house-1")).ReturnsAsync(new List<AdvancePayment>
+        {
+            // Overpaid 1000 (credit), then 600 paid back.
+            new() { HouseId = "house-1", RowKey = "D-1", Type = PaymentType.Doplatek,
+                    WaterAmount = 1000m, PaymentDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new() { HouseId = "house-1", RowKey = "V-1", Type = PaymentType.Payout,
+                    Amount = 600m, PaymentDate = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+        });
+
+        var s = (await _sut.CalculateAsync(null))[0];
+
+        s.ComponentSaldo.Should().Be(-1000m); // credit from the doplatek
+        s.NetAdjustments.Should().Be(600m);    // payout pulls saldo back toward zero
+        s.TotalSaldo.Should().Be(-400m);       // -1000 + 600
+        s.Adjustments.Should().ContainSingle(a => a.Type == "Payout" && a.Amount == 600m);
+    }
+
+    [Fact]
+    public async Task CalculateAsync_OpeningCredit_SetsSaldo_MonthsCovered_AndDissolvingFlag()
+    {
+        _houseRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.House)).ReturnsAsync(new List<House>
+        {
+            new() { Id = "house-1", Name = "House A", IsActive = true, DissolveOverpayment = true },
+        });
+        _billingRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Period))
+            .ReturnsAsync(new List<BillingPeriod>());
+        _settingsRepo.Setup(r => r.GetAsync()).ReturnsAsync(new AdvanceSettings
+        {
+            HouseOverrides = new Dictionary<string, HouseAdvanceOverride>
+            {
+                ["house-1"] = new() { WaterAdvance = 600m, ElectricityAdvance = 300m, CommonAdvance = 100m },
+            },
+        });
+
+        // Opening overpayment 3000 → stored as signed -3000.
+        _advanceRepo.Setup(r => r.GetByHouseIdAsync("house-1")).ReturnsAsync(new List<AdvancePayment>
+        {
+            new() { HouseId = "house-1", RowKey = "O-1", Type = PaymentType.OpeningBalance,
+                    Amount = -3000m, PaymentDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    Note = "počáteční přeplatek" },
+        });
+
+        var s = (await _sut.CalculateAsync(null))[0];
+
+        s.TotalSaldo.Should().Be(-3000m);        // přeplatek
+        s.PrescribedMonthly.Should().Be(1000m);   // 600 + 300 + 100
+        s.MonthsCovered.Should().Be(3.0m);        // 3000 / 1000
+        s.Dissolving.Should().BeTrue();
+        s.Adjustments.Should().ContainSingle(a => a.Type == "OpeningBalance" && a.Amount == -3000m);
+    }
 }

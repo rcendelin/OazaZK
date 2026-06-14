@@ -89,7 +89,7 @@ public class CalculateHouseSaldoUseCase
         var result = new List<HouseSaldoResponse>();
         foreach (var house in targetHouses.OrderBy(h => h.Name))
         {
-            result.Add(await BuildHouseSaldoAsync(house, periods, chargesByPeriod));
+            result.Add(await BuildHouseSaldoAsync(house, periods, chargesByPeriod, settings));
         }
 
         return result;
@@ -98,18 +98,40 @@ public class CalculateHouseSaldoUseCase
     private async Task<HouseSaldoResponse> BuildHouseSaldoAsync(
         House house,
         List<BillingPeriod> periods,
-        Dictionary<string, Dictionary<string, ComponentTriple>> chargesByPeriod)
+        Dictionary<string, Dictionary<string, ComponentTriple>> chargesByPeriod,
+        AdvanceSettings settings)
     {
-        // Bucket the house's payments (advances + doplatky) by the period they fall in.
         var payments = await _advanceRepository.GetByHouseIdAsync(house.Id);
+
+        // Component-split money-in (advances + doplatky) is bucketed per period for
+        // the analytical water/electricity/common breakdown.
         var paidByPeriod = new Dictionary<string, ComponentTriple>();
+        // Net-level transactions (payouts, opening balance) move the total only.
+        decimal netAdjustments = 0m;
+        var adjustments = new List<SaldoAdjustment>();
+
         foreach (var p in payments)
         {
-            var effective = p.EffectiveDate();
-            var period = periods.FirstOrDefault(per => effective >= per.DateFrom && effective <= per.DateTo);
-            var key = period?.Id ?? UnassignedPeriodId;
-            paidByPeriod.TryGetValue(key, out var acc);
-            paidByPeriod[key] = acc.Add(p.WaterAmount, p.ElectricityAmount, p.CommonAmount);
+            if (p.Type is PaymentType.Advance or PaymentType.Doplatek)
+            {
+                var effective = p.EffectiveDate();
+                var period = periods.FirstOrDefault(per => effective >= per.DateFrom && effective <= per.DateTo);
+                var key = period?.Id ?? UnassignedPeriodId;
+                paidByPeriod.TryGetValue(key, out var acc);
+                paidByPeriod[key] = acc.Add(p.WaterAmount, p.ElectricityAmount, p.CommonAmount);
+            }
+            else
+            {
+                // Payout: Amount > 0 (refund of overpayment → increases saldo TOWARD ZERO).
+                // OpeningBalance: signed Amount (positive = debt/nedoplatek, negative = credit/přeplatek).
+                netAdjustments += p.Amount;
+                adjustments.Add(new SaldoAdjustment(
+                    Type: p.Type.ToString(),
+                    Amount: p.Amount,
+                    Date: p.PaymentDate,
+                    Note: p.Note,
+                    RowKey: p.RowKey));
+            }
         }
 
         var totalWater = new ComponentAccumulator();
@@ -137,7 +159,7 @@ public class CalculateHouseSaldoUseCase
                 Common: Component(charge.Common, paid.Common)));
         }
 
-        // Payments that fall outside every period are pure credit (no charge).
+        // Component payments that fall outside every period are pure credit (no charge).
         if (paidByPeriod.TryGetValue(UnassignedPeriodId, out var unassigned) && !unassigned.IsZero)
         {
             totalWater.Add(0m, unassigned.Water);
@@ -156,8 +178,19 @@ public class CalculateHouseSaldoUseCase
         var water = totalWater.ToComponent();
         var electricity = totalElec.ToComponent();
         var common = totalCommon.ToComponent();
-        var totalCharged = Math.Round(totalWater.Charged + totalElec.Charged + totalCommon.Charged, 2);
-        var totalPaid = Math.Round(totalWater.Paid + totalElec.Paid + totalCommon.Paid, 2);
+        var componentSaldo = Math.Round(water.Saldo + electricity.Saldo + common.Saldo, 2);
+        netAdjustments = Math.Round(netAdjustments, 2);
+        var totalSaldo = Math.Round(componentSaldo + netAdjustments, 2);
+
+        // Prescribed monthly = the house's actual override (water + electricity + common).
+        var prescribedMonthly = settings.HouseOverrides.TryGetValue(house.Id, out var ov)
+            ? Math.Round(ov.WaterAdvance + ov.ElectricityAdvance + ov.CommonAdvance, 2)
+            : 0m;
+
+        // "Overpayment lasts ~N months" — only meaningful when in credit with a prescribed amount.
+        decimal? monthsCovered = totalSaldo < 0 && prescribedMonthly > 0
+            ? Math.Round(-totalSaldo / prescribedMonthly, 1)
+            : null;
 
         return new HouseSaldoResponse(
             HouseId: house.Id,
@@ -165,10 +198,14 @@ public class CalculateHouseSaldoUseCase
             Water: water,
             Electricity: electricity,
             Common: common,
-            TotalCharged: totalCharged,
-            TotalPaid: totalPaid,
-            TotalSaldo: Math.Round(totalCharged - totalPaid, 2),
-            Periods: breakdown);
+            ComponentSaldo: componentSaldo,
+            NetAdjustments: netAdjustments,
+            TotalSaldo: totalSaldo,
+            PrescribedMonthly: prescribedMonthly,
+            MonthsCovered: monthsCovered,
+            Dissolving: house.DissolveOverpayment,
+            Periods: breakdown,
+            Adjustments: adjustments.OrderByDescending(a => a.Date).ToList());
     }
 
     private static SaldoComponent Component(decimal charged, decimal paid) =>

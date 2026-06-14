@@ -67,7 +67,8 @@ public static class TableEntityMapper
             { "Address", house.Address },
             { "ContactPerson", house.ContactPerson },
             { "Email", house.Email },
-            { "IsActive", house.IsActive }
+            { "IsActive", house.IsActive },
+            { "DissolveOverpayment", house.DissolveOverpayment }
         };
     }
 
@@ -80,7 +81,8 @@ public static class TableEntityMapper
             Address = entity.GetString("Address") ?? string.Empty,
             ContactPerson = entity.GetString("ContactPerson") ?? string.Empty,
             Email = entity.GetString("Email") ?? string.Empty,
-            IsActive = entity.GetBoolean("IsActive") ?? true
+            IsActive = entity.GetBoolean("IsActive") ?? true,
+            DissolveOverpayment = entity.GetBoolean("DissolveOverpayment") ?? false
         };
     }
 

@@ -16,6 +16,7 @@ public static class EntityMapper
             ContactPerson = house.ContactPerson,
             Email = house.Email,
             IsActive = house.IsActive,
+            DissolveOverpayment = house.DissolveOverpayment,
         };
     }
 

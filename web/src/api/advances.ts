@@ -27,6 +27,21 @@ export interface CreateDoplatekInput {
   note?: string;
 }
 
+export interface CreatePayoutInput {
+  houseId: string;
+  amount: number; // > 0, money returned to the household
+  paymentDate: string; // ISO
+  note?: string;
+}
+
+export interface CreateOpeningBalanceInput {
+  houseId: string;
+  amount: number; // > 0 magnitude
+  isOverpayment: boolean; // true = přeplatek (credit), false = nedoplatek (debt)
+  paymentDate: string; // ISO
+  note?: string;
+}
+
 export const getAdvances = (houseId: string, year: number): Promise<AdvancePayment[]> =>
   apiClient.get<AdvancePayment[]>(
     `/advances?houseId=${encodeURIComponent(houseId)}&year=${encodeURIComponent(String(year))}`,
@@ -53,6 +68,12 @@ export const updateAdvance = (
 
 export const createDoplatek = (data: CreateDoplatekInput): Promise<AdvancePayment> =>
   apiClient.post<AdvancePayment>('/advances/doplatek', data);
+
+export const createPayout = (data: CreatePayoutInput): Promise<AdvancePayment> =>
+  apiClient.post<AdvancePayment>('/advances/payout', data);
+
+export const createOpeningBalance = (data: CreateOpeningBalanceInput): Promise<AdvancePayment> =>
+  apiClient.post<AdvancePayment>('/advances/opening-balance', data);
 
 export const deletePayment = (houseId: string, rowKey: string): Promise<void> =>
   apiClient.delete(`/advances/${encodeURIComponent(houseId)}/${encodeURIComponent(rowKey)}`);

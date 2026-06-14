@@ -39,7 +39,7 @@ export function HousesPage() {
   const submittingRef = useRef(false);
 
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<HouseFormData & { isActive: boolean }>({ ...emptyForm, isActive: true });
+  const [editForm, setEditForm] = useState<HouseFormData & { isActive: boolean; dissolveOverpayment: boolean }>({ ...emptyForm, isActive: true, dissolveOverpayment: false });
   const [editError, setEditError] = useState<string | null>(null);
 
   const handleCreate = async () => {
@@ -70,6 +70,7 @@ export function HousesPage() {
       contactPerson: house.contactPerson,
       email: house.email,
       isActive: house.isActive,
+      dissolveOverpayment: house.dissolveOverpayment,
     });
     setEditError(null);
   };
@@ -99,6 +100,7 @@ export function HousesPage() {
         contactPerson: house.contactPerson,
         email: house.email,
         isActive: !house.isActive,
+        dissolveOverpayment: house.dissolveOverpayment,
       });
       refetch();
     } catch {
@@ -197,6 +199,10 @@ export function HousesPage() {
                         <option value="true">Aktivní</option>
                         <option value="false">Neaktivní</option>
                       </select>
+                      <label className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary" title="Dům neplatí pravidelně, přeplatek se postupně rozpouští">
+                        <input type="checkbox" checked={editForm.dissolveOverpayment} onChange={(e) => setEditForm({ ...editForm, dissolveOverpayment: e.target.checked })} />
+                        Rozpouští přeplatek
+                      </label>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex gap-1 justify-end">

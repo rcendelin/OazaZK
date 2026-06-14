@@ -4,10 +4,12 @@ import { useApi } from '../hooks/useApi';
 import {
   getFinanceRecords,
   getFinanceSummary,
+  getFundBalance,
   createFinanceRecord,
   exportFinancePdf,
   exportFinanceExcel,
 } from '../api/finance';
+import type { FundBalanceResponse } from '../api/finance';
 import { MetricCard } from '../components/MetricCard';
 import { Spinner } from '../components/Spinner';
 import type {
@@ -133,6 +135,11 @@ export function FinancePage() {
     }
   };
 
+  // Fond společného základu (admin/accountant) — all-time, not year-scoped.
+  const { data: fund } = useApi<FundBalanceResponse | null>(
+    useCallback(() => (canExport ? getFundBalance() : Promise.resolve(null)), [canExport]),
+  );
+
   const error = summaryError ?? recordsError ?? exportError;
 
   return (
@@ -184,6 +191,30 @@ export function FinancePage() {
       )}
       {!summaryLoading && summary && (
         <SummaryCards summary={summary} />
+      )}
+
+      {/* Fond společného základu (all-time) */}
+      {fund && (
+        <div className="mt-6 rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
+          <h2 className="text-base font-semibold text-text-primary">Fond společného základu</h2>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Vybrané příspěvky na společný základ minus mimořádné náklady (mimo vodu a elektřinu). Za celou dobu.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-surface-sunken p-3">
+              <p className="text-xs text-text-muted">Vybráno na společný základ</p>
+              <p className="mt-1 text-lg font-semibold text-text-primary">{formatCZK(fund.commonContributions)}</p>
+            </div>
+            <div className="rounded-xl bg-surface-sunken p-3">
+              <p className="text-xs text-text-muted">Mimořádné náklady</p>
+              <p className="mt-1 text-lg font-semibold text-text-primary">{formatCZK(fund.extraordinaryCosts)}</p>
+            </div>
+            <div className={`rounded-xl p-3 ${fund.fundBalance >= 0 ? 'bg-success-light' : 'bg-danger-light'}`}>
+              <p className="text-xs text-text-muted">Zůstatek fondu</p>
+              <p className={`mt-1 text-lg font-bold ${fund.fundBalance >= 0 ? 'text-success' : 'text-danger'}`}>{formatCZK(fund.fundBalance)}</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Add record form (admin only, collapsible) */}

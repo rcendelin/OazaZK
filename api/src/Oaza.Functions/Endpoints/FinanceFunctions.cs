@@ -9,6 +9,7 @@ using Oaza.Application.Exceptions;
 using Oaza.Application.Mapping;
 using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
+using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
@@ -19,6 +20,8 @@ namespace Oaza.Functions.Endpoints;
 public class FinanceFunctions
 {
     private readonly IFinancialRecordRepository _financialRecordRepository;
+    private readonly IAdvancePaymentRepository _advanceRepository;
+    private readonly IHouseRepository _houseRepository;
     private readonly GenerateFinanceReportUseCase _generatePdfUseCase;
     private readonly GenerateFinanceExcelUseCase _generateExcelUseCase;
     private readonly ILogger<FinanceFunctions> _logger;
@@ -31,14 +34,62 @@ public class FinanceFunctions
 
     public FinanceFunctions(
         IFinancialRecordRepository financialRecordRepository,
+        IAdvancePaymentRepository advanceRepository,
+        IHouseRepository houseRepository,
         GenerateFinanceReportUseCase generatePdfUseCase,
         GenerateFinanceExcelUseCase generateExcelUseCase,
         ILogger<FinanceFunctions> logger)
     {
         _financialRecordRepository = financialRecordRepository ?? throw new ArgumentNullException(nameof(financialRecordRepository));
+        _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
+        _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _generatePdfUseCase = generatePdfUseCase ?? throw new ArgumentNullException(nameof(generatePdfUseCase));
         _generateExcelUseCase = generateExcelUseCase ?? throw new ArgumentNullException(nameof(generateExcelUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    [Function("GetFundBalance")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> GetFundBalanceAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "finance/fund")] HttpRequestData req)
+    {
+        try
+        {
+            // Money collected toward the common base across all households.
+            var houses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
+            decimal commonContributions = 0m;
+            foreach (var house in houses)
+            {
+                var payments = await _advanceRepository.GetByHouseIdAsync(house.Id);
+                commonContributions += payments
+                    .Where(p => p.Type is PaymentType.Advance or PaymentType.Doplatek)
+                    .Sum(p => p.CommonAmount);
+            }
+
+            // Extraordinary costs the common fund covers — all expenses except water
+            // (settled separately) and electricity (covered by its own contributions).
+            var records = await _financialRecordRepository.GetAllAsync();
+            var extraordinaryCosts = records
+                .Where(r => r.Type == FinancialRecordType.Expense
+                    && !string.Equals(r.Category, "voda", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(r.Category, "elektro", StringComparison.OrdinalIgnoreCase))
+                .Sum(r => r.Amount);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new
+            {
+                commonContributions = Math.Round(commonContributions, 2),
+                extraordinaryCosts = Math.Round(extraordinaryCosts, 2),
+                fundBalance = Math.Round(commonContributions - extraordinaryCosts, 2),
+            });
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
     }
 
     [Function("GetFinancialRecords")]

@@ -21,6 +21,15 @@ export const getFinanceRecords = (
 export const getFinanceBalance = (): Promise<FinanceBalanceResponse> =>
   apiClient.get<FinanceBalanceResponse>('/finance/balance');
 
+export interface FundBalanceResponse {
+  commonContributions: number;
+  extraordinaryCosts: number;
+  fundBalance: number;
+}
+
+export const getFundBalance = (): Promise<FundBalanceResponse> =>
+  apiClient.get<FundBalanceResponse>('/finance/fund');
+
 export const getFinanceSummary = (
   year: number,
 ): Promise<FinanceSummaryResponse> =>

@@ -313,6 +313,116 @@ public class AdvanceFunctions
         }
     }
 
+    [Function("CreatePayout")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> CreatePayoutAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/payout")] HttpRequestData req)
+    {
+        try
+        {
+            var request = await JsonSerializer.DeserializeAsync<CreatePayoutRequest>(req.Body, JsonOptions);
+            if (request is null)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+            }
+
+            var validationResult = await new CreatePayoutRequestValidator().ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return await WriteValidationErrorResponseAsync(req, validationResult);
+            }
+
+            var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
+            if (house is null)
+            {
+                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+            }
+
+            var paymentDate = DateTime.SpecifyKind(request.PaymentDate, DateTimeKind.Utc);
+            var payment = new AdvancePayment
+            {
+                HouseId = request.HouseId,
+                Year = paymentDate.Year,
+                Month = paymentDate.Month,
+                Amount = request.Amount,        // positive: refund of overpayment → increases saldo toward zero
+                PaymentDate = paymentDate,
+                Type = PaymentType.Payout,
+                Note = request.Note,
+                RowKey = $"V-{InvertedTimestamp.FromDateTime(paymentDate)}-{Guid.NewGuid():N}"[..40],
+            };
+
+            await _advanceRepository.UpsertAsync(payment);
+            _logger.LogInformation("Payout recorded for house {HouseId} ({RowKey}).", payment.HouseId, payment.RowKey);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.Created,
+                EntityMapper.ToResponse(payment, house.Name));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("CreateOpeningBalance")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> CreateOpeningBalanceAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/opening-balance")] HttpRequestData req)
+    {
+        try
+        {
+            var request = await JsonSerializer.DeserializeAsync<CreateOpeningBalanceRequest>(req.Body, JsonOptions);
+            if (request is null)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+            }
+
+            var validationResult = await new CreateOpeningBalanceRequestValidator().ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return await WriteValidationErrorResponseAsync(req, validationResult);
+            }
+
+            var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
+            if (house is null)
+            {
+                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+            }
+
+            // Signed effect on saldo: overpayment (credit) lowers it, underpayment (debt) raises it.
+            var signedAmount = request.IsOverpayment ? -request.Amount : request.Amount;
+            var paymentDate = DateTime.SpecifyKind(request.PaymentDate, DateTimeKind.Utc);
+            var payment = new AdvancePayment
+            {
+                HouseId = request.HouseId,
+                Year = paymentDate.Year,
+                Month = paymentDate.Month,
+                Amount = signedAmount,
+                PaymentDate = paymentDate,
+                Type = PaymentType.OpeningBalance,
+                Note = request.Note,
+                RowKey = $"O-{InvertedTimestamp.FromDateTime(paymentDate)}-{Guid.NewGuid():N}"[..40],
+            };
+
+            await _advanceRepository.UpsertAsync(payment);
+            _logger.LogInformation("Opening balance recorded for house {HouseId} ({RowKey}).", payment.HouseId, payment.RowKey);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.Created,
+                EntityMapper.ToResponse(payment, house.Name));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
     [Function("DeletePayment")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> DeletePaymentAsync(

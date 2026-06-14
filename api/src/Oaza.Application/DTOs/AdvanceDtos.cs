@@ -48,7 +48,26 @@ public class AdvanceResponse
     public string RowKey { get; set; } = string.Empty;
 }
 
-// ───────────────────── Saldo (per-house, per-component) ─────────────────────
+/// <summary>Records a refund of a household's overpayment (money paid back). Net-level.</summary>
+public class CreatePayoutRequest
+{
+    public string HouseId { get; set; } = string.Empty;
+    public decimal Amount { get; set; }     // > 0, money returned to the household
+    public DateTime PaymentDate { get; set; }
+    public string? Note { get; set; }
+}
+
+/// <summary>Seeds a household's opening account balance (one-time, for system start). Net-level.</summary>
+public class CreateOpeningBalanceRequest
+{
+    public string HouseId { get; set; } = string.Empty;
+    public decimal Amount { get; set; }     // > 0 magnitude
+    public bool IsOverpayment { get; set; } // true = přeplatek (credit), false = nedoplatek (debt)
+    public DateTime PaymentDate { get; set; }
+    public string? Note { get; set; }
+}
+
+// ───────────────────── Saldo (per-house) ─────────────────────
 
 /// <summary>One component's account: how much was charged, paid, and the net.</summary>
 public record SaldoComponent(decimal Charged, decimal Paid, decimal Saldo);
@@ -62,10 +81,20 @@ public record PeriodSaldoBreakdown(
     SaldoComponent Electricity,
     SaldoComponent Common);
 
+/// <summary>A net-level adjustment (payout or opening balance) shown in the saldo detail.</summary>
+public record SaldoAdjustment(
+    string Type,        // "Payout" | "OpeningBalance"
+    decimal Amount,     // signed effect on saldo (positive = increases nedoplatek)
+    DateTime Date,
+    string? Note,
+    string RowKey);
+
 /// <summary>
-/// A house's running saldo, split into water / electricity / common base and
-/// summed across all billing periods. Saldo = Charged − Paid
-/// (positive = nedoplatek, negative = přeplatek).
+/// A house's running saldo. The headline is the single net <see cref="TotalSaldo"/>
+/// (positive = nedoplatek, negative = přeplatek); money is fungible across
+/// components. Water/Electricity/Common are an analytical breakdown of where the
+/// charges arose. Net-level adjustments (payouts, opening balance) move the total
+/// but are not attributed to a component.
 /// </summary>
 public record HouseSaldoResponse(
     string HouseId,
@@ -73,7 +102,11 @@ public record HouseSaldoResponse(
     SaldoComponent Water,
     SaldoComponent Electricity,
     SaldoComponent Common,
-    decimal TotalCharged,
-    decimal TotalPaid,
-    decimal TotalSaldo,
-    List<PeriodSaldoBreakdown> Periods);
+    decimal ComponentSaldo,        // water + electricity + common saldo
+    decimal NetAdjustments,        // Σ payouts + opening balance (signed)
+    decimal TotalSaldo,            // ComponentSaldo + NetAdjustments — the net balance
+    decimal PrescribedMonthly,     // expected monthly payment (override sum), 0 if unset
+    decimal? MonthsCovered,        // |overpayment| / prescribed, null if not in credit / no prescribed
+    bool Dissolving,               // household is dissolving its overpayment
+    List<PeriodSaldoBreakdown> Periods,
+    List<SaldoAdjustment> Adjustments);

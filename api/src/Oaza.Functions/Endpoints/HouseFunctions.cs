@@ -147,6 +147,7 @@ public class HouseFunctions
             existing.ContactPerson = request.ContactPerson;
             existing.Email = request.Email;
             existing.IsActive = request.IsActive;
+            existing.DissolveOverpayment = request.DissolveOverpayment;
 
             await _houseRepository.UpsertAsync(existing);
 

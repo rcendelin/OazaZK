@@ -21,5 +21,6 @@ export const updateHouse = (id: string, data: {
   contactPerson: string;
   email: string;
   isActive: boolean;
+  dissolveOverpayment: boolean;
 }): Promise<House> =>
   apiClient.put<House>(`/houses/${encodeURIComponent(id)}`, data);

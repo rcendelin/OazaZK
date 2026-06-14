@@ -1,6 +1,7 @@
 using Azure.Data.Tables;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
+using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
 
 namespace Oaza.Infrastructure.Persistence;
@@ -30,6 +31,10 @@ public class AdvancePaymentRepository : TableStorageRepository<AdvancePayment>, 
         var all = await GetByPartitionKeyAsync(houseId);
         return all.Where(p =>
         {
+            // Only component-split money-in counts toward a period's settlement.
+            // Payouts and opening balances are net-level and must never inflate a
+            // period's advances (they would distort the water true-up).
+            if (p.Type is not (PaymentType.Advance or PaymentType.Doplatek)) return false;
             var effectiveDate = p.EffectiveDate();
             return effectiveDate >= dateFrom && effectiveDate <= dateTo;
         })

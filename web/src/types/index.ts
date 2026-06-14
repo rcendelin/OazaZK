@@ -24,6 +24,7 @@ export interface House {
   contactPerson: string;
   email: string;
   isActive: boolean;
+  dissolveOverpayment: boolean;
 }
 
 export interface WaterMeter {
@@ -78,7 +79,7 @@ export interface SupplierInvoice {
   lineItems: InvoiceLineItem[];
 }
 
-export type PaymentType = 'Advance' | 'Doplatek';
+export type PaymentType = 'Advance' | 'Doplatek' | 'Payout' | 'OpeningBalance';
 
 export interface AdvancePayment {
   houseId: string;
@@ -127,16 +128,31 @@ export interface PeriodSaldoBreakdown {
   common: SaldoComponent;
 }
 
+// Net-level adjustments are only ever payouts or opening balances.
+export type AdjustmentType = 'Payout' | 'OpeningBalance';
+
+export interface SaldoAdjustment {
+  type: AdjustmentType;
+  amount: number; // signed effect on saldo (positive = increases nedoplatek)
+  date: string;
+  note: string | null;
+  rowKey: string;
+}
+
 export interface HouseSaldo {
   houseId: string;
   houseName: string;
   water: SaldoComponent;
   electricity: SaldoComponent;
   common: SaldoComponent;
-  totalCharged: number;
-  totalPaid: number;
-  totalSaldo: number;
+  componentSaldo: number;
+  netAdjustments: number;
+  totalSaldo: number; // the net balance: positive = nedoplatek, negative = přeplatek
+  prescribedMonthly: number;
+  monthsCovered: number | null;
+  dissolving: boolean;
   periods: PeriodSaldoBreakdown[];
+  adjustments: SaldoAdjustment[];
 }
 
 // API response types
