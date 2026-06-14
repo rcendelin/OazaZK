@@ -53,10 +53,14 @@ function ValidationMessages({
   );
 }
 
-function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
+function PreviewTable({ preview, meters }: { preview: ImportPreviewResponse; meters: WaterMeter[] }) {
   const meterIds = Array.from(
     new Set(preview.rows.flatMap((row) => Object.keys(row.meterValues))),
   );
+  const labelFor = (id: string): string => {
+    const meter = meters.find((m) => m.id === id);
+    return meter ? meter.name || meter.meterNumber : id;
+  };
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border">
@@ -65,7 +69,7 @@ function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
           <tr>
             <th className="px-4 py-3">Datum</th>
             {meterIds.map((meterId) => (
-              <th key={meterId} className="px-4 py-3">{meterId}</th>
+              <th key={meterId} className="px-4 py-3">{labelFor(meterId)}</th>
             ))}
           </tr>
         </thead>
@@ -266,6 +270,8 @@ export function ReadingsImportPage() {
   const [clipDate, setClipDate] = useState(() => new Date().toISOString().split('T')[0]);
   const inFlight = useRef(false);
 
+  const { data: meters } = useApi<WaterMeter[]>(useCallback(() => getMeters(), []));
+
   const handleFileSelected = useCallback((file: File) => {
     setSelectedFile(file);
     setError(null);
@@ -453,7 +459,7 @@ export function ReadingsImportPage() {
               <ValidationMessages errors={preview.errors} warnings={preview.warnings} />
               <div>
                 <h2 className="mb-3 text-lg font-semibold text-text-primary">Náhled importu</h2>
-                <PreviewTable preview={preview} />
+                <PreviewTable preview={preview} meters={meters ?? []} />
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={handleReset} disabled={state === 'confirming'}
