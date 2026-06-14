@@ -78,13 +78,21 @@ export interface SupplierInvoice {
   lineItems: InvoiceLineItem[];
 }
 
+export type PaymentType = 'Advance' | 'Doplatek';
+
 export interface AdvancePayment {
   houseId: string;
   houseName: string | null;
   year: number;
   month: number;
   amount: number;
+  waterAmount: number;
+  electricityAmount: number;
+  commonAmount: number;
   paymentDate: string;
+  type: PaymentType;
+  note: string | null;
+  rowKey: string;
 }
 
 export interface Settlement {
@@ -97,6 +105,38 @@ export interface Settlement {
   totalAdvances: number;
   balance: number;
   lossAllocatedM3: number;
+  electricityCharge: number;
+  electricityAdvances: number;
+  commonCharge: number;
+  commonAdvances: number;
+}
+
+// Per-house saldo (water / electricity / common base)
+export interface SaldoComponent {
+  charged: number;
+  paid: number;
+  saldo: number; // charged - paid: positive = nedoplatek, negative = přeplatek
+}
+
+export interface PeriodSaldoBreakdown {
+  periodId: string;
+  periodName: string;
+  closed: boolean;
+  water: SaldoComponent;
+  electricity: SaldoComponent;
+  common: SaldoComponent;
+}
+
+export interface HouseSaldo {
+  houseId: string;
+  houseName: string;
+  water: SaldoComponent;
+  electricity: SaldoComponent;
+  common: SaldoComponent;
+  totalCharged: number;
+  totalPaid: number;
+  totalSaldo: number;
+  periods: PeriodSaldoBreakdown[];
 }
 
 // API response types
@@ -167,6 +207,9 @@ export interface SettlementPreviewResponse {
   totalLoss: number;
   totalInvoiceAmount: number;
   lossAllocationMethod: string;
+  monthsInPeriod: number;
+  totalElectricityCharge: number;
+  totalCommonCharge: number;
   houses: HouseSettlementDetail[];
 }
 
@@ -179,6 +222,10 @@ export interface HouseSettlementDetail {
   calculatedAmount: number;
   totalAdvances: number;
   balance: number;
+  electricityCharge: number;
+  electricityAdvances: number;
+  commonCharge: number;
+  commonAdvances: number;
 }
 
 export interface SettlementResponse {
@@ -191,6 +238,10 @@ export interface SettlementResponse {
   totalAdvances: number;
   balance: number;
   lossAllocatedM3: number;
+  electricityCharge: number;
+  electricityAdvances: number;
+  commonCharge: number;
+  commonAdvances: number;
 }
 
 // Document types

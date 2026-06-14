@@ -18,6 +18,7 @@ public class CloseBillingPeriodUseCaseTests
     private readonly Mock<IMeterReadingRepository> _readingRepo = new();
     private readonly Mock<ISupplierInvoiceRepository> _invoiceRepo = new();
     private readonly Mock<IAdvancePaymentRepository> _advanceRepo = new();
+    private readonly Mock<IAdvanceSettingsRepository> _settingsRepo = new();
     private readonly Mock<ISettlementRepository> _settlementRepo = new();
 
     private readonly CloseBillingPeriodUseCase _sut;
@@ -27,9 +28,12 @@ public class CloseBillingPeriodUseCaseTests
 
     public CloseBillingPeriodUseCaseTests()
     {
+        _settingsRepo.Setup(r => r.GetAsync()).ReturnsAsync(new AdvanceSettings());
+
         var calc = new CalculateSettlementUseCase(
             _billingRepo.Object, _houseRepo.Object, _meterRepo.Object,
             _readingRepo.Object, _invoiceRepo.Object, _advanceRepo.Object,
+            _settingsRepo.Object,
             Mock.Of<ILogger<CalculateSettlementUseCase>>());
 
         _sut = new CloseBillingPeriodUseCase(
@@ -88,7 +92,7 @@ public class CloseBillingPeriodUseCaseTests
         _advanceRepo.Setup(r => r.GetByHouseAndPeriodAsync(houseId, Start, End)).ReturnsAsync(
             new List<AdvancePayment>
             {
-                new() { HouseId = houseId, Year = 2025, Month = 3, Amount = amount },
+                new() { HouseId = houseId, Year = 2025, Month = 3, Amount = amount, WaterAmount = amount },
             });
 
     [Fact]

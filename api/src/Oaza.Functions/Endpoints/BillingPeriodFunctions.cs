@@ -506,7 +506,11 @@ public class BillingPeriodFunctions
             SharePercent: settlement.SharePercent,
             CalculatedAmount: settlement.CalculatedAmount,
             TotalAdvances: settlement.TotalAdvances,
-            Balance: settlement.Balance
+            Balance: settlement.Balance,
+            ElectricityCharge: settlement.ElectricityCharge,
+            ElectricityAdvances: settlement.ElectricityAdvances,
+            CommonCharge: settlement.CommonCharge,
+            CommonAdvances: settlement.CommonAdvances
         );
 
         var pdfBytes = _generateSettlementPdfUseCase.Generate(

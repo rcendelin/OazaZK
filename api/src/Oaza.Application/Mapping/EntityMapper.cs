@@ -70,7 +70,13 @@ public static class EntityMapper
             Year = payment.Year,
             Month = payment.Month,
             Amount = payment.Amount,
+            WaterAmount = payment.WaterAmount,
+            ElectricityAmount = payment.ElectricityAmount,
+            CommonAmount = payment.CommonAmount,
             PaymentDate = payment.PaymentDate,
+            Type = payment.Type.ToString(),
+            Note = payment.Note,
+            RowKey = payment.RowKey,
         };
     }
 
@@ -98,7 +104,11 @@ public static class EntityMapper
             CalculatedAmount: settlement.CalculatedAmount,
             TotalAdvances: settlement.TotalAdvances,
             Balance: settlement.Balance,
-            LossAllocatedM3: settlement.LossAllocatedM3
+            LossAllocatedM3: settlement.LossAllocatedM3,
+            ElectricityCharge: settlement.ElectricityCharge,
+            ElectricityAdvances: settlement.ElectricityAdvances,
+            CommonCharge: settlement.CommonCharge,
+            CommonAdvances: settlement.CommonAdvances
         );
     }
 

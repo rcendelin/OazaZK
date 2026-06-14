@@ -74,6 +74,7 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IMeterReadingRepository>(),
                 sp.GetRequiredService<ISupplierInvoiceRepository>(),
                 sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
                 sp.GetRequiredService<ILogger<CalculateSettlementUseCase>>()));
 
         // Use cases: Billing period close (persist settlements + lock period)
@@ -83,6 +84,17 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IBillingPeriodRepository>(),
                 sp.GetRequiredService<ISettlementRepository>(),
                 sp.GetRequiredService<ILogger<CloseBillingPeriodUseCase>>()));
+
+        // Use cases: Per-house saldo (water / electricity / common base)
+        services.AddSingleton<CalculateHouseSaldoUseCase>(sp =>
+            new CalculateHouseSaldoUseCase(
+                sp.GetRequiredService<CalculateSettlementUseCase>(),
+                sp.GetRequiredService<IBillingPeriodRepository>(),
+                sp.GetRequiredService<ISettlementRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
+                sp.GetRequiredService<ILogger<CalculateHouseSaldoUseCase>>()));
 
         // Use cases: Settlement PDF generation
         services.AddSingleton<GenerateSettlementPdfUseCase>(sp =>

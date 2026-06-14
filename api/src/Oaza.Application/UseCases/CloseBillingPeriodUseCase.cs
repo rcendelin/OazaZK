@@ -65,6 +65,10 @@ public class CloseBillingPeriodUseCase
                 TotalAdvances = houseDetail.TotalAdvances,
                 Balance = houseDetail.Balance,
                 LossAllocatedM3 = houseDetail.LossAllocatedM3,
+                ElectricityCharge = houseDetail.ElectricityCharge,
+                ElectricityAdvances = houseDetail.ElectricityAdvances,
+                CommonCharge = houseDetail.CommonCharge,
+                CommonAdvances = houseDetail.CommonAdvances,
             };
 
             await _settlementRepository.UpsertAsync(settlement);

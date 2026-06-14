@@ -7,10 +7,12 @@ using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
 using Oaza.Application.Mapping;
+using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
+using Oaza.Domain.Helpers;
 using Oaza.Domain.Interfaces;
 using Oaza.Functions.Attributes;
 
@@ -21,6 +23,7 @@ public class AdvanceFunctions
     private readonly IAdvancePaymentRepository _advanceRepository;
     private readonly IHouseRepository _houseRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
+    private readonly CalculateHouseSaldoUseCase _calculateHouseSaldoUseCase;
     private readonly ILogger<AdvanceFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -33,11 +36,13 @@ public class AdvanceFunctions
         IAdvancePaymentRepository advanceRepository,
         IHouseRepository houseRepository,
         IBillingPeriodRepository billingPeriodRepository,
+        CalculateHouseSaldoUseCase calculateHouseSaldoUseCase,
         ILogger<AdvanceFunctions> logger)
     {
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
+        _calculateHouseSaldoUseCase = calculateHouseSaldoUseCase ?? throw new ArgumentNullException(nameof(calculateHouseSaldoUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -153,8 +158,13 @@ public class AdvanceFunctions
                 HouseId = request.HouseId,
                 Year = request.Year,
                 Month = request.Month,
-                Amount = request.Amount,
+                Amount = request.WaterAmount + request.ElectricityAmount + request.CommonAmount,
+                WaterAmount = request.WaterAmount,
+                ElectricityAmount = request.ElectricityAmount,
+                CommonAmount = request.CommonAmount,
                 PaymentDate = request.PaymentDate,
+                Type = PaymentType.Advance,
+                RowKey = $"{request.Year:D4}-{request.Month:D2}",
             };
 
             await _advanceRepository.UpsertAsync(payment);
@@ -214,7 +224,10 @@ public class AdvanceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
-            existing.Amount = request.Amount;
+            existing.WaterAmount = request.WaterAmount;
+            existing.ElectricityAmount = request.ElectricityAmount;
+            existing.CommonAmount = request.CommonAmount;
+            existing.Amount = request.WaterAmount + request.ElectricityAmount + request.CommonAmount;
             existing.PaymentDate = request.PaymentDate;
 
             await _advanceRepository.UpsertAsync(existing);
@@ -227,6 +240,155 @@ public class AdvanceFunctions
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
                 EntityMapper.ToResponse(existing, houseName));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("CreateDoplatek")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> CreateDoplatekAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/doplatek")] HttpRequestData req)
+    {
+        try
+        {
+            var request = await JsonSerializer.DeserializeAsync<CreateDoplatekRequest>(req.Body, JsonOptions);
+            if (request is null)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+            }
+
+            var validator = new CreateDoplatekRequestValidator();
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return await WriteValidationErrorResponseAsync(req, validationResult);
+            }
+
+            var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
+            if (house is null)
+            {
+                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+            }
+
+            var paymentDate = DateTime.SpecifyKind(request.PaymentDate, DateTimeKind.Utc);
+
+            var payment = new AdvancePayment
+            {
+                HouseId = request.HouseId,
+                Year = paymentDate.Year,
+                Month = paymentDate.Month,
+                Amount = request.WaterAmount + request.ElectricityAmount + request.CommonAmount,
+                WaterAmount = request.WaterAmount,
+                ElectricityAmount = request.ElectricityAmount,
+                CommonAmount = request.CommonAmount,
+                PaymentDate = paymentDate,
+                Type = PaymentType.Doplatek,
+                Note = request.Note,
+                // Unique, newest-first key so multiple doplatky per month don't collide.
+                RowKey = $"D-{InvertedTimestamp.FromDateTime(paymentDate)}-{Guid.NewGuid():N}"[..40],
+            };
+
+            await _advanceRepository.UpsertAsync(payment);
+
+            _logger.LogInformation("Doplatek recorded for house {HouseId} ({RowKey}).",
+                payment.HouseId, payment.RowKey);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.Created,
+                EntityMapper.ToResponse(payment, house.Name));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("DeletePayment")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> DeletePaymentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "advances/{houseId}/{rowKey}")] HttpRequestData req,
+        string houseId,
+        string rowKey)
+    {
+        try
+        {
+            var existing = await _advanceRepository.GetAsync(houseId, rowKey);
+            if (existing is null)
+            {
+                throw new NotFoundException("Payment", $"{houseId}/{rowKey}");
+            }
+
+            // A regular monthly advance inside a closed period cannot be removed
+            // (it is locked into that period's settlement). Doplatky are appends and
+            // can always be deleted — they never mutate a stored settlement.
+            if (existing.Type == PaymentType.Advance)
+            {
+                var advanceDate = new DateTime(existing.Year, existing.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var allPeriods = await _billingPeriodRepository.GetByPartitionKeyAsync(PartitionKeys.Period);
+                var inClosedPeriod = allPeriods.Any(p =>
+                    p.Status == BillingPeriodStatus.Closed &&
+                    advanceDate >= p.DateFrom && advanceDate <= p.DateTo);
+                if (inClosedPeriod)
+                {
+                    return await WriteErrorResponseAsync(req, 409, "Cannot delete advance in a closed billing period.");
+                }
+            }
+
+            await _advanceRepository.DeleteAsync(houseId, rowKey);
+
+            _logger.LogInformation("Payment deleted for house {HouseId} ({RowKey}).", houseId, rowKey);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new { deleted = true });
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("GetSaldo")]
+    public async Task<HttpResponseData> GetSaldoAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "advances/saldo")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+            var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var houseIdParam = queryParams["houseId"];
+
+            // Members may only see their own house's saldo.
+            if (user.Role == UserRole.Member)
+            {
+                if (string.IsNullOrEmpty(user.HouseId))
+                {
+                    return await WriteJsonResponseAsync(req, HttpStatusCode.OK, Array.Empty<HouseSaldoResponse>());
+                }
+                if (!string.IsNullOrEmpty(houseIdParam) && houseIdParam != user.HouseId)
+                {
+                    return await WriteErrorResponseAsync(req, 403, "Access denied.");
+                }
+                houseIdParam = user.HouseId;
+            }
+
+            var saldo = await _calculateHouseSaldoUseCase.CalculateAsync(
+                string.IsNullOrEmpty(houseIdParam) ? null : houseIdParam);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, saldo);
         }
         catch (AppException ex)
         {

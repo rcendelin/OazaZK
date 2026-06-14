@@ -30,8 +30,8 @@ public class AdvancePaymentRepository : TableStorageRepository<AdvancePayment>, 
         var all = await GetByPartitionKeyAsync(houseId);
         return all.Where(p =>
         {
-            var paymentDate = new DateTime(p.Year, p.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            return paymentDate >= dateFrom && paymentDate <= dateTo;
+            var effectiveDate = p.EffectiveDate();
+            return effectiveDate >= dateFrom && effectiveDate <= dateTo;
         })
         .ToList()
         .AsReadOnly();

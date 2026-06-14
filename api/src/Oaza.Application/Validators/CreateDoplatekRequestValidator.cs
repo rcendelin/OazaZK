@@ -3,19 +3,13 @@ using Oaza.Application.DTOs;
 
 namespace Oaza.Application.Validators;
 
-public class CreateAdvanceRequestValidator : AbstractValidator<CreateAdvanceRequest>
+public class CreateDoplatekRequestValidator : AbstractValidator<CreateDoplatekRequest>
 {
-    public CreateAdvanceRequestValidator()
+    public CreateDoplatekRequestValidator()
     {
         RuleFor(x => x.HouseId)
             .NotEmpty().WithMessage("House ID is required.")
             .Must(id => Guid.TryParse(id, out _)).WithMessage("House ID must be a valid GUID.");
-
-        RuleFor(x => x.Year)
-            .InclusiveBetween(2020, 2050).WithMessage("Year must be between 2020 and 2050.");
-
-        RuleFor(x => x.Month)
-            .InclusiveBetween(1, 12).WithMessage("Month must be between 1 and 12.");
 
         RuleFor(x => x.WaterAmount).GreaterThanOrEqualTo(0).WithMessage("Water amount cannot be negative.");
         RuleFor(x => x.ElectricityAmount).GreaterThanOrEqualTo(0).WithMessage("Electricity amount cannot be negative.");
@@ -27,5 +21,8 @@ public class CreateAdvanceRequestValidator : AbstractValidator<CreateAdvanceRequ
 
         RuleFor(x => x.PaymentDate)
             .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Payment date must not be in the far future.");
+
+        RuleFor(x => x.Note)
+            .MaximumLength(500).WithMessage("Note must be 500 characters or fewer.");
     }
 }

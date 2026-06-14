@@ -16,6 +16,7 @@ public class CalculateSettlementUseCase
     private readonly IMeterReadingRepository _readingRepository;
     private readonly ISupplierInvoiceRepository _invoiceRepository;
     private readonly IAdvancePaymentRepository _advanceRepository;
+    private readonly IAdvanceSettingsRepository _advanceSettingsRepository;
     private readonly ILogger<CalculateSettlementUseCase> _logger;
 
     public CalculateSettlementUseCase(
@@ -25,6 +26,7 @@ public class CalculateSettlementUseCase
         IMeterReadingRepository readingRepository,
         ISupplierInvoiceRepository invoiceRepository,
         IAdvancePaymentRepository advanceRepository,
+        IAdvanceSettingsRepository advanceSettingsRepository,
         ILogger<CalculateSettlementUseCase> logger)
     {
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
@@ -33,7 +35,19 @@ public class CalculateSettlementUseCase
         _readingRepository = readingRepository ?? throw new ArgumentNullException(nameof(readingRepository));
         _invoiceRepository = invoiceRepository ?? throw new ArgumentNullException(nameof(invoiceRepository));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
+        _advanceSettingsRepository = advanceSettingsRepository ?? throw new ArgumentNullException(nameof(advanceSettingsRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Number of calendar months a period spans, inclusive of both ends
+    /// (e.g. 1 Jan – 30 Jun = 6). Used to accrue the flat electricity and
+    /// common-base charges over the period.
+    /// </summary>
+    internal static int MonthsInPeriod(DateTime from, DateTime to)
+    {
+        var months = (to.Year - from.Year) * 12 + (to.Month - from.Month) + 1;
+        return Math.Max(1, months);
     }
 
     /// <summary>
@@ -125,6 +139,11 @@ public class CalculateSettlementUseCase
         var allInvoices = await _invoiceRepository.GetByPartitionKeyAsync(PartitionKeys.Invoice);
         var totalInvoiceAmount = SumInvoiceCostForPeriod(allInvoices, period.DateFrom, period.DateTo);
 
+        // 9b. Electricity & common-base charges are budget-based: they accrue at the
+        // configured monthly rate over the number of months the period spans.
+        var settings = await _advanceSettingsRepository.GetAsync();
+        var monthsInPeriod = MonthsInPeriod(period.DateFrom, period.DateTo);
+
         // 10–12. Calculate each house's share, amount, advances, and balance
         var housesWithMeters = activeHouses
             .Where(h => houseConsumptions.ContainsKey(h.Id))
@@ -151,13 +170,22 @@ public class CalculateSettlementUseCase
 
             var calculatedAmount = Math.Round(sharePercent / 100m * totalInvoiceAmount, 2);
 
-            // 11. Load advance payments for the house within period dates
+            // 11. Load advance payments (advances + doplatky) for the house within
+            // the period and split them by component.
             var advances = await _advanceRepository.GetByHouseAndPeriodAsync(
                 house.Id, period.DateFrom, period.DateTo);
-            var totalAdvances = advances.Sum(a => a.Amount);
+            var waterAdvances = advances.Sum(a => a.WaterAmount);
+            var electricityAdvances = advances.Sum(a => a.ElectricityAmount);
+            var commonAdvances = advances.Sum(a => a.CommonAmount);
 
-            // 12. Balance: positive = underpayment (doplatek), negative = overpayment (přeplatek)
-            var balance = Math.Round(calculatedAmount - totalAdvances, 2);
+            // Electricity & common charges (budget-based) for this house.
+            var elecCoeff = settings.ElectricityCoefficients.GetValueOrDefault(house.Id, 0m);
+            var electricityCharge = Math.Round(
+                settings.MonthlyElectricityCost * elecCoeff / 100m * monthsInPeriod, 2);
+            var commonCharge = Math.Round(settings.MonthlyCommonBaseFee * monthsInPeriod, 2);
+
+            // 12. Water balance: positive = underpayment (doplatek), negative = overpayment (přeplatek)
+            var balance = Math.Round(calculatedAmount - waterAdvances, 2);
 
             houseDetails.Add(new HouseSettlementDetail(
                 HouseId: house.Id,
@@ -166,8 +194,12 @@ public class CalculateSettlementUseCase
                 LossAllocatedM3: Math.Round(allocatedLoss, 3),
                 SharePercent: Math.Round(sharePercent, 2),
                 CalculatedAmount: calculatedAmount,
-                TotalAdvances: Math.Round(totalAdvances, 2),
-                Balance: balance
+                TotalAdvances: Math.Round(waterAdvances, 2),
+                Balance: balance,
+                ElectricityCharge: electricityCharge,
+                ElectricityAdvances: Math.Round(electricityAdvances, 2),
+                CommonCharge: commonCharge,
+                CommonAdvances: Math.Round(commonAdvances, 2)
             ));
         }
 
@@ -181,6 +213,9 @@ public class CalculateSettlementUseCase
             TotalLoss: Math.Round(loss, 3),
             TotalInvoiceAmount: Math.Round(totalInvoiceAmount, 2),
             LossAllocationMethod: lossAllocationMethod.ToString(),
+            MonthsInPeriod: monthsInPeriod,
+            TotalElectricityCharge: houseDetails.Sum(h => h.ElectricityCharge),
+            TotalCommonCharge: houseDetails.Sum(h => h.CommonCharge),
             Houses: houseDetails
         );
     }

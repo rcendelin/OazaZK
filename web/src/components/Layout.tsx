@@ -13,6 +13,7 @@ import {
   Home,
   Users,
   Gauge,
+  Scale,
   LogOut,
   Menu,
   X,
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
     icon: <Wallet size={iconSize} />,
     children: [
       { label: 'Zálohy', path: '/advances', icon: <Banknote size={iconSize} /> },
+      { label: 'Saldo a platby', path: '/saldo', icon: <Scale size={iconSize} /> },
       { label: 'Vyúčtování', path: '/billing', icon: <Receipt size={iconSize} /> },
     ],
   },
