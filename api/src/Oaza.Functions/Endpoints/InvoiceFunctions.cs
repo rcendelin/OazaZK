@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Application.Mapping;
 using Oaza.Application.Validators;
 using Oaza.Domain.Constants;
@@ -20,7 +21,10 @@ public class InvoiceFunctions
 {
     private readonly ISupplierInvoiceRepository _invoiceRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<InvoiceFunctions> _logger;
+
+    private const long MaxAttachmentBytes = 20 * 1024 * 1024; // 20 MB
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -31,10 +35,12 @@ public class InvoiceFunctions
     public InvoiceFunctions(
         ISupplierInvoiceRepository invoiceRepository,
         IBillingPeriodRepository billingPeriodRepository,
+        IBlobStorageService blobStorageService,
         ILogger<InvoiceFunctions> logger)
     {
         _invoiceRepository = invoiceRepository ?? throw new ArgumentNullException(nameof(invoiceRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -225,6 +231,122 @@ public class InvoiceFunctions
         {
             return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
         }
+    }
+
+    [Function("UploadInvoiceAttachment")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> UploadInvoiceAttachmentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "invoices/{id}/attachment")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _invoiceRepository.GetAsync(PartitionKeys.Invoice, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("Invoice", id);
+            }
+
+            if (await IsInvoiceInClosedPeriodAsync(existing))
+            {
+                return await WriteErrorResponseAsync(req, 409, "Cannot modify an invoice in a closed billing period.");
+            }
+
+            var contentType = req.Headers.TryGetValues("Content-Type", out var ctValues)
+                ? ctValues.FirstOrDefault() ?? string.Empty
+                : string.Empty;
+            if (!contentType.Contains("application/pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Příloha musí být ve formátu PDF.");
+            }
+
+            var bytes = await ReadBodyBytesWithLimitAsync(req.Body, MaxAttachmentBytes);
+            if (bytes.Length == 0)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Prázdný soubor.");
+            }
+
+            var blobPath = $"{id}/faktura-{existing.Year}-{existing.Month:D2}.pdf";
+            await _blobStorageService.UploadAsync(BlobContainerNames.Invoices, blobPath, bytes, "application/pdf");
+
+            existing.AttachmentBlobName = blobPath;
+            await _invoiceRepository.UpsertAsync(existing);
+
+            _logger.LogInformation("Attachment uploaded for invoice {InvoiceId} ({Size} bytes).", id, bytes.Length);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, EntityMapper.ToResponse(existing));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    [Function("DownloadInvoiceAttachment")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> DownloadInvoiceAttachmentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "invoices/{id}/attachment")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _invoiceRepository.GetAsync(PartitionKeys.Invoice, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("Invoice", id);
+            }
+
+            if (string.IsNullOrEmpty(existing.AttachmentBlobName))
+            {
+                return await WriteErrorResponseAsync(req, 404, "Faktura nemá přílohu.");
+            }
+
+            var stream = await _blobStorageService.DownloadAsync(BlobContainerNames.Invoices, existing.AttachmentBlobName);
+            if (stream is null)
+            {
+                return await WriteErrorResponseAsync(req, 404, "Soubor nebyl ve storage nalezen.");
+            }
+
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", "application/pdf");
+            var fileName = $"faktura-{SanitizeFileName(existing.InvoiceNumber)}.pdf";
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+            response.Body = new MemoryStream(ms.ToArray());
+            return response;
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+        }
+    }
+
+    private static async Task<byte[]> ReadBodyBytesWithLimitAsync(Stream body, long limit)
+    {
+        using var ms = new MemoryStream();
+        await body.CopyToAsync(ms);
+        if (ms.Length > limit)
+        {
+            throw new AppException("Soubor je příliš velký (max 20 MB).", 400);
+        }
+        return ms.ToArray();
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var clean = new string(name.Where(c => !invalid.Contains(c)).ToArray());
+        return string.IsNullOrWhiteSpace(clean) ? "faktura" : clean;
     }
 
     private async Task<bool> IsInvoiceInClosedPeriodAsync(SupplierInvoice invoice)

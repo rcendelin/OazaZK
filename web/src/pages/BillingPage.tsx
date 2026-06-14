@@ -9,6 +9,7 @@ import {
   getSettlements,
 } from '../api/billing';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { InvoicesSection } from '../components/InvoicesSection';
 import type {
   BillingPeriodResponse,
   CreateBillingPeriodRequest,
@@ -157,6 +158,8 @@ function AdminBillingView({
           )}
         </>
       )}
+
+      <InvoicesSection />
     </div>
   );
 }
