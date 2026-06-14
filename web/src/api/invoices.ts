@@ -1,14 +1,22 @@
 import { apiClient, ApiError } from './client.ts';
 import type { SupplierInvoice } from '../types/index.ts';
 
+export interface InvoiceLineItemInput {
+  dateFrom: string; // ISO
+  dateTo: string; // ISO
+  startReading: number;
+  endReading: number;
+  consumptionM3: number;
+  unitPrice: number;
+  amountExclVat: number;
+}
+
 export interface InvoiceInput {
-  year: number;
-  month: number;
   invoiceNumber: string;
   issuedDate: string; // ISO
   dueDate: string; // ISO
-  amount: number;
-  consumptionM3: number;
+  vatRatePercent: number;
+  lineItems: InvoiceLineItemInput[];
 }
 
 export const getInvoices = (year?: number): Promise<SupplierInvoice[]> =>

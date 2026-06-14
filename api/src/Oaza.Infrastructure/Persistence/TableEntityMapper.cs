@@ -179,6 +179,8 @@ public static class TableEntityMapper
             { "DueDate", DateTime.SpecifyKind(invoice.DueDate, DateTimeKind.Utc) },
             { "Amount", invoice.Amount.ToString("G29", CultureInfo.InvariantCulture) },
             { "ConsumptionM3", invoice.ConsumptionM3.ToString("G29", CultureInfo.InvariantCulture) },
+            { "VatRatePercent", invoice.VatRatePercent.ToString("G29", CultureInfo.InvariantCulture) },
+            { "LineItemsJson", System.Text.Json.JsonSerializer.Serialize(invoice.LineItems) },
             { "AttachmentBlobName", invoice.AttachmentBlobName }
         };
     }
@@ -195,6 +197,8 @@ public static class TableEntityMapper
             DueDate = entity.GetDateTimeOffset("DueDate")?.UtcDateTime ?? DateTime.MinValue,
             Amount = decimal.TryParse(entity.GetString("Amount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) ? amount : 0m,
             ConsumptionM3 = decimal.TryParse(entity.GetString("ConsumptionM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var consumption) ? consumption : 0m,
+            VatRatePercent = decimal.TryParse(entity.GetString("VatRatePercent"), NumberStyles.Any, CultureInfo.InvariantCulture, out var vat) ? vat : 0m,
+            LineItems = System.Text.Json.JsonSerializer.Deserialize<List<InvoiceLineItem>>(entity.GetString("LineItemsJson") ?? "[]") ?? new(),
             AttachmentBlobName = entity.GetString("AttachmentBlobName")
         };
     }

@@ -118,9 +118,12 @@ public class CalculateSettlementUseCase
         var lossAllocations = AllocateLoss(
             loss, houseConsumptions, totalHouseConsumption, lossAllocationMethod);
 
-        // 9. Load supplier invoices for the period
-        var invoices = await _invoiceRepository.GetByPeriodAsync(period.DateFrom, period.DateTo);
-        var totalInvoiceAmount = invoices.Sum(i => i.Amount);
+        // 9. Supplier invoice cost for the period. An invoice can carry multiple
+        // line items (sub-readings) spanning different periods, so sum the line items
+        // whose date falls into the billing period (incl. VAT). Invoices without line
+        // items fall back to their total by invoice month.
+        var allInvoices = await _invoiceRepository.GetByPartitionKeyAsync(PartitionKeys.Invoice);
+        var totalInvoiceAmount = SumInvoiceCostForPeriod(allInvoices, period.DateFrom, period.DateTo);
 
         // 10–12. Calculate each house's share, amount, advances, and balance
         var housesWithMeters = activeHouses
@@ -258,6 +261,36 @@ public class CalculateSettlementUseCase
         }
 
         return consumption;
+    }
+
+    /// <summary>
+    /// Sums supplier-invoice cost (incl. VAT) attributable to the billing period.
+    /// Line-item invoices contribute the items whose DateFrom falls in the period;
+    /// invoices without line items contribute their total by invoice month.
+    /// </summary>
+    private static decimal SumInvoiceCostForPeriod(
+        IReadOnlyList<SupplierInvoice> invoices, DateTime periodFrom, DateTime periodTo)
+    {
+        decimal total = 0m;
+        foreach (var inv in invoices)
+        {
+            if (inv.LineItems is { Count: > 0 })
+            {
+                var vatFactor = 1m + inv.VatRatePercent / 100m;
+                total += inv.LineItems
+                    .Where(li => li.DateFrom >= periodFrom && li.DateFrom <= periodTo)
+                    .Sum(li => li.AmountExclVat * vatFactor);
+            }
+            else
+            {
+                var invoiceMonth = new DateTime(inv.Year, inv.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                if (invoiceMonth >= periodFrom && invoiceMonth <= periodTo)
+                {
+                    total += inv.Amount;
+                }
+            }
+        }
+        return total;
     }
 
     /// <summary>

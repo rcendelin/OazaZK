@@ -444,7 +444,7 @@ public class CalculateSettlementUseCaseTests
         SetupReadings("meter-2", (PeriodStart, 0m), (PeriodEnd, 60m));
 
         // No invoices
-        _invoiceRepo.Setup(r => r.GetByPeriodAsync(PeriodStart, PeriodEnd))
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice))
             .ReturnsAsync(new List<SupplierInvoice>());
 
         SetupAdvances("house-1", 1000m);
@@ -526,6 +526,44 @@ public class CalculateSettlementUseCaseTests
         house.Balance.Should().Be(0m); // exact match
     }
 
+    [Fact]
+    public async Task CalculateAsync_InvoiceWithLineItems_UsesOnlyLinesInPeriod_InclVat()
+    {
+        // Arrange: one invoice with two sub-readings; only the 2025-03 line falls in
+        // the billing period (2025-01..2025-06). VAT 12 % must be applied.
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A");
+        SetupMeters("main-meter", "meter-1", "house-1");
+        SetupReadings("main-meter", (PeriodStart, 0m), (PeriodEnd, 50m));
+        SetupReadings("meter-1", (PeriodStart, 0m), (PeriodEnd, 50m));
+        SetupAdvances("house-1", 0m);
+
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice))
+            .ReturnsAsync(new List<SupplierInvoice>
+            {
+                new()
+                {
+                    Id = "inv-1",
+                    InvoiceNumber = "FA-1",
+                    VatRatePercent = 12m,
+                    LineItems = new List<InvoiceLineItem>
+                    {
+                        new() { DateFrom = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), DateTo = new DateTime(2025, 3, 31, 0, 0, 0, DateTimeKind.Utc), AmountExclVat = 1000m, ConsumptionM3 = 10m },
+                        new() { DateFrom = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc), DateTo = new DateTime(2024, 3, 31, 0, 0, 0, DateTimeKind.Utc), AmountExclVat = 5000m, ConsumptionM3 = 50m },
+                    },
+                },
+            });
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert: only the in-period line, incl. 12% VAT → 1000 * 1.12 = 1120
+        result.TotalInvoiceAmount.Should().Be(1120m);
+        result.Houses.Should().HaveCount(1);
+        result.Houses[0].CalculatedAmount.Should().Be(1120m); // single house = 100 %
+    }
+
     #region Test Setup Helpers
 
     private void SetupOpenPeriod(string periodId)
@@ -600,7 +638,7 @@ public class CalculateSettlementUseCaseTests
 
     private void SetupInvoices(decimal totalAmount)
     {
-        _invoiceRepo.Setup(r => r.GetByPeriodAsync(PeriodStart, PeriodEnd))
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice))
             .ReturnsAsync(new List<SupplierInvoice>
             {
                 new()

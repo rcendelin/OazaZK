@@ -46,7 +46,18 @@ public static class EntityMapper
             DueDate = invoice.DueDate,
             Amount = invoice.Amount,
             ConsumptionM3 = invoice.ConsumptionM3,
+            VatRatePercent = invoice.VatRatePercent,
             AttachmentBlobName = invoice.AttachmentBlobName,
+            LineItems = invoice.LineItems.Select(li => new InvoiceLineItemDto
+            {
+                DateFrom = li.DateFrom,
+                DateTo = li.DateTo,
+                StartReading = li.StartReading,
+                EndReading = li.EndReading,
+                ConsumptionM3 = li.ConsumptionM3,
+                UnitPrice = li.UnitPrice,
+                AmountExclVat = li.AmountExclVat,
+            }).ToList(),
         };
     }
 

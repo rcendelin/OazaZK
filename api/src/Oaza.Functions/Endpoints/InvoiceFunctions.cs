@@ -99,16 +99,21 @@ public class InvoiceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
+            var lineItems = request.LineItems.Select(ToLineItem).ToList();
+            var firstFrom = lineItems.Min(l => l.DateFrom);
+
             var invoice = new SupplierInvoice
             {
                 Id = Guid.NewGuid().ToString(),
-                Year = request.Year,
-                Month = request.Month,
+                Year = firstFrom.Year,
+                Month = firstFrom.Month,
                 InvoiceNumber = request.InvoiceNumber,
                 IssuedDate = request.IssuedDate,
                 DueDate = request.DueDate,
-                Amount = request.Amount,
-                ConsumptionM3 = request.ConsumptionM3,
+                VatRatePercent = request.VatRatePercent,
+                LineItems = lineItems,
+                ConsumptionM3 = lineItems.Sum(l => l.ConsumptionM3),
+                Amount = TotalInclVat(lineItems, request.VatRatePercent),
             };
 
             await _invoiceRepository.UpsertAsync(invoice);
@@ -162,17 +167,18 @@ public class InvoiceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
+            var lineItems = request.LineItems.Select(ToLineItem).ToList();
+            var firstFrom = lineItems.Min(l => l.DateFrom);
+
             existing.InvoiceNumber = request.InvoiceNumber;
             existing.IssuedDate = request.IssuedDate;
             existing.DueDate = request.DueDate;
-            existing.Amount = request.Amount;
-            existing.ConsumptionM3 = request.ConsumptionM3;
-
-            // Apply optional year/month change
-            if (request.Year.HasValue)
-                existing.Year = request.Year.Value;
-            if (request.Month.HasValue)
-                existing.Month = request.Month.Value;
+            existing.VatRatePercent = request.VatRatePercent;
+            existing.LineItems = lineItems;
+            existing.Year = firstFrom.Year;
+            existing.Month = firstFrom.Month;
+            existing.ConsumptionM3 = lineItems.Sum(l => l.ConsumptionM3);
+            existing.Amount = TotalInclVat(lineItems, request.VatRatePercent);
 
             // Check if the new year/month would fall into a closed period
             if (await IsInvoiceInClosedPeriodAsync(existing))
@@ -348,6 +354,20 @@ public class InvoiceFunctions
         var clean = new string(name.Where(c => !invalid.Contains(c)).ToArray());
         return string.IsNullOrWhiteSpace(clean) ? "faktura" : clean;
     }
+
+    private static InvoiceLineItem ToLineItem(InvoiceLineItemDto d) => new()
+    {
+        DateFrom = DateTime.SpecifyKind(d.DateFrom, DateTimeKind.Utc),
+        DateTo = DateTime.SpecifyKind(d.DateTo, DateTimeKind.Utc),
+        StartReading = d.StartReading,
+        EndReading = d.EndReading,
+        ConsumptionM3 = d.ConsumptionM3,
+        UnitPrice = d.UnitPrice,
+        AmountExclVat = d.AmountExclVat,
+    };
+
+    private static decimal TotalInclVat(IEnumerable<InvoiceLineItem> lines, decimal vatRatePercent) =>
+        Math.Round(lines.Sum(l => l.AmountExclVat) * (1m + vatRatePercent / 100m), 2);
 
     private async Task<bool> IsInvoiceInClosedPeriodAsync(SupplierInvoice invoice)
     {

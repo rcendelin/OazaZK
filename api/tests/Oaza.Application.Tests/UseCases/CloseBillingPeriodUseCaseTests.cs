@@ -63,7 +63,7 @@ public class CloseBillingPeriodUseCaseTests
         Readings("main", (Start, 100m), (End, 200m)); // 100
         Readings("m1", (Start, 50m), (End, 80m));      // 30
         Readings("m2", (Start, 20m), (End, 80m));      // 60  -> loss 10, equal 5 each
-        _invoiceRepo.Setup(r => r.GetByPeriodAsync(Start, End)).ReturnsAsync(new List<SupplierInvoice>
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice)).ReturnsAsync(new List<SupplierInvoice>
         {
             new() { Id = "inv", Year = 2025, Month = 3, Amount = 10000m },
         });

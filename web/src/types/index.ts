@@ -54,6 +54,16 @@ export interface BillingPeriod {
   status: BillingPeriodStatus;
 }
 
+export interface InvoiceLineItem {
+  dateFrom: string;
+  dateTo: string;
+  startReading: number;
+  endReading: number;
+  consumptionM3: number;
+  unitPrice: number;
+  amountExclVat: number;
+}
+
 export interface SupplierInvoice {
   id: string;
   year: number;
@@ -63,7 +73,9 @@ export interface SupplierInvoice {
   dueDate: string;
   amount: number;
   consumptionM3: number;
+  vatRatePercent: number;
   attachmentBlobName: string | null;
+  lineItems: InvoiceLineItem[];
 }
 
 export interface AdvancePayment {
