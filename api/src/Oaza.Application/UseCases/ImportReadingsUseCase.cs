@@ -358,10 +358,17 @@ public class ImportReadingsUseCase
             return Result();
         }
 
-        // Meter lookup by physical RadioAddress
+        // Meter lookup by physical RadioAddress.
         var meterByAddress = allMeters
             .Where(m => !string.IsNullOrWhiteSpace(m.RadioAddress))
             .GroupBy(m => m.RadioAddress!.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        // Fallback lookup by identifier (MeterNumber) — admins often put the physical
+        // address straight into the meter's identifier instead of the Address field.
+        var meterByNumber = allMeters
+            .Where(m => !string.IsNullOrWhiteSpace(m.MeterNumber))
+            .GroupBy(m => m.MeterNumber.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var lines = pastedText.Replace("\r\n", "\n").Replace("\r", "\n")
@@ -414,12 +421,14 @@ public class ImportReadingsUseCase
             var address = cells[addressCol].Trim();
             if (string.IsNullOrEmpty(address)) continue;
 
-            if (!meterByAddress.TryGetValue(address, out var meter))
+            // Match by Address (RadioAddress) first, then fall back to the identifier.
+            if (!meterByAddress.TryGetValue(address, out var meter)
+                && !meterByNumber.TryGetValue(address, out meter))
             {
                 errors.Add(new ImportValidationMessage
                 {
                     Type = "error",
-                    Message = $"Adresa vodoměru '{address}' není přiřazena žádnému vodoměru. Vyplňte ji v Admin → Vodoměry.",
+                    Message = $"Adresa '{address}' neodpovídá žádnému vodoměru (ani podle pole Adresa, ani podle Identifikátoru). Doplňte ji v Admin → Vodoměry.",
                     Row = rowNum
                 });
                 continue;

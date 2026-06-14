@@ -149,8 +149,31 @@ public class ImportReadingsUseCaseTests
 
         // Assert
         result.Errors.Should().ContainSingle();
-        result.Errors[0].Message.Should().Contain("není přiřazena");
+        result.Errors[0].Message.Should().Contain("neodpovídá");
         result.Rows.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ParseClipboardAndValidateAsync_MatchesByMeterNumber_WhenAddressFieldEmpty()
+    {
+        // Admin put the physical address straight into the identifier (MeterNumber),
+        // leaving the dedicated Address field empty — the import must still match.
+        _mainMeter.MeterNumber = "22040724";
+        _mainMeter.RadioAddress = null;
+        var meters = new List<WaterMeter> { _mainMeter };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
+
+        var text = "Address\tValue 1\tUnit 1\n22040724\t426,576\tm3";
+
+        // Act
+        var result = await _useCase.ParseClipboardAndValidateAsync(
+            text, new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), "user-1");
+
+        // Assert
+        result.Errors.Should().BeEmpty();
+        result.Rows.Should().ContainSingle();
+        result.Rows[0].MeterValues["meter-main"].Should().Be(426.576m);
     }
 
     [Fact]
