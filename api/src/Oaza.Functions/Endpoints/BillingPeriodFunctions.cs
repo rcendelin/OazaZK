@@ -26,6 +26,7 @@ public class BillingPeriodFunctions
     private readonly ISettlementRepository _settlementRepository;
     private readonly IHouseRepository _houseRepository;
     private readonly CalculateSettlementUseCase _calculateSettlementUseCase;
+    private readonly CloseBillingPeriodUseCase _closeBillingPeriodUseCase;
     private readonly GenerateSettlementPdfUseCase _generateSettlementPdfUseCase;
     private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<BillingPeriodFunctions> _logger;
@@ -42,6 +43,7 @@ public class BillingPeriodFunctions
         ISettlementRepository settlementRepository,
         IHouseRepository houseRepository,
         CalculateSettlementUseCase calculateSettlementUseCase,
+        CloseBillingPeriodUseCase closeBillingPeriodUseCase,
         GenerateSettlementPdfUseCase generateSettlementPdfUseCase,
         IBlobStorageService blobStorageService,
         ILogger<BillingPeriodFunctions> logger)
@@ -51,6 +53,7 @@ public class BillingPeriodFunctions
         _settlementRepository = settlementRepository ?? throw new ArgumentNullException(nameof(settlementRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _calculateSettlementUseCase = calculateSettlementUseCase ?? throw new ArgumentNullException(nameof(calculateSettlementUseCase));
+        _closeBillingPeriodUseCase = closeBillingPeriodUseCase ?? throw new ArgumentNullException(nameof(closeBillingPeriodUseCase));
         _generateSettlementPdfUseCase = generateSettlementPdfUseCase ?? throw new ArgumentNullException(nameof(generateSettlementPdfUseCase));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -207,48 +210,8 @@ public class BillingPeriodFunctions
                 lossMethod = parsed;
             }
 
-            // Calculate final settlement numbers
-            var preview = await _calculateSettlementUseCase.CalculateAsync(id, lossMethod);
-
-            // Re-verify period is still Open (double-check after calculation)
-            var period = await _billingPeriodRepository.GetAsync(PartitionKeys.Period, id);
-            if (period is null)
-            {
-                throw new NotFoundException("BillingPeriod", id);
-            }
-
-            if (period.Status != BillingPeriodStatus.Open)
-            {
-                throw new AppException("Billing period is already closed. Cannot close again.");
-            }
-
-            // Save settlement entities for each house
-            var settlements = new List<Settlement>();
-            foreach (var houseDetail in preview.Houses)
-            {
-                var settlement = new Settlement
-                {
-                    PeriodId = id,
-                    HouseId = houseDetail.HouseId,
-                    ConsumptionM3 = houseDetail.ConsumptionM3,
-                    SharePercent = houseDetail.SharePercent,
-                    CalculatedAmount = houseDetail.CalculatedAmount,
-                    TotalAdvances = houseDetail.TotalAdvances,
-                    Balance = houseDetail.Balance,
-                    LossAllocatedM3 = houseDetail.LossAllocatedM3,
-                };
-
-                await _settlementRepository.UpsertAsync(settlement);
-                settlements.Add(settlement);
-            }
-
-            // Close the period (irreversible)
-            period.Status = BillingPeriodStatus.Closed;
-            await _billingPeriodRepository.UpsertAsync(period);
-
-            _logger.LogInformation(
-                "Billing period {PeriodId} ({Name}) closed with {Count} settlements.",
-                id, period.Name, settlements.Count);
+            // Calculate, persist settlements and lock the period (irreversible).
+            var settlements = await _closeBillingPeriodUseCase.CloseAsync(id, lossMethod);
 
             // Build response with house names
             var houses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);

@@ -20,7 +20,9 @@ export function useApi<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+    // useApi is a generic data hook: callers pass their own deps array, so the
+    // dependency list is intentionally dynamic (not an array literal).
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/use-memo
 
   useEffect(() => {
     const cancel = execute();

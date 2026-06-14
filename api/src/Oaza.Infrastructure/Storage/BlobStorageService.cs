@@ -79,7 +79,10 @@ public class BlobStorageService : IBlobStorageService
 
         // Fallback: use user delegation SAS if account key is not available
         var userDelegationKey = await _blobServiceClient.GetUserDelegationKeyAsync(
-            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.Add(expiry));
+            new BlobGetUserDelegationKeyOptions(DateTimeOffset.UtcNow.Add(expiry))
+            {
+                StartsOn = DateTimeOffset.UtcNow,
+            });
 
         var delegationSasBuilder = new BlobSasBuilder
         {

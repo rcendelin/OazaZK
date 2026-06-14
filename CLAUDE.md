@@ -79,6 +79,8 @@ oaza/
 
 ### NuGet packages
 
+**Verze pinuj explicitně — žádné floating wildcardy (`12.*`).** Floaty driftnou na `Azure.Core 1.55` (vyžaduje `Microsoft.Extensions.* >=10`) a rozbijou build proti pinům `8.*`. Verze jsou nyní pevné a `global.json` zamyká SDK na .NET 8 (`rollForward: latestFeature`).
+
 ```xml
 <!-- Oaza.Infrastructure -->
 <PackageReference Include="Azure.Data.Tables" />
@@ -161,10 +163,13 @@ public class User
     public string? HouseId { get; set; }       // FK to House (null for admin without house)
     public AuthMethod AuthMethod { get; set; } // EntraId, MagicLink
     public string? EntraObjectId { get; set; } // Entra ID object ID (nullable)
-    public string? MagicLinkToken { get; set; }
+    public string? MagicLinkTokenHash { get; set; }            // SHA-256 hash of the token (never stored plaintext)
     public DateTime? MagicLinkExpiry { get; set; }
     public DateTime? LastLogin { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
+    public int MagicLinkRequestCount { get; set; }             // rate limit: requests in the current window
+    public DateTime? MagicLinkRequestWindowStart { get; set; } // rate limit: start of the 1h sliding window
+    public int MagicLinkFailedAttempts { get; set; }           // lockout after 5 failed verifications
 }
 
 // Oaza.Domain/Entities/House.cs
@@ -285,6 +290,17 @@ public enum BillingPeriodStatus { Open, Closed }
 public enum FinancialRecordType { Income, Expense }
 public enum LossAllocationMethod { Equal, ProportionalToConsumption }
 ```
+
+### Implementation additions (beyond the initial spec)
+
+The code has grown past this document; the following exist in the implementation but were not in the original data model / endpoint tables:
+
+- **`DocumentVersion`** entity + `DocumentVersions` table + repository — per-document version history (keeps the last 10 versions). PartitionKey = documentId, RowKey = zero-padded version number. Endpoints: `POST/GET /documents/{id}/versions`, `GET /documents/{id}/versions/{version}/download`.
+- **`AdvanceSettings`** singleton entity (PartitionKey `SETTINGS`, RowKey `advances`, table `AdvanceSettings`) — advance-payment pricing: water price/validity, monthly electricity cost + per-house coefficients, common base fee, per-house overrides, and a `LossAllocationMethod`. Endpoints: `GET/PUT /advance-settings`, `GET /advance-settings/calculate` (admins/accountants see all houses; members see only their own).
+- **`User`** stores the magic-link token **hashed** (`MagicLinkTokenHash`, SHA-256) plus rate-limit/lockout counters (see above).
+- **`WaterMeter.Name`** — optional display label.
+- **Extra endpoints:** `DELETE /users/{id}`, `GET /readings/all`, `GET /finance/balance`, `POST /seed` (gated by `ENABLE_SEED`).
+- **Email** is Azure Communication Services (not SendGrid).
 
 ## API endpoints
 
@@ -492,13 +508,14 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 - **Date formatting:** Use `Intl.DateTimeFormat('cs-CZ')` for Czech locale
 - **Number formatting:** Use `Intl.NumberFormat('cs-CZ')` — comma as decimal separator
 - **No console.log in production** — use proper error boundaries
+- **Lint je CI gate (přísná React Compiler pravidla):** `npm run lint` musí projít. Pozor na `react-hooks/preserve-manual-memoization` (deps `useMemo`/`useCallback` musí přesně sedět) a `set-state-in-effect`. Build = `tsc -b && vite build` (Vite v8/rolldown).
 
 ### Git conventions
 
-- **Branch strategy:** `main` = production (auto-deploy)
+- **Branch strategy:** `develop` → test/DEV (`deploy-dev.yml` → `func-oaza-dev`); `master` → production (`deploy.yml` → `func-oaza-prod`).
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
-- **No force push to main**
+- **No force push to master**
 
 ## Azure resource naming
 
@@ -562,7 +579,8 @@ AppUrl=https://oaza.cendelinovi.cz
 - **Unit tests:** Domain logic (settlement calculation, loss allocation, validation rules) in `Oaza.Application.Tests`
 - **Integration tests:** Table Storage repository operations in `Oaza.Infrastructure.Tests` (use Azurite local emulator)
 - **No E2E automation** — manual E2E testing (15 users, not worth the investment)
-- Run tests: `dotnet test` from `api/` directory
+- Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 8.0.x.
+- Integrační testy potřebují Azurite: `docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`. Používají `[SkippableFact]` (skip když chybí); CI běží Azurite jako service container.
 
 ## Development workflow
 

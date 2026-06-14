@@ -29,7 +29,7 @@ public class GenerateSettlementPdfUseCase
             house.Id, house.Name, period.Id);
 
         var document = new PdfDocument();
-        document.Info.Title = $"Vyuctovani - {house.Name} - {period.Name}";
+        document.Info.Title = $"Vyúčtování - {house.Name} - {period.Name}";
         var page = document.AddPage();
         page.Size = PdfSharpCore.PageSize.A4;
         var gfx = XGraphics.FromPdfPage(page);
@@ -54,9 +54,9 @@ public class GenerateSettlementPdfUseCase
         double contentWidth = rightEdge - leftMargin;
 
         // Header
-        gfx.DrawString("Oaza Zadni Kopanina", fontTitle, new XSolidBrush(blue), leftMargin, y);
+        gfx.DrawString("Oáza Zadní Kopanina", fontTitle, new XSolidBrush(blue), leftMargin, y);
         y += 24;
-        gfx.DrawString("Vyuctovani vodneho", fontSubtitle, new XSolidBrush(gray), leftMargin, y);
+        gfx.DrawString("Vyúčtování vodného", fontSubtitle, new XSolidBrush(gray), leftMargin, y);
         y += 20;
         gfx.DrawString(period.Name, new XFont("Arial", 12, XFontStyle.Regular), new XSolidBrush(gray), leftMargin, y);
         y += 16;
@@ -64,41 +64,41 @@ public class GenerateSettlementPdfUseCase
         y += 20;
 
         // Period info
-        DrawSectionBox(gfx, leftMargin, ref y, contentWidth, lightGray, "Obdobi", fontSection, blue, new[]
+        DrawSectionBox(gfx, leftMargin, ref y, contentWidth, lightGray, "Období", fontSection, blue, new[]
         {
             ($"Datum od: {period.DateFrom:d. MMMM yyyy}", $"Datum do: {period.DateTo:d. MMMM yyyy}")
         }, fontNormal, fontBold);
 
         // House info
-        DrawSectionBox(gfx, leftMargin, ref y, contentWidth, lightGray, "Informace o domacnosti", fontSection, blue, new[]
+        DrawSectionBox(gfx, leftMargin, ref y, contentWidth, lightGray, "Informace o domácnosti", fontSection, blue, new[]
         {
-            ($"Nazev: {house.Name}", $"Kontaktni osoba: {house.ContactPerson}"),
+            ($"Název: {house.Name}", $"Kontaktní osoba: {house.ContactPerson}"),
             ($"Adresa: {house.Address}", $"E-mail: {house.Email}")
         }, fontNormal, fontBold);
 
         // Consumption table
         y += 10;
-        gfx.DrawString("Spotreba", fontSection, new XSolidBrush(blue), leftMargin, y);
+        gfx.DrawString("Spotřeba", fontSection, new XSolidBrush(blue), leftMargin, y);
         y += 16;
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Polozka", "Hodnota", fontBold, true);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Spotreba vaseho domu", FormatVolume(detail.ConsumptionM3), fontNormal, false);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Prirazena ztrata", FormatVolume(detail.LossAllocatedM3), fontNormal, false);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkova spotreba site", FormatVolume(totalNetworkConsumption), fontNormal, false);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, new XSolidBrush(lightGray).Color, XColors.Black, "Vas podil na celku", FormatPercent(detail.SharePercent), fontBold, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Položka", "Hodnota", fontBold, true);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Spotřeba vašeho domu", FormatVolume(detail.ConsumptionM3), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Přiřazená ztráta", FormatVolume(detail.LossAllocatedM3), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celková spotřeba sítě", FormatVolume(totalNetworkConsumption), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, new XSolidBrush(lightGray).Color, XColors.Black, "Váš podíl na celku", FormatPercent(detail.SharePercent), fontBold, false);
 
         // Financial table
         y += 16;
-        gfx.DrawString("Financni vyuctovani", fontSection, new XSolidBrush(blue), leftMargin, y);
+        gfx.DrawString("Finanční vyúčtování", fontSection, new XSolidBrush(blue), leftMargin, y);
         y += 16;
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Polozka", "Castka", fontBold, true);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celkova faktura dodavatele", FormatCurrency(totalInvoiceAmount), fontNormal, false);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Vase castka k uhrade", FormatCurrency(detail.CalculatedAmount), fontNormal, false);
-        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Zaplacene zalohy", FormatCurrency(detail.TotalAdvances), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, blue, XColors.White, "Položka", "Částka", fontBold, true);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Celková faktura dodavatele", FormatCurrency(totalInvoiceAmount), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Vaše částka k úhradě", FormatCurrency(detail.CalculatedAmount), fontNormal, false);
+        DrawTableRow(gfx, leftMargin, ref y, contentWidth, XColors.White, XColors.Black, "Zaplacené zálohy", FormatCurrency(detail.TotalAdvances), fontNormal, false);
 
         // Balance summary
         y += 16;
         var isOverpayment = detail.Balance < 0;
-        var balanceLabel = isOverpayment ? "Preplatek" : "Doplatek";
+        var balanceLabel = isOverpayment ? "Přeplatek" : "Doplatek";
         var balanceColor = isOverpayment ? green : red;
         var balanceAmount = Math.Abs(detail.Balance);
 
@@ -113,8 +113,8 @@ public class GenerateSettlementPdfUseCase
         y = page.Height - 40;
         gfx.DrawLine(new XPen(XColors.LightGray, 0.5), leftMargin, y, rightEdge, y);
         y += 12;
-        gfx.DrawString($"Datum vystaveni: {DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
-        var footerText = "Vygenerovano portalem Oaza Zadni Kopanina";
+        gfx.DrawString($"Datum vystavení: {DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
+        var footerText = "Vygenerováno portálem Oáza Zadní Kopanina";
         var footerWidth = gfx.MeasureString(footerText, fontSmall).Width;
         gfx.DrawString(footerText, fontSmall, XBrushes.Gray, rightEdge - footerWidth, y);
 
@@ -162,5 +162,5 @@ public class GenerateSettlementPdfUseCase
         value.ToString("N2", CzechCulture) + " %";
 
     private static string FormatCurrency(decimal value) =>
-        value.ToString("N2", CzechCulture) + " Kc";
+        value.ToString("N2", CzechCulture) + " Kč";
 }

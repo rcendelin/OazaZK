@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
 using Oaza.Application.Mapping;
@@ -248,9 +249,12 @@ public class UserFunctions
                 throw new NotFoundException("User", id);
             }
 
-            // Prevent admin from deleting themselves
-            var currentUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid as string : null;
-            if (currentUserId == id)
+            // Prevent admin from deleting themselves. The authenticated User is
+            // stored by AuthenticationMiddleware under AuthConstants.HttpContextUserKey.
+            var currentUser = req.FunctionContext.Items.TryGetValue(AuthConstants.HttpContextUserKey, out var userObj)
+                ? userObj as User
+                : null;
+            if (currentUser is not null && currentUser.Id == id)
             {
                 return await WriteErrorResponseAsync(req, 400, "Nemůžete smazat sami sebe.");
             }

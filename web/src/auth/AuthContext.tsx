@@ -93,6 +93,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     if (isAuthenticated) {
+      // Auth-bootstrap effect: once MSAL interaction has settled we must resolve
+      // the initial auth state (load profile, then clear the loading flag).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void fetchUserProfile().finally(() => setIsLoading(false));
     } else {
       setUser(null);
@@ -155,6 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with its provider
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {

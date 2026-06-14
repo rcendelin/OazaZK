@@ -190,28 +190,29 @@ public class ImportReadingsUseCase
                     continue;
                 }
 
-                // Duplicate check: same meter + same date in DB
+                // Duplicate check: same meter + same MONTH in DB (one reading per
+                // meter per month), consistent with ConfirmImportAsync and manual entry.
                 var duplicate = existingReadings.FirstOrDefault(r =>
-                    r.ReadingDate.Date == readingDate.Date);
+                    r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
                 if (duplicate is not null)
                 {
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Duplicate reading for meter '{meter.MeterNumber}' on {readingDate:d.M.yyyy}. Existing: {duplicate.Value}.",
+                        Message = $"A reading for meter '{meter.MeterNumber}' already exists for {readingDate:MM/yyyy} (on {duplicate.ReadingDate:d.M.yyyy}, value {duplicate.Value}).",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
                     continue;
                 }
 
-                // Same-file duplicate
-                if (!seenMeterDates.Add((meter.Id, readingDate)))
+                // Same-file duplicate: same meter + same month within the upload
+                if (!seenMeterDates.Add((meter.Id, new DateTime(readingDate.Year, readingDate.Month, 1))))
                 {
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Duplicate in file for meter '{meter.MeterNumber}' on {readingDate:d.M.yyyy}.",
+                        Message = $"Duplicate in file for meter '{meter.MeterNumber}' in {readingDate:MM/yyyy}.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });

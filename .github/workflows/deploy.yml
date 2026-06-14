@@ -2,9 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -15,6 +15,13 @@ jobs:
   build-api:
     name: Build & Test API
     runs-on: ubuntu-latest
+    services:
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 10000:10000
+          - 10001:10001
+          - 10002:10002
     defaults:
       run:
         working-directory: api
@@ -36,13 +43,13 @@ jobs:
         run: dotnet test Oaza.sln --configuration Release --no-restore --verbosity normal
 
       - name: Publish
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
           dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
           cp -r src/Oaza.Functions/bin/Release/net8.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
 
       - name: Upload API artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: api-artifact
@@ -68,6 +75,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         run: npm run build
         env:
@@ -75,7 +85,7 @@ jobs:
           VITE_ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID }}
 
       - name: Upload web artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: web-artifact
@@ -84,7 +94,7 @@ jobs:
   deploy-api:
     name: Deploy API to Azure Functions
     needs: [build-api, build-web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -104,7 +114,7 @@ jobs:
   deploy-web:
     name: Deploy Frontend to Static Web Apps
     needs: [build-api, build-web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment: production
     steps:

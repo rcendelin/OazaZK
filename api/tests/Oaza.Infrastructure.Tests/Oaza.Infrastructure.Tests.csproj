@@ -13,13 +13,13 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="FluentAssertions" Version="7.2.2" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Oaza.Functions\Oaza.Functions.csproj" />
-    <ProjectReference Include="..\..\src\Oaza.Application\Oaza.Application.csproj" />
+    <ProjectReference Include="..\..\src\Oaza.Infrastructure\Oaza.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Oaza.Domain\Oaza.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

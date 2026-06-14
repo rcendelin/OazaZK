@@ -17,7 +17,9 @@ public class EntraIdTokenValidator : IEntraIdTokenValidator
     public EntraIdTokenValidator(IOptions<EntraIdSettings> settings)
     {
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
-        _tokenHandler = new JwtSecurityTokenHandler();
+        // Keep short JWT claim names ("oid", "email", ...) instead of remapping to
+        // long WS-* ClaimTypes URIs, so claim lookups in the middleware are consistent.
+        _tokenHandler = new JwtSecurityTokenHandler { MapInboundClaims = false };
 
         // Entra ID is optional — if not configured, ValidateTokenAsync will always return null
         if (!string.IsNullOrWhiteSpace(_settings.TenantId) && !string.IsNullOrWhiteSpace(_settings.ClientId))

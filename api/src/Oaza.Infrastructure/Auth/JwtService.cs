@@ -89,7 +89,10 @@ public class JwtService : IJwtService
 
         try
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
+            // MapInboundClaims=false keeps short JWT claim names ("sub", "email", ...)
+            // intact instead of remapping them to long WS-* ClaimTypes URIs, so the
+            // middleware's primary lookup by the "sub" claim resolves correctly.
+            var tokenHandler = new JwtSecurityTokenHandler { MapInboundClaims = false };
             var principal = tokenHandler.ValidateToken(token, _validationParameters, out _);
             return principal;
         }
