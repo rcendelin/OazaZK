@@ -135,7 +135,7 @@ export function MetersPage() {
                 onChange={(e) => setCreateForm({ ...createForm, radioAddress: e.target.value })}
                 placeholder="např. 22040724"
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              <p className="text-xs text-text-muted mt-1">Fyzická adresa měřáku z odečítačky — použije se pro import odečtů ze schránky</p>
+              <p className="text-xs text-text-muted mt-1">Fyzická adresa vodoměru z odečítačky — použije se pro import odečtů ze schránky</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Název *</label>

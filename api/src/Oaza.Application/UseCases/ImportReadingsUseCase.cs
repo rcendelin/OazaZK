@@ -419,7 +419,7 @@ public class ImportReadingsUseCase
                 errors.Add(new ImportValidationMessage
                 {
                     Type = "error",
-                    Message = $"Adresa měřáku '{address}' není přiřazena žádnému měřáku. Vyplňte ji v Admin → Měřáky.",
+                    Message = $"Adresa vodoměru '{address}' není přiřazena žádnému vodoměru. Vyplňte ji v Admin → Vodoměry.",
                     Row = rowNum
                 });
                 continue;
@@ -467,7 +467,7 @@ public class ImportReadingsUseCase
             warnings.Add(new ImportValidationMessage
             {
                 Type = "warning",
-                Message = $"Měřák '{meter.MeterNumber}' (adresa {meter.RadioAddress}) nebyl ve vloženém textu."
+                Message = $"Vodoměr '{meter.MeterNumber}' (adresa {meter.RadioAddress}) nebyl ve vloženém textu."
             });
         }
 

@@ -448,7 +448,7 @@ export function ReadingsImportPage() {
                 {state === 'uploading' ? <span className="flex items-center gap-2"><Spinner size="sm" /> Načítám...</span> : 'Načíst náhled'}
               </button>
               <p className="text-xs text-text-muted">
-                Měřáky se párují podle sloupce <strong>Address</strong> — fyzickou adresu vyplňte u měřáku v Admin → Měřáky.
+                Vodoměry se párují podle sloupce <strong>Address</strong> — fyzickou adresu vyplňte u vodoměru v Admin → Vodoměry.
                 Odečet se bere ze sloupce <strong>Value 1</strong> (m³) a uloží se k vybranému datu.
               </p>
             </div>
