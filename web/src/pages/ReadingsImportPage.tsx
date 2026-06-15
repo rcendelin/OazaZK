@@ -311,6 +311,17 @@ export function ReadingsImportPage() {
     }
   }, [clipText, clipDate]);
 
+  const handleLoadClipFile = useCallback((file: File | null) => {
+    if (!file) return;
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setClipText(typeof reader.result === 'string' ? reader.result : '');
+    };
+    reader.onerror = () => setError('Soubor se nepodařilo načíst.');
+    reader.readAsText(file);
+  }, []);
+
   const handleConfirm = useCallback(async () => {
     if (!preview || inFlight.current) return;
     inFlight.current = true;
@@ -355,13 +366,13 @@ export function ReadingsImportPage() {
           onClick={() => switchTab('file')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'file' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
         >
-          Import ze souboru
+          Excel (.xlsx)
         </button>
         <button
           onClick={() => switchTab('clipboard')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'clipboard' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
         >
-          Vložit ze schránky
+          Odečítačka (.txt / schránka)
         </button>
         <button
           onClick={() => switchTab('manual')}
@@ -431,12 +442,22 @@ export function ReadingsImportPage() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Soubor z odečítačky (.txt)</label>
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  onChange={(e) => handleLoadClipFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-xl file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover"
+                />
+                <p className="mt-1 text-xs text-text-muted">Vyberte soubor z odečítačky (např. MBWUSB2_....txt) — jeho obsah se načte níže. Nebo data vložte ručně.</p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">Data z odečítačky</label>
                 <textarea
                   value={clipText}
                   onChange={(e) => setClipText(e.target.value)}
                   rows={8}
-                  placeholder={'Vložte zkopírovaná data včetně řádku s názvy sloupců\n(Reception time … Address … Value 1 …), oddělená tabulátory.'}
+                  placeholder={'Vyberte soubor výše, nebo sem vložte zkopírovaná data včetně řádku s názvy sloupců\n(Reception time … Address … Value 1 …), oddělená tabulátory.'}
                   className="w-full border border-border rounded-xl px-3 py-2 text-xs font-mono bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20"
                 />
               </div>
