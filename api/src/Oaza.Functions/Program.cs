@@ -90,6 +90,11 @@ var host = new HostBuilder()
                 sp.GetRequiredService<CalculateSettlementUseCase>(),
                 sp.GetRequiredService<IBillingPeriodRepository>(),
                 sp.GetRequiredService<ISettlementRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IFinancialRecordRepository>(),
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
+                sp.GetRequiredService<GetFundBalanceUseCase>(),
                 sp.GetRequiredService<ILogger<CloseBillingPeriodUseCase>>()));
 
         // Use cases: Per-house saldo (water / electricity / common base)
