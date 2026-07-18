@@ -65,6 +65,13 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IJwtService>(),
                 sp.GetRequiredService<ILogger<VerifyMagicLinkUseCase>>()));
 
+        // Use cases: Common fund balance (shared by GET /finance/fund and water-settlement close)
+        services.AddSingleton<GetFundBalanceUseCase>(sp =>
+            new GetFundBalanceUseCase(
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IFinancialRecordRepository>()));
+
         // Use cases: Settlement calculation
         services.AddSingleton<CalculateSettlementUseCase>(sp =>
             new CalculateSettlementUseCase(
