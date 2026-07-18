@@ -79,6 +79,19 @@ export interface SupplierInvoice {
   lineItems: InvoiceLineItem[];
 }
 
+export interface ReceivedInvoice {
+  source: 'voda' | 'ostatni';
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  dueDate: string | null;
+  countsTowardWaterSettlement: boolean;
+  hasAttachment: boolean;
+  attachmentDownloadPath: string | null;
+}
+
 export type PaymentType = 'Advance' | 'Doplatek' | 'Payout' | 'OpeningBalance';
 
 export interface AdvancePayment {
