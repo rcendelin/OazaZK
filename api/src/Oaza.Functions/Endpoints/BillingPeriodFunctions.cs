@@ -257,7 +257,7 @@ public class BillingPeriodFunctions
         {
             var user = GetAuthenticatedUser(context);
 
-            // Parse loss allocation method from request body
+            // Parse loss allocation method + optional fund draw / price update from the request body.
             var request = await JsonSerializer.DeserializeAsync<CalculateSettlementRequest>(req.Body, JsonOptions);
             var lossMethod = LossAllocationMethod.Equal;
             if (request is not null &&
@@ -267,8 +267,13 @@ public class BillingPeriodFunctions
                 lossMethod = parsed;
             }
 
+            var fundDrawAmount = request?.FundDrawAmount ?? 0m;
+            var applyNewWaterPrice = request?.ApplyNewWaterPrice ?? false;
+            var newWaterPriceValidFrom = request?.NewWaterPriceValidFrom;
+
             // Calculate, persist settlements and lock the period (irreversible).
-            var settlements = await _closeBillingPeriodUseCase.CloseAsync(id, lossMethod);
+            var settlements = await _closeBillingPeriodUseCase.CloseAsync(
+                id, lossMethod, fundDrawAmount, applyNewWaterPrice, newWaterPriceValidFrom);
 
             // Build response with house names
             var houses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
