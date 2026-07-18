@@ -376,6 +376,7 @@ function OpenPeriodDetail({
   onPeriodClosed: () => void;
 }) {
   const [method, setMethod] = useState<string>('Equal');
+  const methodTouched = useRef(false);
   const [preview, setPreview] = useState<SettlementPreviewResponse | null>(
     null,
   );
@@ -443,11 +444,19 @@ function OpenPeriodDetail({
     setCalculating(true);
     setCalcError(null);
     try {
-      const [result, fund, houses, settings] = await Promise.all([
-        calculateSettlement(period.id, method),
+      // Default to the loss-allocation method configured in Nastavení záloh
+      // (the same source CalculateHouseSaldoUseCase uses for the live Saldo
+      // preview) so this preview doesn't silently disagree with Saldo until
+      // the admin explicitly picks a different method for this period.
+      const settings = await getAdvanceSettings();
+      const effectiveMethod = methodTouched.current ? method : settings.lossAllocationMethod;
+      if (!methodTouched.current && effectiveMethod !== method) {
+        setMethod(effectiveMethod);
+      }
+      const [result, fund, houses] = await Promise.all([
+        calculateSettlement(period.id, effectiveMethod),
         getFundBalance(),
         getHouses(),
-        getAdvanceSettings(),
       ]);
       setPreview(result);
       setFundBalance(fund.fundBalance);
@@ -575,7 +584,10 @@ function OpenPeriodDetail({
           <select
             id="method-select"
             value={method}
-            onChange={(e) => setMethod(e.target.value)}
+            onChange={(e) => {
+              methodTouched.current = true;
+              setMethod(e.target.value);
+            }}
             className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           >
             <option value="Equal">Rovnoměrně</option>
