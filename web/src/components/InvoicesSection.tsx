@@ -49,8 +49,11 @@ export function InvoicesSection() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
-  const fetchInvoices = useCallback(() => getInvoices(year), [year]);
-  const { data: invoices, loading, error, refetch } = useApi<SupplierInvoice[]>(fetchInvoices, [year]);
+  // Load all invoices once and filter by year client-side, so a multi-year
+  // invoice is always findable under its issue-date year (the year dropdown is
+  // derived from real data, not a fixed window around the current year).
+  const fetchInvoices = useCallback(() => getInvoices(), []);
+  const { data: invoices, loading, error, refetch } = useApi<SupplierInvoice[]>(fetchInvoices, []);
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -167,9 +170,12 @@ export function InvoicesSection() {
     }
   };
 
-  const list = (invoices ?? []).slice().sort((a, b) => a.month - b.month);
+  const yearOf = (i: SupplierInvoice) => new Date(i.issuedDate).getFullYear();
+  const allInvoices = invoices ?? [];
+  const list = allInvoices.filter((i) => yearOf(i) === year).slice().sort((a, b) => a.month - b.month);
   const total = list.reduce((s, i) => s + i.amount, 0);
-  const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+  const dataYears = allInvoices.map(yearOf).filter((y) => !Number.isNaN(y));
+  const years = [...new Set([currentYear + 1, currentYear, ...dataYears])].sort((a, b) => b - a);
   const inputCls = 'w-full border border-border rounded-lg px-2 py-1 text-sm bg-surface-raised';
 
   return (
