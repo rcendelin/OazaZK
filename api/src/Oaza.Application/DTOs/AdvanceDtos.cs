@@ -45,6 +45,7 @@ public class AdvanceResponse
     public DateTime PaymentDate { get; set; }
     public string Type { get; set; } = "Advance";
     public string? Note { get; set; }
+    public bool IsFundTransfer { get; set; }
     public string RowKey { get; set; } = string.Empty;
 }
 

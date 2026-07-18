@@ -93,6 +93,7 @@ export interface AdvancePayment {
   paymentDate: string;
   type: PaymentType;
   note: string | null;
+  isFundTransfer: boolean;
   rowKey: string;
 }
 

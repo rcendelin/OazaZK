@@ -226,7 +226,8 @@ public static class TableEntityMapper
             { "CommonAmount", payment.CommonAmount.ToString("G29", CultureInfo.InvariantCulture) },
             { "PaymentDate", DateTime.SpecifyKind(payment.PaymentDate, DateTimeKind.Utc) },
             { "Type", payment.Type.ToString() },
-            { "Note", payment.Note }
+            { "Note", payment.Note },
+            { "IsFundTransfer", payment.IsFundTransfer }
         };
     }
 
@@ -244,7 +245,8 @@ public static class TableEntityMapper
             CommonAmount = decimal.TryParse(entity.GetString("CommonAmount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var common) ? common : 0m,
             PaymentDate = entity.GetDateTimeOffset("PaymentDate")?.UtcDateTime ?? DateTime.MinValue,
             Type = Enum.TryParse<PaymentType>(entity.GetString("Type"), out var type) ? type : PaymentType.Advance,
-            Note = entity.GetString("Note")
+            Note = entity.GetString("Note"),
+            IsFundTransfer = entity.GetBoolean("IsFundTransfer") ?? false
         };
     }
 
