@@ -6,7 +6,7 @@ namespace Oaza.Application.Validators;
 public class UpdateFinanceRequestValidator : AbstractValidator<UpdateFinanceRequest>
 {
     private static readonly string[] AllowedTypes = { "Income", "Expense" };
-    private static readonly string[] AllowedCategories = { "voda", "elektro", "udrzba", "pojisteni", "jine" };
+    private static readonly string[] AllowedCategories = { "voda", "elektro", "udrzba", "pojisteni", "jine", "fond-voda" };
 
     public UpdateFinanceRequestValidator()
     {
