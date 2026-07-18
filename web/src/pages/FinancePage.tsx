@@ -6,12 +6,15 @@ import {
   getFinanceSummary,
   getFundBalance,
   createFinanceRecord,
+  uploadFinanceAttachment,
+  downloadFinanceAttachment,
   exportFinancePdf,
   exportFinanceExcel,
 } from '../api/finance';
 import type { FundBalanceResponse } from '../api/finance';
 import { MetricCard } from '../components/MetricCard';
 import { Spinner } from '../components/Spinner';
+import { Download } from 'lucide-react';
 import type {
   FinanceResponse,
   FinanceSummaryResponse,
@@ -316,10 +319,24 @@ function SummaryCards({ summary }: { summary: FinanceSummaryResponse }) {
 // ─── Records Table ──────────────────────────────────────────────────────────
 
 function RecordsTable({ records }: { records: FinanceResponse[] }) {
+  const { getAccessToken } = useAuth();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   // Sort by date descending
   const sorted = [...records].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
+
+  const handleDownload = async (rec: FinanceResponse) => {
+    setDownloadingId(rec.id);
+    try {
+      await downloadFinanceAttachment(rec.id, `faktura-${rec.description || rec.id}.pdf`, getAccessToken);
+    } catch {
+      // swallow — a failed download shouldn't break the table
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <>
@@ -342,6 +359,9 @@ function RecordsTable({ records }: { records: FinanceResponse[] }) {
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
                 Částka
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-text-muted">
+                Příloha
               </th>
             </tr>
           </thead>
@@ -381,6 +401,21 @@ function RecordsTable({ records }: { records: FinanceResponse[] }) {
                 >
                   {rec.type === 'Income' ? '+' : '-'}{formatCZK(rec.amount)}
                 </td>
+                <td className="px-4 py-3 text-center">
+                  {rec.hasAttachment ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDownload(rec)}
+                      disabled={downloadingId === rec.id}
+                      className="inline-flex items-center gap-1 text-accent hover:text-accent-hover disabled:opacity-50"
+                      title="Stáhnout přílohu"
+                    >
+                      <Download size={16} />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-text-muted">—</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -418,13 +453,25 @@ function RecordsTable({ records }: { records: FinanceResponse[] }) {
                   </span>
                 </div>
               </div>
-              <p
-                className={`ml-3 text-sm font-medium ${
-                  rec.type === 'Income' ? 'text-success' : 'text-danger'
-                }`}
-              >
-                {rec.type === 'Income' ? '+' : '-'}{formatCZK(rec.amount)}
-              </p>
+              <div className="ml-3 flex flex-col items-end gap-1">
+                <p
+                  className={`text-sm font-medium ${
+                    rec.type === 'Income' ? 'text-success' : 'text-danger'
+                  }`}
+                >
+                  {rec.type === 'Income' ? '+' : '-'}{formatCZK(rec.amount)}
+                </p>
+                {rec.hasAttachment && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDownload(rec)}
+                    disabled={downloadingId === rec.id}
+                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover disabled:opacity-50"
+                  >
+                    <Download size={14} /> Příloha
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -441,11 +488,13 @@ interface AddRecordFormProps {
 }
 
 function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
+  const { getAccessToken } = useAuth();
   const [type, setType] = useState<FinancialRecordType>('Expense');
   const [category, setCategory] = useState('voda');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const submittingRef = useRef(false);
@@ -481,7 +530,10 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
     };
 
     try {
-      await createFinanceRecord(data);
+      const created = await createFinanceRecord(data);
+      if (file) {
+        await uploadFinanceAttachment(created.id, file, getAccessToken);
+      }
       onCreated();
     } catch {
       setFormError('Uložení se nezdařilo');
@@ -585,6 +637,20 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
             rows={2}
             className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             placeholder="Popis záznamu"
+          />
+        </div>
+
+        {/* Attachment (optional PDF) */}
+        <div>
+          <label htmlFor="fin-file" className="block text-sm font-medium text-text-secondary">
+            Příloha (PDF, nepovinné)
+          </label>
+          <input
+            id="fin-file"
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="mt-1 block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-surface-sunken file:px-3 file:py-1.5 file:text-sm file:text-text-secondary hover:file:bg-surface-sunken/70"
           />
         </div>
 
