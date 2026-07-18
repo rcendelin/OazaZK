@@ -559,7 +559,14 @@ function PaymentsList({ payments, onDelete }: { payments: AdvancePayment[]; onDe
                 <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.electricityAmount) : '—'}</td>
                 <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.commonAmount) : '—'}</td>
                 <td className="px-2 py-2.5 text-right font-mono font-semibold">{fmt(p.amount)}</td>
-                <td className="px-2 py-2.5 text-text-muted max-w-[12rem] truncate">{p.note}</td>
+                <td className="px-2 py-2.5 text-text-muted max-w-[12rem] truncate">
+                  {p.isFundTransfer && (
+                    <span className="mr-1 rounded bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
+                      Z fondu
+                    </span>
+                  )}
+                  {p.note}
+                </td>
                 <td className="px-2 py-2.5 text-right">
                   <button onClick={() => onDelete(p)} className="text-xs text-text-muted hover:text-danger">Smazat</button>
                 </td>
