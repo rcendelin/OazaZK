@@ -22,6 +22,7 @@ public class FinanceFunctions
     private readonly IFinancialRecordRepository _financialRecordRepository;
     private readonly IAdvancePaymentRepository _advanceRepository;
     private readonly IHouseRepository _houseRepository;
+    private readonly GetFundBalanceUseCase _getFundBalanceUseCase;
     private readonly GenerateFinanceReportUseCase _generatePdfUseCase;
     private readonly GenerateFinanceExcelUseCase _generateExcelUseCase;
     private readonly ILogger<FinanceFunctions> _logger;
@@ -36,6 +37,7 @@ public class FinanceFunctions
         IFinancialRecordRepository financialRecordRepository,
         IAdvancePaymentRepository advanceRepository,
         IHouseRepository houseRepository,
+        GetFundBalanceUseCase getFundBalanceUseCase,
         GenerateFinanceReportUseCase generatePdfUseCase,
         GenerateFinanceExcelUseCase generateExcelUseCase,
         ILogger<FinanceFunctions> logger)
@@ -43,6 +45,7 @@ public class FinanceFunctions
         _financialRecordRepository = financialRecordRepository ?? throw new ArgumentNullException(nameof(financialRecordRepository));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
+        _getFundBalanceUseCase = getFundBalanceUseCase ?? throw new ArgumentNullException(nameof(getFundBalanceUseCase));
         _generatePdfUseCase = generatePdfUseCase ?? throw new ArgumentNullException(nameof(generatePdfUseCase));
         _generateExcelUseCase = generateExcelUseCase ?? throw new ArgumentNullException(nameof(generateExcelUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -55,31 +58,12 @@ public class FinanceFunctions
     {
         try
         {
-            // Money collected toward the common base across all households.
-            var houses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
-            decimal commonContributions = 0m;
-            foreach (var house in houses)
-            {
-                var payments = await _advanceRepository.GetByHouseIdAsync(house.Id);
-                commonContributions += payments
-                    .Where(p => p.Type is PaymentType.Advance or PaymentType.Doplatek)
-                    .Sum(p => p.CommonAmount);
-            }
-
-            // Extraordinary costs the common fund covers — all expenses except water
-            // (settled separately) and electricity (covered by its own contributions).
-            var records = await _financialRecordRepository.GetAllAsync();
-            var extraordinaryCosts = records
-                .Where(r => r.Type == FinancialRecordType.Expense
-                    && !string.Equals(r.Category, "voda", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(r.Category, "elektro", StringComparison.OrdinalIgnoreCase))
-                .Sum(r => r.Amount);
-
+            var result = await _getFundBalanceUseCase.CalculateAsync();
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new
             {
-                commonContributions = Math.Round(commonContributions, 2),
-                extraordinaryCosts = Math.Round(extraordinaryCosts, 2),
-                fundBalance = Math.Round(commonContributions - extraordinaryCosts, 2),
+                commonContributions = result.CommonContributions,
+                extraordinaryCosts = result.ExtraordinaryCosts,
+                fundBalance = result.FundBalance,
             });
         }
         catch (AppException ex)
