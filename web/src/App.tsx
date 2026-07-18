@@ -18,6 +18,7 @@ import { MetersPage } from './pages/admin/MetersPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { SaldoPage } from './pages/SaldoPage';
+import { InvoicesOverviewPage } from './pages/InvoicesOverviewPage';
 
 function App() {
   return (
@@ -55,6 +56,14 @@ function App() {
               <Route path="/advances" element={<AdvancesPage />} />
               <Route path="/saldo" element={<SaldoPage />} />
               <Route path="/billing" element={<BillingPage />} />
+              <Route
+                path="/prehled-faktur"
+                element={
+                  <ProtectedRoute requiredRole="Accountant">
+                    <InvoicesOverviewPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route

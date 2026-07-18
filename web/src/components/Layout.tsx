@@ -7,6 +7,7 @@ import {
   Wallet,
   Banknote,
   Receipt,
+  ReceiptText,
   Droplets,
   List,
   Upload,
@@ -27,6 +28,7 @@ interface NavItem {
   path: string;
   icon: ReactNode;
   adminOnly?: boolean;
+  financeManager?: boolean; // visible to Admin + Accountant only
   children?: NavItem[];
 }
 
@@ -43,6 +45,7 @@ const navItems: NavItem[] = [
       { label: 'Zálohy', path: '/advances', icon: <Banknote size={iconSize} /> },
       { label: 'Saldo a platby', path: '/saldo', icon: <Scale size={iconSize} /> },
       { label: 'Vyúčtování', path: '/billing', icon: <Receipt size={iconSize} /> },
+      { label: 'Přehled faktur', path: '/prehled-faktur', icon: <ReceiptText size={iconSize} />, financeManager: true },
     ],
   },
   {
@@ -65,6 +68,7 @@ const adminNavItems: NavItem[] = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'Admin';
+  const isAccountant = user?.role === 'Accountant';
   const location = useLocation();
 
   const isParentActive = (item: NavItem): boolean => {
@@ -126,7 +130,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 {item.children && active && (
                   <div className="mt-1 space-y-0.5">
                     {item.children
-                      .filter((child) => !child.adminOnly || isAdmin)
+                      .filter((child) => (!child.adminOnly || isAdmin) && (!child.financeManager || isAdmin || isAccountant))
                       .map((child) => (
                         <NavLink
                           key={child.path}
