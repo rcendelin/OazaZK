@@ -48,5 +48,8 @@ public record SettlementResponse(
 );
 
 public record CalculateSettlementRequest(
-    string LossAllocationMethod // "Equal" or "ProportionalToConsumption"
+    string LossAllocationMethod, // "Equal" or "ProportionalToConsumption"
+    decimal FundDrawAmount = 0m,
+    bool ApplyNewWaterPrice = false,
+    DateTime? NewWaterPriceValidFrom = null
 );
