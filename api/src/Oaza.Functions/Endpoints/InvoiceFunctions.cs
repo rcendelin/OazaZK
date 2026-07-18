@@ -8,6 +8,7 @@ using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
 using Oaza.Application.Interfaces;
 using Oaza.Application.Mapping;
+using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
@@ -22,6 +23,7 @@ public class InvoiceFunctions
     private readonly ISupplierInvoiceRepository _invoiceRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
     private readonly IBlobStorageService _blobStorageService;
+    private readonly GetReceivedInvoicesUseCase _receivedInvoicesUseCase;
     private readonly ILogger<InvoiceFunctions> _logger;
 
     private const long MaxAttachmentBytes = 20 * 1024 * 1024; // 20 MB
@@ -36,11 +38,13 @@ public class InvoiceFunctions
         ISupplierInvoiceRepository invoiceRepository,
         IBillingPeriodRepository billingPeriodRepository,
         IBlobStorageService blobStorageService,
+        GetReceivedInvoicesUseCase receivedInvoicesUseCase,
         ILogger<InvoiceFunctions> logger)
     {
         _invoiceRepository = invoiceRepository ?? throw new ArgumentNullException(nameof(invoiceRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _receivedInvoicesUseCase = receivedInvoicesUseCase ?? throw new ArgumentNullException(nameof(receivedInvoicesUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -68,6 +72,30 @@ public class InvoiceFunctions
 
             var responses = invoices.Select(EntityMapper.ToResponse).ToList();
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, responses);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    [Function("GetReceivedInvoices")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> GetReceivedInvoicesAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "invoices/all")] HttpRequestData req)
+    {
+        try
+        {
+            var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            int? year = int.TryParse(queryParams["year"], out var y) ? y : null;
+            var category = queryParams["category"];
+
+            var result = await _receivedInvoicesUseCase.GetAsync(year, category);
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, result);
         }
         catch (AppException ex)
         {

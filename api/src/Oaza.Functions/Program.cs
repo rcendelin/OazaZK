@@ -72,6 +72,12 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IAdvancePaymentRepository>(),
                 sp.GetRequiredService<IFinancialRecordRepository>()));
 
+        // Use cases: Unified received-invoices overview (GET /invoices/all)
+        services.AddSingleton<GetReceivedInvoicesUseCase>(sp =>
+            new GetReceivedInvoicesUseCase(
+                sp.GetRequiredService<ISupplierInvoiceRepository>(),
+                sp.GetRequiredService<IFinancialRecordRepository>()));
+
         // Use cases: Settlement calculation
         services.AddSingleton<CalculateSettlementUseCase>(sp =>
             new CalculateSettlementUseCase(
