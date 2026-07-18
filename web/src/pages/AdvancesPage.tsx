@@ -6,6 +6,7 @@ import { getHouses } from '../api/houses';
 import { Spinner } from '../components/Spinner';
 import type { AdvanceSettingsData, AdvanceCalculation, HouseAdvanceOverride } from '../api/advanceSettings';
 import type { House } from '../types';
+import { parseCzechNumber } from '../utils/number';
 
 const fmt = (v: number | null | undefined) => {
   const n = typeof v === 'number' && !isNaN(v) ? v : 0;
@@ -59,7 +60,7 @@ export function AdvancesPage() {
     setMsg(null);
     const parsedCoeffs: Record<string, number> = {};
     for (const [k, v] of Object.entries(coeffs)) {
-      const p = parseFloat(v.replace(',', '.'));
+      const p = parseFloat(v.replace(/\s/g, '').replace(',', '.'));
       if (!isNaN(p)) parsedCoeffs[k] = p;
     }
     try {
@@ -123,7 +124,7 @@ export function AdvancesPage() {
     }
   };
 
-  const coeffSum = Object.values(coeffs).reduce((s, v) => s + (parseFloat(v.replace(',', '.')) || 0), 0);
+  const coeffSum = Object.values(coeffs).reduce((s, v) => s + parseCzechNumber(v), 0);
   const activeHouses = houses?.filter((h) => h.isActive) ?? [];
 
   if (sLoading || cLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;

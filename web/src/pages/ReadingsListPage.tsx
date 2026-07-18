@@ -80,7 +80,7 @@ export function ReadingsListPage() {
     savingRef.current = true;
     setEditError(null);
 
-    const parsed = parseFloat(editValue.replace(',', '.'));
+    const parsed = parseFloat(editValue.replace(/\s/g, '').replace(',', '.'));
     if (isNaN(parsed) || parsed < 0) {
       setEditError('Neplatná hodnota');
       savingRef.current = false;

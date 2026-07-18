@@ -135,7 +135,7 @@ function ManualEntry() {
     const errors: string[] = [];
 
     for (const [meterId, rawValue] of entries) {
-      const value = parseFloat(rawValue.replace(',', '.'));
+      const value = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
       if (isNaN(value) || value < 0) {
         const meter = meters?.find((m) => m.id === meterId);
         errors.push(`Neplatná hodnota pro ${meter?.name || meterId}: ${rawValue}`);

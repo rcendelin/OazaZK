@@ -16,6 +16,7 @@ import { Spinner } from '../components/Spinner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import type { HouseSaldo, AdvancePayment, House, PaymentType } from '../types';
 import type { AdvanceCalculation } from '../api/advanceSettings';
+import { parseCzechNumber } from '../utils/number';
 
 const fmt = (v: number | null | undefined) => {
   const n = typeof v === 'number' && !isNaN(v) ? v : 0;
@@ -337,7 +338,7 @@ function PaymentForm({
   const [note, setNote] = useState('');
   const savingRef = useRef(false);
 
-  const num = (s: string) => parseFloat(s.replace(',', '.')) || 0;
+  const num = parseCzechNumber;
   const componentTotal = num(water) + num(elec) + num(common);
 
   const prefillFromPlan = () => {

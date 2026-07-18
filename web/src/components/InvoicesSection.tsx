@@ -14,6 +14,7 @@ import {
 import { ConfirmDialog } from './ConfirmDialog';
 import { Spinner } from './Spinner';
 import type { SupplierInvoice } from '../types';
+import { parseCzechNumber } from '../utils/number';
 
 const CZK = (v: number) =>
   new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
@@ -26,10 +27,7 @@ const fmtDate = (s: string) => {
     return '—';
   }
 };
-const num = (s: string) => {
-  const v = parseFloat(s.replace(/\s/g, '').replace(',', '.'));
-  return isNaN(v) ? 0 : v;
-};
+const num = parseCzechNumber;
 const dec = (n: number) => String(n).replace('.', ',');
 
 interface LineRow {

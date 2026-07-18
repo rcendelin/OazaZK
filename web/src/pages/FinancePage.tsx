@@ -454,7 +454,7 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
     e.preventDefault();
     if (submittingRef.current) return;
 
-    const parsedAmount = parseFloat(amount.replace(',', '.'));
+    const parsedAmount = parseFloat(amount.replace(/\s/g, '').replace(',', '.'));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setFormError('Zadejte platnou částku');
       return;
