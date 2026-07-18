@@ -65,7 +65,7 @@ public class CalculateSettlementUseCase
 
         if (activeHouses.Count == 0)
         {
-            throw new AppException("No active houses found for settlement calculation.");
+            throw new AppException("Pro výpočet vyúčtování nebyly nalezeny žádné aktivní domácnosti.");
         }
 
         // 3. Load all water meters
@@ -74,7 +74,7 @@ public class CalculateSettlementUseCase
 
         if (mainMeter is null)
         {
-            throw new AppException("No main water meter found.");
+            throw new AppException("Nebyl nalezen žádný hlavní vodoměr.");
         }
 
         // 4. Get main meter consumption for the period
@@ -113,7 +113,7 @@ public class CalculateSettlementUseCase
 
         if (houseConsumptions.Count == 0)
         {
-            throw new AppException("No house meter readings found for the period. Cannot calculate settlement.");
+            throw new AppException("Pro dané období nebyly nalezeny žádné odečty domácích vodoměrů. Vyúčtování nelze vypočítat.");
         }
 
         var totalHouseConsumption = houseConsumptions.Values.Sum();
@@ -233,7 +233,7 @@ public class CalculateSettlementUseCase
 
         if (period.Status != BillingPeriodStatus.Open)
         {
-            throw new AppException("Billing period is already closed. Settlements cannot be recalculated.");
+            throw new AppException("Zúčtovací období je již uzavřeno. Vyúčtování nelze znovu přepočítat.");
         }
 
         return period;
@@ -249,7 +249,7 @@ public class CalculateSettlementUseCase
         var allReadings = await _readingRepository.GetByMeterIdAsync(meterId);
         if (allReadings.Count == 0)
         {
-            throw new AppException($"No readings found for {meterDescription} (meter ID: {meterId}).");
+            throw new AppException($"Nebyly nalezeny žádné odečty pro {meterDescription} (ID vodoměru: {meterId}).");
         }
 
         // Sort readings by date ascending
@@ -273,7 +273,7 @@ public class CalculateSettlementUseCase
         if (endReading is null)
         {
             throw new AppException(
-                $"No reading found at or before the period end date for {meterDescription} (meter ID: {meterId}).");
+                $"Pro {meterDescription} (ID vodoměru: {meterId}) nebyl nalezen žádný odečet k datu konce období nebo dříve.");
         }
 
         // Ensure we have two distinct readings
@@ -291,8 +291,8 @@ public class CalculateSettlementUseCase
         if (consumption < 0)
         {
             throw new AppException(
-                $"Negative consumption detected for {meterDescription}: end reading ({endReading.Value}) " +
-                $"is less than start reading ({startReading.Value}). Check meter readings.");
+                $"Zjištěna záporná spotřeba pro {meterDescription}: koncový odečet ({endReading.Value}) " +
+                $"je nižší než počáteční odečet ({startReading.Value}). Zkontrolujte odečty.");
         }
 
         return consumption;
@@ -382,7 +382,7 @@ public class CalculateSettlementUseCase
             }
 
             default:
-                throw new AppException($"Unknown loss allocation method: {method}");
+                throw new AppException($"Neznámá metoda rozpočtu ztráty: {method}");
         }
 
         return allocations;

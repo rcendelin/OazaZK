@@ -8,7 +8,7 @@ public class MagicLinkRequestValidator : AbstractValidator<MagicLinkRequest>
     public MagicLinkRequestValidator()
     {
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required.")
-            .EmailAddress().WithMessage("Email must be a valid email address.");
+            .NotEmpty().WithMessage("Email je povinný.")
+            .EmailAddress().WithMessage("Zadejte platnou emailovou adresu.");
     }
 }

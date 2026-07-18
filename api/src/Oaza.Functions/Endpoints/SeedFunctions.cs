@@ -59,7 +59,7 @@ public class SeedFunctions
             if (existingHouses.Count > 0)
             {
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteAsJsonAsync(new { message = "Data already seeded.", housesCount = existingHouses.Count });
+                await response.WriteAsJsonAsync(new { message = "Data jsou již naseedovaná.", housesCount = existingHouses.Count });
                 return response;
             }
 
@@ -152,7 +152,7 @@ public class SeedFunctions
         {
             _logger.LogError(ex, "Seed data failed");
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
+            await errorResponse.WriteAsJsonAsync(new { error = "Nastala neočekávaná chyba." });
             return errorResponse;
         }
     }

@@ -82,7 +82,7 @@ public class HouseFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateHouseRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateHouseRequestValidator();
@@ -132,7 +132,7 @@ public class HouseFunctions
             var request = await JsonSerializer.DeserializeAsync<UpdateHouseRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateHouseRequestValidator();
@@ -184,6 +184,6 @@ public class HouseFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

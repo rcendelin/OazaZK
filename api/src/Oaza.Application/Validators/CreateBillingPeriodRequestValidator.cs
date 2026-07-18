@@ -8,13 +8,13 @@ public class CreateBillingPeriodRequestValidator : AbstractValidator<CreateBilli
     public CreateBillingPeriodRequestValidator()
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Name is required.")
-            .MaximumLength(100).WithMessage("Name must not exceed 100 characters.");
+            .NotEmpty().WithMessage("Název je povinný.")
+            .MaximumLength(100).WithMessage("Název nesmí přesáhnout 100 znaků.");
 
         RuleFor(x => x.DateFrom)
-            .LessThan(x => x.DateTo).WithMessage("DateFrom must be before DateTo.");
+            .LessThan(x => x.DateTo).WithMessage("Datum od musí být před datem do.");
 
         RuleFor(x => x.DateTo)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(2)).WithMessage("DateTo must not be in the far future.");
+            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(2)).WithMessage("Datum do nesmí být příliš v budoucnosti.");
     }
 }

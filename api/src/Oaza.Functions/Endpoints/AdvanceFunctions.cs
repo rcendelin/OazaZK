@@ -68,7 +68,7 @@ public class AdvanceFunctions
 
                 if (!string.IsNullOrEmpty(houseIdParam) && houseIdParam != user.HouseId)
                 {
-                    return await WriteErrorResponseAsync(req, 403, "Access denied.");
+                    return await WriteErrorResponseAsync(req, 403, "Přístup odepřen.");
                 }
 
                 houseIdParam = user.HouseId;
@@ -113,7 +113,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -127,7 +127,7 @@ public class AdvanceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateAdvanceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateAdvanceRequestValidator();
@@ -141,7 +141,7 @@ public class AdvanceFunctions
             var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
             if (house is null)
             {
-                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+                return await WriteErrorResponseAsync(req, 404, $"Domácnost '{request.HouseId}' nebyla nalezena.");
             }
 
             // Check for duplicate (same house, same year-month)
@@ -150,7 +150,7 @@ public class AdvanceFunctions
             if (existing is not null)
             {
                 return await WriteErrorResponseAsync(req, 409,
-                    $"Advance payment for house '{house.Name}' for {request.Year}-{request.Month:D2} already exists.");
+                    $"Zálohová platba pro domácnost '{house.Name}' za {request.Year}-{request.Month:D2} již existuje.");
             }
 
             var payment = new AdvancePayment
@@ -181,7 +181,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -208,13 +208,13 @@ public class AdvanceFunctions
                 advanceDate >= p.DateFrom && advanceDate <= p.DateTo);
             if (inClosedPeriod)
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot modify advance in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Zálohu nelze upravit v uzavřeném zúčtovacím období.");
             }
 
             var request = await JsonSerializer.DeserializeAsync<UpdateAdvanceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateAdvanceRequestValidator();
@@ -247,7 +247,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -261,7 +261,7 @@ public class AdvanceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateDoplatekRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateDoplatekRequestValidator();
@@ -274,7 +274,7 @@ public class AdvanceFunctions
             var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
             if (house is null)
             {
-                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+                return await WriteErrorResponseAsync(req, 404, $"Domácnost '{request.HouseId}' nebyla nalezena.");
             }
 
             var paymentDate = DateTime.SpecifyKind(request.PaymentDate, DateTimeKind.Utc);
@@ -309,7 +309,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -323,7 +323,7 @@ public class AdvanceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreatePayoutRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validationResult = await new CreatePayoutRequestValidator().ValidateAsync(request);
@@ -335,7 +335,7 @@ public class AdvanceFunctions
             var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
             if (house is null)
             {
-                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+                return await WriteErrorResponseAsync(req, 404, $"Domácnost '{request.HouseId}' nebyla nalezena.");
             }
 
             var paymentDate = DateTime.SpecifyKind(request.PaymentDate, DateTimeKind.Utc);
@@ -363,7 +363,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -377,7 +377,7 @@ public class AdvanceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateOpeningBalanceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validationResult = await new CreateOpeningBalanceRequestValidator().ValidateAsync(request);
@@ -389,7 +389,7 @@ public class AdvanceFunctions
             var house = await _houseRepository.GetAsync(PartitionKeys.House, request.HouseId);
             if (house is null)
             {
-                return await WriteErrorResponseAsync(req, 404, $"House '{request.HouseId}' not found.");
+                return await WriteErrorResponseAsync(req, 404, $"Domácnost '{request.HouseId}' nebyla nalezena.");
             }
 
             // Signed effect on saldo: overpayment (credit) lowers it, underpayment (debt) raises it.
@@ -419,7 +419,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -450,7 +450,7 @@ public class AdvanceFunctions
                     advanceDate >= p.DateFrom && advanceDate <= p.DateTo);
                 if (inClosedPeriod)
                 {
-                    return await WriteErrorResponseAsync(req, 409, "Cannot delete advance in a closed billing period.");
+                    return await WriteErrorResponseAsync(req, 409, "Zálohu nelze smazat v uzavřeném zúčtovacím období.");
                 }
             }
 
@@ -466,7 +466,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -490,7 +490,7 @@ public class AdvanceFunctions
                 }
                 if (!string.IsNullOrEmpty(houseIdParam) && houseIdParam != user.HouseId)
                 {
-                    return await WriteErrorResponseAsync(req, 403, "Access denied.");
+                    return await WriteErrorResponseAsync(req, 403, "Přístup odepřen.");
                 }
                 houseIdParam = user.HouseId;
             }
@@ -506,7 +506,7 @@ public class AdvanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -518,7 +518,7 @@ public class AdvanceFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(
@@ -543,6 +543,6 @@ public class AdvanceFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

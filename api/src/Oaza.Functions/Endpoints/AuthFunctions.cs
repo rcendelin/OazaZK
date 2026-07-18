@@ -44,7 +44,7 @@ public class AuthFunctions
             userObj is not User user)
         {
             return await WriteJsonResponseAsync(req, HttpStatusCode.Unauthorized,
-                new { error = "Unauthorized" });
+                new { error = "Nejste přihlášeni." });
         }
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
@@ -64,13 +64,13 @@ public class AuthFunctions
         catch (JsonException)
         {
             return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-                new { error = "Invalid request body." });
+                new { error = "Neplatné tělo požadavku." });
         }
 
         if (request is null)
         {
             return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-                new { error = "Request body is required." });
+                new { error = "Tělo požadavku je povinné." });
         }
 
         var validator = new MagicLinkRequestValidator();
@@ -85,7 +85,7 @@ public class AuthFunctions
 
         // Always return success to prevent email enumeration
         return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
-            new { message = "If the email is registered, a login link has been sent." });
+            new { message = "Pokud je email zaregistrován, byl na něj odeslán přihlašovací odkaz." });
     }
 
     [Function("VerifyMagicLink")]
@@ -101,13 +101,13 @@ public class AuthFunctions
         catch (JsonException)
         {
             return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-                new { error = "Invalid request body." });
+                new { error = "Neplatné tělo požadavku." });
         }
 
         if (request is null)
         {
             return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-                new { error = "Request body is required." });
+                new { error = "Tělo požadavku je povinné." });
         }
 
         var validator = new MagicLinkVerifyRequestValidator();
@@ -123,7 +123,7 @@ public class AuthFunctions
         if (authResponse is null)
         {
             return await WriteJsonResponseAsync(req, HttpStatusCode.Unauthorized,
-                new { error = "Invalid or expired token." });
+                new { error = "Neplatný nebo vypršelý odkaz." });
         }
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.OK, authResponse);

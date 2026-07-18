@@ -72,7 +72,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -85,7 +85,7 @@ public class FinanceFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var yearParam = queryParams["year"];
@@ -115,7 +115,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -128,14 +128,14 @@ public class FinanceFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var yearParam = queryParams["year"];
 
             if (!int.TryParse(yearParam, out var year))
             {
-                return await WriteErrorResponseAsync(req, 400, "Query parameter 'year' is required and must be a valid integer.");
+                return await WriteErrorResponseAsync(req, 400, "Parametr 'year' je povinný a musí být platné celé číslo.");
             }
 
             var records = await _financialRecordRepository.GetByYearAsync(year);
@@ -171,7 +171,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -184,7 +184,7 @@ public class FinanceFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var allRecords = await _financialRecordRepository.GetAllAsync();
 
@@ -209,7 +209,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -223,7 +223,7 @@ public class FinanceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateFinanceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateFinanceRequestValidator();
@@ -261,7 +261,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -284,7 +284,7 @@ public class FinanceFunctions
             var request = await JsonSerializer.DeserializeAsync<UpdateFinanceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateFinanceRequestValidator();
@@ -330,7 +330,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -344,13 +344,13 @@ public class FinanceFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var yearParam = queryParams["year"];
 
             if (!int.TryParse(yearParam, out var year))
-                return await WriteErrorResponseAsync(req, 400, "Query parameter 'year' is required and must be a valid integer.");
+                return await WriteErrorResponseAsync(req, 400, "Parametr 'year' je povinný a musí být platné celé číslo.");
 
             var records = await _financialRecordRepository.GetByYearAsync(year);
             var pdfBytes = _generatePdfUseCase.Generate(year, records);
@@ -367,7 +367,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -381,13 +381,13 @@ public class FinanceFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var yearParam = queryParams["year"];
 
             if (!int.TryParse(yearParam, out var year))
-                return await WriteErrorResponseAsync(req, 400, "Query parameter 'year' is required and must be a valid integer.");
+                return await WriteErrorResponseAsync(req, 400, "Parametr 'year' je povinný a musí být platné celé číslo.");
 
             var records = await _financialRecordRepository.GetByYearAsync(year);
             var excelBytes = _generateExcelUseCase.Generate(year, records);
@@ -404,7 +404,7 @@ public class FinanceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -448,7 +448,7 @@ public class FinanceFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 
     private static User GetAuthenticatedUser(FunctionContext context)
@@ -459,6 +459,6 @@ public class FinanceFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 }

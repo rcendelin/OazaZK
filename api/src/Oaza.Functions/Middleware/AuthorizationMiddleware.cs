@@ -109,7 +109,7 @@ public class AuthorizationMiddleware : IFunctionsWorkerMiddleware
     {
         var response = request.CreateResponse(HttpStatusCode.Forbidden);
         response.Headers.Add("Content-Type", "application/json");
-        await response.WriteStringAsync("{\"error\":\"Insufficient permissions\"}");
+        await response.WriteStringAsync("{\"error\":\"Nemáte dostatečná oprávnění.\"}");
         context.GetInvocationResult().Value = response;
     }
 }

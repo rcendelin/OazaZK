@@ -68,7 +68,7 @@ public class DocumentFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var category = queryParams["category"];
@@ -99,7 +99,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -118,26 +118,26 @@ public class DocumentFunctions
             var category = queryParams["category"];
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(category))
-                return await WriteErrorResponseAsync(req, 400, "Name and category are required as query parameters.");
+                return await WriteErrorResponseAsync(req, 400, "Název a kategorie jsou povinné parametry.");
 
             // Validate category
             if (!AllowedCategoriesSet.Contains(category))
-                return await WriteErrorResponseAsync(req, 400, "Invalid category.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatná kategorie.");
 
             if (name.Length > 200)
-                return await WriteErrorResponseAsync(req, 400, "Name must be at most 200 characters.");
+                return await WriteErrorResponseAsync(req, 400, "Název smí mít maximálně 200 znaků.");
 
             // Read body with size limit (20MB)
             var bodyBytes = await ReadBodyBytesWithLimitAsync(req.Body, MaxFileSizeBytes);
             if (bodyBytes.Length == 0)
-                return await WriteErrorResponseAsync(req, 400, "No file content.");
+                return await WriteErrorResponseAsync(req, 400, "Soubor je prázdný.");
 
             // Determine content type from Content-Type header
             var contentType = req.Headers.GetValues("Content-Type")?.FirstOrDefault() ?? "application/octet-stream";
 
             // Validate content type
             if (!AllowedContentTypes.Contains(contentType))
-                return await WriteErrorResponseAsync(req, 400, $"Content type '{contentType}' is not allowed.");
+                return await WriteErrorResponseAsync(req, 400, $"Typ souboru '{contentType}' není povolen.");
 
             // Determine file extension from content type
             var extension = contentType switch
@@ -183,7 +183,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -197,7 +197,7 @@ public class DocumentFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             // Look up across all categories since we only have the id (rowKey)
             var document = await FindDocumentByIdAsync(id);
@@ -208,7 +208,7 @@ public class DocumentFunctions
 
             var stream = await _blobStorageService.DownloadAsync(BlobContainerNames.Documents, document.BlobName);
             if (stream is null)
-                return await WriteErrorResponseAsync(req, 404, "File not found in storage.");
+                return await WriteErrorResponseAsync(req, 404, "Soubor nebyl v úložišti nalezen.");
 
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
@@ -224,7 +224,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -258,7 +258,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -280,11 +280,11 @@ public class DocumentFunctions
             // Read body with size limit (20MB)
             var bodyBytes = await ReadBodyBytesWithLimitAsync(req.Body, MaxFileSizeBytes);
             if (bodyBytes.Length == 0)
-                return await WriteErrorResponseAsync(req, 400, "No file content.");
+                return await WriteErrorResponseAsync(req, 400, "Soubor je prázdný.");
 
             var contentType = req.Headers.GetValues("Content-Type")?.FirstOrDefault() ?? "application/octet-stream";
             if (!AllowedContentTypes.Contains(contentType))
-                return await WriteErrorResponseAsync(req, 400, $"Content type '{contentType}' is not allowed.");
+                return await WriteErrorResponseAsync(req, 400, $"Typ souboru '{contentType}' není povolen.");
 
             // Get latest version number
             var latestVersion = await _documentVersionRepository.GetLatestVersionAsync(id);
@@ -357,7 +357,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -371,7 +371,7 @@ public class DocumentFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var document = await FindDocumentByIdAsync(id);
             if (document is null)
@@ -391,7 +391,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -406,7 +406,7 @@ public class DocumentFunctions
         {
             var user = GetAuthenticatedUser(context);
             if (user is null)
-                return await WriteErrorResponseAsync(req, 401, "Unauthorized");
+                return await WriteErrorResponseAsync(req, 401, "Nejste přihlášeni.");
 
             var document = await FindDocumentByIdAsync(id);
             if (document is null)
@@ -418,7 +418,7 @@ public class DocumentFunctions
 
             var stream = await _blobStorageService.DownloadAsync(BlobContainerNames.Documents, versionEntity.BlobName);
             if (stream is null)
-                return await WriteErrorResponseAsync(req, 404, "File not found in storage.");
+                return await WriteErrorResponseAsync(req, 404, "Soubor nebyl v úložišti nalezen.");
 
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
@@ -434,7 +434,7 @@ public class DocumentFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -464,7 +464,7 @@ public class DocumentFunctions
         {
             totalRead += bytesRead;
             if (totalRead > maxBytes)
-                throw new AppException($"File exceeds maximum size of {maxBytes / (1024 * 1024)} MB.", 400);
+                throw new AppException($"Soubor přesahuje maximální velikost {maxBytes / (1024 * 1024)} MB.", 400);
             ms.Write(buffer, 0, bytesRead);
         }
         return ms.ToArray();
@@ -488,7 +488,7 @@ public class DocumentFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(

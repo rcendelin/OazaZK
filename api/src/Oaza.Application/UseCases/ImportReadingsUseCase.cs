@@ -50,7 +50,7 @@ public class ImportReadingsUseCase
             errors.Add(new ImportValidationMessage
             {
                 Type = "error",
-                Message = "No meters configured in the system. Please create meters first."
+                Message = "V systému nejsou nakonfigurované žádné vodoměry. Nejprve prosím vytvořte vodoměry."
             });
             return new ImportPreviewResponse
             {
@@ -90,7 +90,7 @@ public class ImportReadingsUseCase
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Cannot parse date in column {col}: '{dateStr}'."
+                        Message = $"Nelze zpracovat datum ve sloupci {col}: '{dateStr}'."
                     });
                     continue;
                 }
@@ -100,7 +100,7 @@ public class ImportReadingsUseCase
 
         if (columnDateMap.Count == 0)
         {
-            errors.Add(new ImportValidationMessage { Type = "error", Message = "No valid dates found in header row." });
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "V hlavičkovém řádku nebylo nalezeno žádné platné datum." });
             return new ImportPreviewResponse { Rows = previewRows, Errors = errors, Warnings = warnings, ImportSessionId = string.Empty };
         }
 
@@ -154,7 +154,7 @@ public class ImportReadingsUseCase
                 errors.Add(new ImportValidationMessage
                 {
                     Type = "error",
-                    Message = $"Row {rowNum}: meter number '{meterNumber}' does not match any configured meter.",
+                    Message = $"Řádek {rowNum}: číslo vodoměru '{meterNumber}' neodpovídá žádnému nakonfigurovanému vodoměru.",
                     Row = rowNum
                 });
                 continue;
@@ -171,7 +171,7 @@ public class ImportReadingsUseCase
                     warnings.Add(new ImportValidationMessage
                     {
                         Type = "warning",
-                        Message = $"Missing value for meter '{meter.MeterNumber}' at {readingDate:d.M.yyyy}.",
+                        Message = $"Chybí hodnota pro vodoměr '{meter.MeterNumber}' k datu {readingDate:d.M.yyyy}.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
@@ -183,7 +183,7 @@ public class ImportReadingsUseCase
                     errors.Add(new ImportValidationMessage
                     {
                         Type = "error",
-                        Message = $"Cannot parse value for meter '{meter.MeterNumber}' at {readingDate:d.M.yyyy}: '{cell.GetString()}'.",
+                        Message = $"Nelze zpracovat hodnotu pro vodoměr '{meter.MeterNumber}' k datu {readingDate:d.M.yyyy}: '{cell.GetString()}'.",
                         Row = rowNum,
                         MeterId = meter.Id
                     });
@@ -238,7 +238,7 @@ public class ImportReadingsUseCase
             warnings.Add(new ImportValidationMessage
             {
                 Type = "warning",
-                Message = $"Meter '{meter.MeterNumber}' ({meter.Type}) is not mapped to any column in the Excel file."
+                Message = $"Vodoměr '{meter.MeterNumber}' ({meter.Type}) není namapován na žádný sloupec v Excel souboru."
             });
         }
 
@@ -274,24 +274,24 @@ public class ImportReadingsUseCase
         var session = _sessionCache.Retrieve(importSessionId);
         if (session is null)
         {
-            throw new AppException("Import session not found or expired. Please re-upload the file.", 404);
+            throw new AppException("Importní relace nebyla nalezena nebo vypršela. Nahrajte prosím soubor znovu.", 404);
         }
 
         // Verify the confirming user is the same as the one who created the session
         if (!string.IsNullOrEmpty(session.CreatedBy) && session.CreatedBy != importedBy)
         {
-            throw new AppException("You can only confirm your own import sessions.", 403);
+            throw new AppException("Můžete potvrdit pouze vlastní importní relace.", 403);
         }
 
         if (session.Errors.Count > 0)
         {
             throw new AppException(
-                $"Cannot confirm import with {session.Errors.Count} validation error(s). Please fix the errors and re-upload.");
+                $"Nelze potvrdit import s {session.Errors.Count} chybami validace. Opravte prosím chyby a nahrajte soubor znovu.");
         }
 
         if (session.Readings.Count == 0)
         {
-            throw new AppException("No readings to import.");
+            throw new AppException("Nejsou žádné odečty k importu.");
         }
 
         foreach (var reading in session.Readings)
@@ -304,7 +304,7 @@ public class ImportReadingsUseCase
             if (duplicate)
             {
                 throw new AppException(
-                    $"A reading for meter {reading.MeterId} already exists for {reading.ReadingDate:yyyy-MM}. The data may have changed since preview.", 409);
+                    $"Odečet pro vodoměr {reading.MeterId} za {reading.ReadingDate:yyyy-MM} již existuje. Data se od náhledu mohla změnit.", 409);
             }
 
             await _readingRepository.UpsertAsync(reading);
@@ -354,7 +354,7 @@ public class ImportReadingsUseCase
         var allMeters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
         if (allMeters.Count == 0)
         {
-            errors.Add(new ImportValidationMessage { Type = "error", Message = "No meters configured in the system. Please create meters first." });
+            errors.Add(new ImportValidationMessage { Type = "error", Message = "V systému nejsou nakonfigurované žádné vodoměry. Nejprve prosím vytvořte vodoměry." });
             return Result();
         }
 
@@ -526,7 +526,7 @@ public class ImportReadingsUseCase
             errors.Add(new ImportValidationMessage
             {
                 Type = "error",
-                Message = $"A reading for meter '{meter.MeterNumber}' already exists for {readingDate:MM/yyyy} (on {duplicate.ReadingDate:d.M.yyyy}, value {duplicate.Value}).",
+                Message = $"Odečet pro vodoměr '{meter.MeterNumber}' za {readingDate:MM/yyyy} již existuje (ze dne {duplicate.ReadingDate:d.M.yyyy}, hodnota {duplicate.Value}).",
                 Row = rowNum,
                 MeterId = meter.Id
             });
@@ -539,7 +539,7 @@ public class ImportReadingsUseCase
             errors.Add(new ImportValidationMessage
             {
                 Type = "error",
-                Message = $"Duplicate in file for meter '{meter.MeterNumber}' in {readingDate:MM/yyyy}.",
+                Message = $"Duplicita v souboru pro vodoměr '{meter.MeterNumber}' za {readingDate:MM/yyyy}.",
                 Row = rowNum,
                 MeterId = meter.Id
             });
@@ -557,7 +557,7 @@ public class ImportReadingsUseCase
             errors.Add(new ImportValidationMessage
             {
                 Type = "error",
-                Message = $"Negative consumption for '{meter.MeterNumber}': {value} < previous {previousReading.Value}.",
+                Message = $"Záporná spotřeba pro '{meter.MeterNumber}': {value} < předchozí {previousReading.Value}.",
                 Row = rowNum,
                 MeterId = meter.Id
             });
@@ -588,7 +588,7 @@ public class ImportReadingsUseCase
                         warnings.Add(new ImportValidationMessage
                         {
                             Type = "warning",
-                            Message = $"Anomaly for '{meter.MeterNumber}' on {readingDate:d.M.yyyy}: {consumption:F1} m³ > 2× avg ({avg:F1} m³).",
+                            Message = $"Anomálie u '{meter.MeterNumber}' k datu {readingDate:d.M.yyyy}: {consumption:F1} m³ > 2× průměr ({avg:F1} m³).",
                             Row = rowNum,
                             MeterId = meter.Id
                         });

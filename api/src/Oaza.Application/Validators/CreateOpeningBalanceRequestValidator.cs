@@ -8,16 +8,16 @@ public class CreateOpeningBalanceRequestValidator : AbstractValidator<CreateOpen
     public CreateOpeningBalanceRequestValidator()
     {
         RuleFor(x => x.HouseId)
-            .NotEmpty().WithMessage("House ID is required.")
-            .Must(id => Guid.TryParse(id, out _)).WithMessage("House ID must be a valid GUID.");
+            .NotEmpty().WithMessage("ID domácnosti je povinné.")
+            .Must(id => Guid.TryParse(id, out _)).WithMessage("ID domácnosti musí být platné GUID.");
 
         RuleFor(x => x.Amount)
-            .GreaterThan(0).WithMessage("Opening balance amount must be greater than 0.");
+            .GreaterThan(0).WithMessage("Počáteční zůstatek musí být větší než 0.");
 
         RuleFor(x => x.PaymentDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Date must not be in the far future.");
+            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum nesmí být příliš v budoucnosti.");
 
         RuleFor(x => x.Note)
-            .MaximumLength(500).WithMessage("Note must be 500 characters or fewer.");
+            .MaximumLength(500).WithMessage("Poznámka smí mít maximálně 500 znaků.");
     }
 }

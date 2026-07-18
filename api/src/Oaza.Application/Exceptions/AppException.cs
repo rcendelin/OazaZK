@@ -13,5 +13,5 @@ public class AppException : Exception
 public class NotFoundException : AppException
 {
     public NotFoundException(string entity, string id)
-        : base("The requested resource was not found.", 404) { }
+        : base("Požadovaný záznam nebyl nalezen.", 404) { }
 }

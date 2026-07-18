@@ -7,15 +7,15 @@ public class UpdateAdvanceRequestValidator : AbstractValidator<UpdateAdvanceRequ
 {
     public UpdateAdvanceRequestValidator()
     {
-        RuleFor(x => x.WaterAmount).GreaterThanOrEqualTo(0).WithMessage("Water amount cannot be negative.");
-        RuleFor(x => x.ElectricityAmount).GreaterThanOrEqualTo(0).WithMessage("Electricity amount cannot be negative.");
-        RuleFor(x => x.CommonAmount).GreaterThanOrEqualTo(0).WithMessage("Common amount cannot be negative.");
+        RuleFor(x => x.WaterAmount).GreaterThanOrEqualTo(0).WithMessage("Částka za vodu nesmí být záporná.");
+        RuleFor(x => x.ElectricityAmount).GreaterThanOrEqualTo(0).WithMessage("Částka za elektřinu nesmí být záporná.");
+        RuleFor(x => x.CommonAmount).GreaterThanOrEqualTo(0).WithMessage("Částka za společné výdaje nesmí být záporná.");
 
         RuleFor(x => x)
             .Must(x => x.WaterAmount + x.ElectricityAmount + x.CommonAmount > 0)
-            .WithMessage("Total amount must be greater than 0.");
+            .WithMessage("Celková částka musí být větší než 0.");
 
         RuleFor(x => x.PaymentDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Payment date must not be in the far future.");
+            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum platby nesmí být příliš v budoucnosti.");
     }
 }

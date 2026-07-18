@@ -8,19 +8,19 @@ public class UpdateHouseRequestValidator : AbstractValidator<UpdateHouseRequest>
     public UpdateHouseRequestValidator()
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Name is required.")
-            .MaximumLength(200).WithMessage("Name must not exceed 200 characters.");
+            .NotEmpty().WithMessage("Název je povinný.")
+            .MaximumLength(200).WithMessage("Název nesmí přesáhnout 200 znaků.");
 
         RuleFor(x => x.Address)
-            .NotEmpty().WithMessage("Address is required.")
-            .MaximumLength(500).WithMessage("Address must not exceed 500 characters.");
+            .NotEmpty().WithMessage("Adresa je povinná.")
+            .MaximumLength(500).WithMessage("Adresa nesmí přesáhnout 500 znaků.");
 
         RuleFor(x => x.ContactPerson)
-            .NotEmpty().WithMessage("Contact person is required.")
-            .MaximumLength(200).WithMessage("Contact person must not exceed 200 characters.");
+            .NotEmpty().WithMessage("Kontaktní osoba je povinná.")
+            .MaximumLength(200).WithMessage("Kontaktní osoba nesmí přesáhnout 200 znaků.");
 
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required.")
-            .EmailAddress().WithMessage("A valid email address is required.");
+            .NotEmpty().WithMessage("Email je povinný.")
+            .EmailAddress().WithMessage("Zadejte platnou emailovou adresu.");
     }
 }

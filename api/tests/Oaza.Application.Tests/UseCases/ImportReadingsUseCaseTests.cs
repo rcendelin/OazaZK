@@ -211,7 +211,7 @@ public class ImportReadingsUseCaseTests
         // Assert
         result.Errors.Should().HaveCount(1);
         result.Errors[0].Type.Should().Be("error");
-        result.Errors[0].Message.Should().Contain("already exists");
+        result.Errors[0].Message.Should().Contain("již existuje");
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public class ImportReadingsUseCaseTests
         // Assert
         result.Errors.Should().HaveCount(1);
         result.Errors[0].Type.Should().Be("error");
-        result.Errors[0].Message.Should().Contain("already exists");
+        result.Errors[0].Message.Should().Contain("již existuje");
     }
 
     [Fact]
@@ -288,7 +288,7 @@ public class ImportReadingsUseCaseTests
 
         // Assert
         result.Errors.Should().HaveCount(1);
-        result.Errors[0].Message.Should().Contain("Negative consumption");
+        result.Errors[0].Message.Should().Contain("Záporná spotřeba");
     }
 
     [Fact]
@@ -310,7 +310,7 @@ public class ImportReadingsUseCaseTests
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Warnings.Should().Contain(w => w.Message.Contains("Missing value"));
+        result.Warnings.Should().Contain(w => w.Message.Contains("Chybí hodnota"));
     }
 
     [Fact]
@@ -350,7 +350,7 @@ public class ImportReadingsUseCaseTests
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Warnings.Should().Contain(w => w.Message.Contains("Anomaly"));
+        result.Warnings.Should().Contain(w => w.Message.Contains("Anomálie"));
         result.Errors.Should().BeEmpty();
     }
 
@@ -374,7 +374,7 @@ public class ImportReadingsUseCaseTests
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Errors.Should().Contain(e => e.Message.Contains("UNKNOWN-999") && e.Message.Contains("does not match"));
+        result.Errors.Should().Contain(e => e.Message.Contains("UNKNOWN-999") && e.Message.Contains("neodpovídá"));
     }
 
     [Fact]
@@ -396,7 +396,7 @@ public class ImportReadingsUseCaseTests
 
         // Assert
         result.Errors.Should().HaveCount(1);
-        result.Errors[0].Message.Should().Contain("No meters configured");
+        result.Errors[0].Message.Should().Contain("nejsou nakonfigurované");
     }
 
     [Fact]
@@ -480,7 +480,7 @@ public class ImportReadingsUseCaseTests
         // Act & Assert
         var act = () => _useCase.ConfirmImportAsync("nonexistent", "user-1");
         await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*not found or expired*");
+            .WithMessage("*nebyla nalezena nebo vypršela*");
     }
 
     [Fact]
@@ -506,7 +506,7 @@ public class ImportReadingsUseCaseTests
         // Act & Assert
         var act = () => _useCase.ConfirmImportAsync(sessionId, "user-1");
         await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*validation error*");
+            .WithMessage("*chybami validace*");
     }
 
     [Fact]
@@ -526,7 +526,7 @@ public class ImportReadingsUseCaseTests
         // Act & Assert
         var act = () => _useCase.ConfirmImportAsync(sessionId, "user-1");
         await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*No readings to import*");
+            .WithMessage("*Nejsou žádné odečty k importu*");
     }
 
     [Fact]

@@ -201,7 +201,7 @@ public class CloseBillingPeriodUseCaseTests
         var act = () => _sut.CloseAsync("period-1", LossAllocationMethod.Equal, fundDrawAmount: 100m);
 
         // Assert
-        await act.Should().ThrowAsync<AppException>().WithMessage("*exceeds*");
+        await act.Should().ThrowAsync<AppException>().WithMessage("*přesahuje*");
         _advanceRepo.Verify(r => r.UpsertAsync(It.Is<AdvancePayment>(p => p.IsFundTransfer)), Times.Never);
         _financialRecordRepo.Verify(r => r.UpsertAsync(It.IsAny<FinancialRecord>()), Times.Never);
         _settlementRepo.Verify(r => r.UpsertAsync(It.IsAny<Settlement>()), Times.Never);

@@ -8,21 +8,21 @@ public class CreateDoplatekRequestValidator : AbstractValidator<CreateDoplatekRe
     public CreateDoplatekRequestValidator()
     {
         RuleFor(x => x.HouseId)
-            .NotEmpty().WithMessage("House ID is required.")
-            .Must(id => Guid.TryParse(id, out _)).WithMessage("House ID must be a valid GUID.");
+            .NotEmpty().WithMessage("ID domácnosti je povinné.")
+            .Must(id => Guid.TryParse(id, out _)).WithMessage("ID domácnosti musí být platné GUID.");
 
-        RuleFor(x => x.WaterAmount).GreaterThanOrEqualTo(0).WithMessage("Water amount cannot be negative.");
-        RuleFor(x => x.ElectricityAmount).GreaterThanOrEqualTo(0).WithMessage("Electricity amount cannot be negative.");
-        RuleFor(x => x.CommonAmount).GreaterThanOrEqualTo(0).WithMessage("Common amount cannot be negative.");
+        RuleFor(x => x.WaterAmount).GreaterThanOrEqualTo(0).WithMessage("Částka za vodu nesmí být záporná.");
+        RuleFor(x => x.ElectricityAmount).GreaterThanOrEqualTo(0).WithMessage("Částka za elektřinu nesmí být záporná.");
+        RuleFor(x => x.CommonAmount).GreaterThanOrEqualTo(0).WithMessage("Částka za společné výdaje nesmí být záporná.");
 
         RuleFor(x => x)
             .Must(x => x.WaterAmount + x.ElectricityAmount + x.CommonAmount > 0)
-            .WithMessage("Total amount must be greater than 0.");
+            .WithMessage("Celková částka musí být větší než 0.");
 
         RuleFor(x => x.PaymentDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Payment date must not be in the far future.");
+            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum platby nesmí být příliš v budoucnosti.");
 
         RuleFor(x => x.Note)
-            .MaximumLength(500).WithMessage("Note must be 500 characters or fewer.");
+            .MaximumLength(500).WithMessage("Poznámka smí mít maximálně 500 znaků.");
     }
 }

@@ -269,7 +269,7 @@ public class CalculateSettlementUseCaseTests
         // Act & Assert
         await _sut.Invoking(s => s.CalculateAsync(periodId, LossAllocationMethod.Equal))
             .Should().ThrowAsync<AppException>()
-            .WithMessage("*No readings found*Main meter*");
+            .WithMessage("*Nebyly nalezeny žádné odečty*Main meter*");
     }
 
     [Fact]
@@ -381,7 +381,7 @@ public class CalculateSettlementUseCaseTests
         // Act & Assert
         await _sut.Invoking(s => s.CalculateAsync("period-1", LossAllocationMethod.Equal))
             .Should().ThrowAsync<AppException>()
-            .WithMessage("*already closed*");
+            .WithMessage("*již uzavřeno*");
     }
 
     [Fact]

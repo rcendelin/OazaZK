@@ -95,7 +95,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -112,7 +112,7 @@ public class BillingPeriodFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateBillingPeriodRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateBillingPeriodRequestValidator();
@@ -148,7 +148,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -174,7 +174,7 @@ public class BillingPeriodFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateBillingPeriodRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateBillingPeriodRequestValidator();
@@ -205,7 +205,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -242,7 +242,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -291,7 +291,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -331,7 +331,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -352,7 +352,7 @@ public class BillingPeriodFunctions
             // Members can only access their own house's PDF
             if (user.Role == UserRole.Member && user.HouseId != houseId)
             {
-                return await WriteErrorResponseAsync(req, 403, "You can only access your own house's settlement PDF.");
+                return await WriteErrorResponseAsync(req, 403, "Máte přístup pouze k PDF vyúčtování vlastní domácnosti.");
             }
 
             // Check if period exists and is closed
@@ -364,7 +364,7 @@ public class BillingPeriodFunctions
 
             if (period.Status != BillingPeriodStatus.Closed)
             {
-                throw new AppException("Settlement PDFs are only available for closed billing periods.");
+                throw new AppException("PDF vyúčtování je dostupné pouze pro uzavřená zúčtovací období.");
             }
 
             var blobPath = $"{id}/{houseId}.pdf";
@@ -384,7 +384,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -411,14 +411,14 @@ public class BillingPeriodFunctions
 
             if (period.Status != BillingPeriodStatus.Closed)
             {
-                throw new AppException("Settlement PDFs are only available for closed billing periods.");
+                throw new AppException("PDF vyúčtování je dostupné pouze pro uzavřená zúčtovací období.");
             }
 
             // Get all settlements for this period
             var settlements = await _settlementRepository.GetByPeriodIdAsync(id);
             if (settlements.Count == 0)
             {
-                throw new AppException("No settlements found for this billing period.");
+                throw new AppException("Pro toto zúčtovací období nebyla nalezena žádná vyúčtování.");
             }
 
             // Generate ZIP with all PDFs
@@ -461,7 +461,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -540,7 +540,7 @@ public class BillingPeriodFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(
@@ -565,6 +565,6 @@ public class BillingPeriodFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

@@ -73,12 +73,12 @@ public class CloseBillingPeriodUseCase
 
         if (period.Status != BillingPeriodStatus.Open)
         {
-            throw new AppException("Billing period is already closed. Cannot close again.");
+            throw new AppException("Zúčtovací období je již uzavřeno. Nelze jej uzavřít znovu.");
         }
 
         if (fundDrawAmount < 0)
         {
-            throw new AppException("Fund draw amount cannot be negative.");
+            throw new AppException("Čerpaná částka z fondu nesmí být záporná.");
         }
 
         if (fundDrawAmount > 0)
@@ -142,14 +142,14 @@ public class CloseBillingPeriodUseCase
 
         if (activeHouses.Count == 0)
         {
-            throw new AppException("Cannot draw from the fund: no active houses.");
+            throw new AppException("Z fondu nelze čerpat: nejsou žádné aktivní domácnosti.");
         }
 
         var fundBalance = await _getFundBalanceUseCase.CalculateAsync();
         if (fundDrawAmount > fundBalance.FundBalance)
         {
             throw new AppException(
-                $"Fund draw amount ({fundDrawAmount:F2} Kč) exceeds the available fund balance ({fundBalance.FundBalance:F2} Kč).");
+                $"Čerpaná částka z fondu ({fundDrawAmount:F2} Kč) přesahuje dostupný zůstatek fondu ({fundBalance.FundBalance:F2} Kč).");
         }
 
         var perHouse = Math.Round(fundDrawAmount / activeHouses.Count, 2);
@@ -204,13 +204,13 @@ public class CloseBillingPeriodUseCase
     {
         if (newWaterPriceValidFrom is null)
         {
-            throw new AppException("New water price valid-from date is required when applying a new price.");
+            throw new AppException("Při aplikaci nové ceny vody je nutné zadat datum platnosti od.");
         }
 
         var totalWaterM3 = preview.TotalHouseConsumption + preview.TotalLoss;
         if (totalWaterM3 <= 0)
         {
-            throw new AppException("Cannot derive a new water price: total consumption for the period is zero.");
+            throw new AppException("Nelze odvodit novou cenu vody: celková spotřeba za období je nulová.");
         }
 
         var effectivePrice = Math.Round(preview.TotalInvoiceAmount / totalWaterM3, 2);

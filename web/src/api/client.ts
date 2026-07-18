@@ -32,12 +32,12 @@ class ApiClient {
     if (!response.ok) {
       const error = await response
         .json()
-        .catch(() => ({ error: 'Unknown error' }));
+        .catch(() => ({ error: 'Neznámá chyba' }));
       throw new ApiError(
         response.status,
         (error as Record<string, string>).error ||
           (error as Record<string, string>).message ||
-          'Request failed',
+          'Požadavek se nezdařil',
       );
     }
 
@@ -81,7 +81,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new ApiError(response.status, 'Upload failed');
+      throw new ApiError(response.status, 'Nahrání se nezdařilo');
     }
 
     return response.json() as Promise<T>;

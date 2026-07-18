@@ -45,7 +45,7 @@ public class NotificationFunctions
             var request = await JsonSerializer.DeserializeAsync<SendNotificationRequest>(req.Body, JsonOptions);
             if (request is null || string.IsNullOrWhiteSpace(request.Type))
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body. 'type' is required.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku. Pole 'type' je povinné.");
             }
 
             switch (request.Type)
@@ -57,7 +57,7 @@ public class NotificationFunctions
                 case "import_completed":
                     if (!request.Year.HasValue || !request.Month.HasValue)
                     {
-                        return await WriteErrorResponseAsync(req, 400, "Parameters 'year' and 'month' are required for import_completed notification.");
+                        return await WriteErrorResponseAsync(req, 400, "Parametry 'year' a 'month' jsou povinné pro notifikaci import_completed.");
                     }
                     await _notificationService.SendImportNotificationAsync(request.Year.Value, request.Month.Value);
                     break;
@@ -65,7 +65,7 @@ public class NotificationFunctions
                 case "settlement_closed":
                     if (string.IsNullOrWhiteSpace(request.PeriodId))
                     {
-                        return await WriteErrorResponseAsync(req, 400, "Parameter 'periodId' is required for settlement_closed notification.");
+                        return await WriteErrorResponseAsync(req, 400, "Parametr 'periodId' je povinný pro notifikaci settlement_closed.");
                     }
                     await _notificationService.SendSettlementNotificationAsync(request.PeriodId);
                     break;
@@ -86,7 +86,7 @@ public class NotificationFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error sending notification.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 

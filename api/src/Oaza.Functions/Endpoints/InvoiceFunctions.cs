@@ -75,7 +75,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -89,7 +89,7 @@ public class InvoiceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateInvoiceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateInvoiceRequestValidator();
@@ -130,7 +130,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -151,13 +151,13 @@ public class InvoiceFunctions
             // Check if invoice is in a closed billing period
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot modify an invoice in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze upravit v uzavřeném zúčtovacím období.");
             }
 
             var request = await JsonSerializer.DeserializeAsync<UpdateInvoiceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateInvoiceRequestValidator();
@@ -183,7 +183,7 @@ public class InvoiceFunctions
             // Check if the new year/month would fall into a closed period
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot move an invoice into a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze přesunout do uzavřeného zúčtovacího období.");
             }
 
             await _invoiceRepository.UpsertAsync(existing);
@@ -199,7 +199,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -220,7 +220,7 @@ public class InvoiceFunctions
             // Check if invoice is in a closed billing period
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot delete an invoice in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze smazat v uzavřeném zúčtovacím období.");
             }
 
             await _invoiceRepository.DeleteAsync(PartitionKeys.Invoice, id);
@@ -235,7 +235,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -255,7 +255,7 @@ public class InvoiceFunctions
 
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot modify an invoice in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze upravit v uzavřeném zúčtovacím období.");
             }
 
             var contentType = req.Headers.TryGetValues("Content-Type", out var ctValues)
@@ -288,7 +288,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -333,7 +333,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -388,7 +388,7 @@ public class InvoiceFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(
@@ -413,6 +413,6 @@ public class InvoiceFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

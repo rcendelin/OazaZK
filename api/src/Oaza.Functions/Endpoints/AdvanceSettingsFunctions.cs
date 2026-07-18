@@ -63,7 +63,7 @@ public class AdvanceSettingsFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Advance settings error.");
-            return await WriteErrorResponseAsync(req, 500, $"Chyba: {ex.GetType().Name}: {ex.Message}");
+            return await WriteErrorResponseAsync(req, 500, "Nastala chyba při načítání nastavení záloh. Zkuste to prosím znovu nebo kontaktujte správce.");
         }
     }
 
@@ -78,7 +78,7 @@ public class AdvanceSettingsFunctions
             GetAuthenticatedUser(context);
             var settings = await JsonSerializer.DeserializeAsync<AdvanceSettings>(req.Body, JsonOptions);
             if (settings is null)
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
 
             // Ensure collections are never null
             settings.ElectricityCoefficients ??= new Dictionary<string, decimal>();
@@ -104,7 +104,7 @@ public class AdvanceSettingsFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating advance settings.");
-            return await WriteErrorResponseAsync(req, 500, $"Chyba při ukládání: {ex.GetType().Name}: {ex.Message}");
+            return await WriteErrorResponseAsync(req, 500, "Nastala chyba při ukládání nastavení záloh. Zkuste to prosím znovu nebo kontaktujte správce.");
         }
     }
 
@@ -246,7 +246,7 @@ public class AdvanceSettingsFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calculating advances.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -269,7 +269,7 @@ public class AdvanceSettingsFunctions
     {
         if (context.Items.TryGetValue(AuthConstants.HttpContextUserKey, out var userObj) && userObj is User user)
             return user;
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(HttpRequestData req, HttpStatusCode status, T data)
