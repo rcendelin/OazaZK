@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Application.Mapping;
 using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
@@ -22,10 +23,13 @@ public class FinanceFunctions
     private readonly IFinancialRecordRepository _financialRecordRepository;
     private readonly IAdvancePaymentRepository _advanceRepository;
     private readonly IHouseRepository _houseRepository;
+    private readonly IBlobStorageService _blobStorageService;
     private readonly GetFundBalanceUseCase _getFundBalanceUseCase;
     private readonly GenerateFinanceReportUseCase _generatePdfUseCase;
     private readonly GenerateFinanceExcelUseCase _generateExcelUseCase;
     private readonly ILogger<FinanceFunctions> _logger;
+
+    private const long MaxAttachmentBytes = 20 * 1024 * 1024; // 20 MB
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -37,6 +41,7 @@ public class FinanceFunctions
         IFinancialRecordRepository financialRecordRepository,
         IAdvancePaymentRepository advanceRepository,
         IHouseRepository houseRepository,
+        IBlobStorageService blobStorageService,
         GetFundBalanceUseCase getFundBalanceUseCase,
         GenerateFinanceReportUseCase generatePdfUseCase,
         GenerateFinanceExcelUseCase generateExcelUseCase,
@@ -45,6 +50,7 @@ public class FinanceFunctions
         _financialRecordRepository = financialRecordRepository ?? throw new ArgumentNullException(nameof(financialRecordRepository));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _getFundBalanceUseCase = getFundBalanceUseCase ?? throw new ArgumentNullException(nameof(getFundBalanceUseCase));
         _generatePdfUseCase = generatePdfUseCase ?? throw new ArgumentNullException(nameof(generatePdfUseCase));
         _generateExcelUseCase = generateExcelUseCase ?? throw new ArgumentNullException(nameof(generateExcelUseCase));
@@ -234,7 +240,7 @@ public class FinanceFunctions
             }
 
             if (!Enum.TryParse<FinancialRecordType>(request.Type, ignoreCase: true, out var recordType))
-                return await WriteErrorResponseAsync(req, 400, "Invalid record type.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatný typ záznamu.");
 
             var record = new FinancialRecord
             {
@@ -298,7 +304,7 @@ public class FinanceFunctions
             var oldYear = existing.Year;
 
             if (!Enum.TryParse<FinancialRecordType>(request.Type, ignoreCase: true, out var recordType))
-                return await WriteErrorResponseAsync(req, 400, "Invalid record type.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatný typ záznamu.");
 
             existing.Type = recordType;
             existing.Category = request.Category.ToLowerInvariant();
@@ -406,6 +412,109 @@ public class FinanceFunctions
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
+    }
+
+    [Function("UploadFinanceAttachment")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> UploadFinanceAttachmentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "finance/{id}/attachment")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await FindFinancialRecordByIdAsync(id);
+            if (existing is null)
+            {
+                throw new NotFoundException("FinancialRecord", id);
+            }
+
+            var contentType = req.Headers.TryGetValues("Content-Type", out var ctValues)
+                ? ctValues.FirstOrDefault() ?? string.Empty
+                : string.Empty;
+            if (!contentType.Contains("application/pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Příloha musí být ve formátu PDF.");
+            }
+
+            var bytes = await ReadBodyBytesWithLimitAsync(req.Body, MaxAttachmentBytes);
+            if (bytes.Length == 0)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Prázdný soubor.");
+            }
+
+            var blobPath = $"{id}/faktura.pdf";
+            await _blobStorageService.UploadAsync(BlobContainerNames.Finance, blobPath, bytes, "application/pdf");
+
+            existing.AttachmentBlobName = blobPath;
+            await _financialRecordRepository.UpsertAsync(existing);
+
+            _logger.LogInformation("Attachment uploaded for finance record {RecordId} ({Size} bytes).", id, bytes.Length);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, EntityMapper.ToResponse(existing));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    [Function("DownloadFinanceAttachment")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> DownloadFinanceAttachmentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "finance/{id}/attachment")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await FindFinancialRecordByIdAsync(id);
+            if (existing is null)
+            {
+                throw new NotFoundException("FinancialRecord", id);
+            }
+
+            if (string.IsNullOrEmpty(existing.AttachmentBlobName))
+            {
+                return await WriteErrorResponseAsync(req, 404, "Záznam nemá přílohu.");
+            }
+
+            var stream = await _blobStorageService.DownloadAsync(BlobContainerNames.Finance, existing.AttachmentBlobName);
+            if (stream is null)
+            {
+                return await WriteErrorResponseAsync(req, 404, "Soubor nebyl ve storage nalezen.");
+            }
+
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", "application/pdf");
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"faktura-{id}.pdf\"");
+            response.Body = new MemoryStream(ms.ToArray());
+            return response;
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    private static async Task<byte[]> ReadBodyBytesWithLimitAsync(Stream body, long limit)
+    {
+        using var ms = new MemoryStream();
+        await body.CopyToAsync(ms);
+        if (ms.Length > limit)
+        {
+            throw new AppException("Soubor je příliš velký (max 20 MB).", 400);
+        }
+        return ms.ToArray();
     }
 
     /// <summary>
