@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddSingleton<IBillingPeriodRepository, BillingPeriodRepository>();
         services.AddSingleton<ISupplierInvoiceRepository, SupplierInvoiceRepository>();
         services.AddSingleton<IAdvancePaymentRepository, AdvancePaymentRepository>();
+        services.AddSingleton<IAdvanceSettingsRepository, AdvanceSettingsRepository>();
         services.AddSingleton<ISettlementRepository, SettlementRepository>();
         services.AddSingleton<IDocumentRepository, DocumentRepository>();
         services.AddSingleton<IDocumentVersionRepository, DocumentVersionRepository>();

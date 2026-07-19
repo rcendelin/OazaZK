@@ -67,7 +67,8 @@ public static class TableEntityMapper
             { "Address", house.Address },
             { "ContactPerson", house.ContactPerson },
             { "Email", house.Email },
-            { "IsActive", house.IsActive }
+            { "IsActive", house.IsActive },
+            { "DissolveOverpayment", house.DissolveOverpayment }
         };
     }
 
@@ -80,7 +81,8 @@ public static class TableEntityMapper
             Address = entity.GetString("Address") ?? string.Empty,
             ContactPerson = entity.GetString("ContactPerson") ?? string.Empty,
             Email = entity.GetString("Email") ?? string.Empty,
-            IsActive = entity.GetBoolean("IsActive") ?? true
+            IsActive = entity.GetBoolean("IsActive") ?? true,
+            DissolveOverpayment = entity.GetBoolean("DissolveOverpayment") ?? false
         };
     }
 
@@ -94,6 +96,7 @@ public static class TableEntityMapper
             { "Name", meter.Name },
             { "Type", meter.Type.ToString() },
             { "HouseId", meter.HouseId },
+            { "RadioAddress", meter.RadioAddress },
             { "InstallationDate", DateTime.SpecifyKind(meter.InstallationDate, DateTimeKind.Utc) }
         };
     }
@@ -107,6 +110,7 @@ public static class TableEntityMapper
             Name = entity.GetString("Name") ?? string.Empty,
             Type = Enum.TryParse<MeterType>(entity.GetString("Type"), out var meterType) ? meterType : MeterType.Individual,
             HouseId = entity.GetString("HouseId"),
+            RadioAddress = entity.GetString("RadioAddress"),
             InstallationDate = entity.GetDateTimeOffset("InstallationDate")?.UtcDateTime ?? DateTime.MinValue
         };
     }
@@ -177,6 +181,8 @@ public static class TableEntityMapper
             { "DueDate", DateTime.SpecifyKind(invoice.DueDate, DateTimeKind.Utc) },
             { "Amount", invoice.Amount.ToString("G29", CultureInfo.InvariantCulture) },
             { "ConsumptionM3", invoice.ConsumptionM3.ToString("G29", CultureInfo.InvariantCulture) },
+            { "VatRatePercent", invoice.VatRatePercent.ToString("G29", CultureInfo.InvariantCulture) },
+            { "LineItemsJson", System.Text.Json.JsonSerializer.Serialize(invoice.LineItems) },
             { "AttachmentBlobName", invoice.AttachmentBlobName }
         };
     }
@@ -193,22 +199,35 @@ public static class TableEntityMapper
             DueDate = entity.GetDateTimeOffset("DueDate")?.UtcDateTime ?? DateTime.MinValue,
             Amount = decimal.TryParse(entity.GetString("Amount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) ? amount : 0m,
             ConsumptionM3 = decimal.TryParse(entity.GetString("ConsumptionM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var consumption) ? consumption : 0m,
+            VatRatePercent = decimal.TryParse(entity.GetString("VatRatePercent"), NumberStyles.Any, CultureInfo.InvariantCulture, out var vat) ? vat : 0m,
+            LineItems = System.Text.Json.JsonSerializer.Deserialize<List<InvoiceLineItem>>(entity.GetString("LineItemsJson") ?? "[]") ?? new(),
             AttachmentBlobName = entity.GetString("AttachmentBlobName")
         };
     }
 
     // ───────────────────── AdvancePayment ─────────────────────
-    // PK = houseId, RK = "YYYY-MM"
+    // PK = houseId. RK = "YYYY-MM" for advances, "D-{invertedTicks}-{guid8}" for doplatky.
 
     public static TableEntity ToTableEntity(AdvancePayment payment)
     {
-        var rowKey = $"{payment.Year:D4}-{payment.Month:D2}";
+        // Advances are keyed by month (one per house per month). Doplatky carry a
+        // pre-assigned unique RowKey (set by the endpoint at creation).
+        var rowKey = payment.Type == PaymentType.Advance
+            ? $"{payment.Year:D4}-{payment.Month:D2}"
+            : payment.RowKey;
+
         return new TableEntity(payment.HouseId, rowKey)
         {
             { "Year", payment.Year },
             { "Month", payment.Month },
             { "Amount", payment.Amount.ToString("G29", CultureInfo.InvariantCulture) },
-            { "PaymentDate", DateTime.SpecifyKind(payment.PaymentDate, DateTimeKind.Utc) }
+            { "WaterAmount", payment.WaterAmount.ToString("G29", CultureInfo.InvariantCulture) },
+            { "ElectricityAmount", payment.ElectricityAmount.ToString("G29", CultureInfo.InvariantCulture) },
+            { "CommonAmount", payment.CommonAmount.ToString("G29", CultureInfo.InvariantCulture) },
+            { "PaymentDate", DateTime.SpecifyKind(payment.PaymentDate, DateTimeKind.Utc) },
+            { "Type", payment.Type.ToString() },
+            { "Note", payment.Note },
+            { "IsFundTransfer", payment.IsFundTransfer }
         };
     }
 
@@ -217,10 +236,17 @@ public static class TableEntityMapper
         return new AdvancePayment
         {
             HouseId = entity.PartitionKey,
+            RowKey = entity.RowKey,
             Year = entity.GetInt32("Year") ?? 0,
             Month = entity.GetInt32("Month") ?? 0,
             Amount = decimal.TryParse(entity.GetString("Amount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) ? amount : 0m,
-            PaymentDate = entity.GetDateTimeOffset("PaymentDate")?.UtcDateTime ?? DateTime.MinValue
+            WaterAmount = decimal.TryParse(entity.GetString("WaterAmount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var water) ? water : 0m,
+            ElectricityAmount = decimal.TryParse(entity.GetString("ElectricityAmount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elec) ? elec : 0m,
+            CommonAmount = decimal.TryParse(entity.GetString("CommonAmount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var common) ? common : 0m,
+            PaymentDate = entity.GetDateTimeOffset("PaymentDate")?.UtcDateTime ?? DateTime.MinValue,
+            Type = Enum.TryParse<PaymentType>(entity.GetString("Type"), out var type) ? type : PaymentType.Advance,
+            Note = entity.GetString("Note"),
+            IsFundTransfer = entity.GetBoolean("IsFundTransfer") ?? false
         };
     }
 
@@ -236,7 +262,11 @@ public static class TableEntityMapper
             { "CalculatedAmount", settlement.CalculatedAmount.ToString("G29", CultureInfo.InvariantCulture) },
             { "TotalAdvances", settlement.TotalAdvances.ToString("G29", CultureInfo.InvariantCulture) },
             { "Balance", settlement.Balance.ToString("G29", CultureInfo.InvariantCulture) },
-            { "LossAllocatedM3", settlement.LossAllocatedM3.ToString("G29", CultureInfo.InvariantCulture) }
+            { "LossAllocatedM3", settlement.LossAllocatedM3.ToString("G29", CultureInfo.InvariantCulture) },
+            { "ElectricityCharge", settlement.ElectricityCharge.ToString("G29", CultureInfo.InvariantCulture) },
+            { "ElectricityAdvances", settlement.ElectricityAdvances.ToString("G29", CultureInfo.InvariantCulture) },
+            { "CommonCharge", settlement.CommonCharge.ToString("G29", CultureInfo.InvariantCulture) },
+            { "CommonAdvances", settlement.CommonAdvances.ToString("G29", CultureInfo.InvariantCulture) }
         };
     }
 
@@ -251,7 +281,11 @@ public static class TableEntityMapper
             CalculatedAmount = decimal.TryParse(entity.GetString("CalculatedAmount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var calculatedAmount) ? calculatedAmount : 0m,
             TotalAdvances = decimal.TryParse(entity.GetString("TotalAdvances"), NumberStyles.Any, CultureInfo.InvariantCulture, out var totalAdvances) ? totalAdvances : 0m,
             Balance = decimal.TryParse(entity.GetString("Balance"), NumberStyles.Any, CultureInfo.InvariantCulture, out var balance) ? balance : 0m,
-            LossAllocatedM3 = decimal.TryParse(entity.GetString("LossAllocatedM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var lossAllocatedM3) ? lossAllocatedM3 : 0m
+            LossAllocatedM3 = decimal.TryParse(entity.GetString("LossAllocatedM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var lossAllocatedM3) ? lossAllocatedM3 : 0m,
+            ElectricityCharge = decimal.TryParse(entity.GetString("ElectricityCharge"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elecCharge) ? elecCharge : 0m,
+            ElectricityAdvances = decimal.TryParse(entity.GetString("ElectricityAdvances"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elecAdv) ? elecAdv : 0m,
+            CommonCharge = decimal.TryParse(entity.GetString("CommonCharge"), NumberStyles.Any, CultureInfo.InvariantCulture, out var commonCharge) ? commonCharge : 0m,
+            CommonAdvances = decimal.TryParse(entity.GetString("CommonAdvances"), NumberStyles.Any, CultureInfo.InvariantCulture, out var commonAdv) ? commonAdv : 0m
         };
     }
 

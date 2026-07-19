@@ -21,6 +21,15 @@ export const getFinanceRecords = (
 export const getFinanceBalance = (): Promise<FinanceBalanceResponse> =>
   apiClient.get<FinanceBalanceResponse>('/finance/balance');
 
+export interface FundBalanceResponse {
+  commonContributions: number;
+  extraordinaryCosts: number;
+  fundBalance: number;
+}
+
+export const getFundBalance = (): Promise<FundBalanceResponse> =>
+  apiClient.get<FundBalanceResponse>('/finance/fund');
+
 export const getFinanceSummary = (
   year: number,
 ): Promise<FinanceSummaryResponse> =>
@@ -41,6 +50,56 @@ export const updateFinanceRecord = (
     `/finance/${encodeURIComponent(id)}`,
     data,
   );
+
+export const uploadFinanceAttachment = async (
+  id: string,
+  file: File,
+  getToken: () => Promise<string | null>,
+): Promise<FinanceResponse> => {
+  const token = await getToken();
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  const response = await fetch(`${baseUrl}/finance/${encodeURIComponent(id)}/attachment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/pdf',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Nahrání přílohy selhalo' }));
+    throw new ApiError(response.status, error.error || 'Nahrání přílohy selhalo');
+  }
+
+  return response.json() as Promise<FinanceResponse>;
+};
+
+export const downloadFinanceAttachment = async (
+  id: string,
+  filename: string,
+  getToken: () => Promise<string | null>,
+): Promise<void> => {
+  const token = await getToken();
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+  const response = await fetch(`${baseUrl}/finance/${encodeURIComponent(id)}/attachment`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status, 'Stahování přílohy se nezdařilo');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 
 export const exportFinancePdf = async (
   year: number,

@@ -8,11 +8,11 @@ public class MagicLinkVerifyRequestValidator : AbstractValidator<MagicLinkVerify
     public MagicLinkVerifyRequestValidator()
     {
         RuleFor(x => x.Token)
-            .NotEmpty().WithMessage("Token is required.")
-            .MaximumLength(100).WithMessage("Token must not exceed 100 characters.");
+            .NotEmpty().WithMessage("Token je povinný.")
+            .MaximumLength(100).WithMessage("Token nesmí přesáhnout 100 znaků.");
 
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required.")
-            .EmailAddress().WithMessage("Email must be a valid email address.");
+            .NotEmpty().WithMessage("Email je povinný.")
+            .EmailAddress().WithMessage("Zadejte platnou emailovou adresu.");
     }
 }

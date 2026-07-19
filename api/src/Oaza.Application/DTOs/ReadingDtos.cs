@@ -29,6 +29,13 @@ public class ConfirmImportRequest
     public string ImportSessionId { get; set; } = string.Empty;
 }
 
+// Clipboard import request (paste from meter-reader export)
+public class ClipboardImportRequest
+{
+    public string Text { get; set; } = string.Empty;
+    public DateTime ReadingDate { get; set; }
+}
+
 // Manual reading entry
 public class CreateReadingRequest
 {

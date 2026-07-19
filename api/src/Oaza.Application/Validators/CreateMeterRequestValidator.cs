@@ -9,26 +9,26 @@ public class CreateMeterRequestValidator : AbstractValidator<CreateMeterRequest>
     public CreateMeterRequestValidator()
     {
         RuleFor(x => x.MeterNumber)
-            .NotEmpty().WithMessage("Meter number is required.")
-            .MaximumLength(50).WithMessage("Meter number must not exceed 50 characters.");
+            .NotEmpty().WithMessage("Číslo vodoměru je povinné.")
+            .MaximumLength(50).WithMessage("Číslo vodoměru nesmí přesáhnout 50 znaků.");
 
         RuleFor(x => x.Type)
-            .NotEmpty().WithMessage("Type is required.")
+            .NotEmpty().WithMessage("Typ je povinný.")
             .Must(t => Enum.TryParse<MeterType>(t, ignoreCase: true, out _))
-            .WithMessage("Type must be 'Main' or 'Individual'.");
+            .WithMessage("Typ musí být 'Main' nebo 'Individual'.");
 
         RuleFor(x => x.HouseId)
             .Must(id => id is null || id.Length > 0)
-            .WithMessage("HouseId must not be an empty string.");
+            .WithMessage("HouseId nesmí být prázdný řetězec.");
 
         RuleFor(x => x.HouseId)
             .NotEmpty()
             .When(x => string.Equals(x.Type, "Individual", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("HouseId is required for Individual meters.");
+            .WithMessage("U individuálních vodoměrů je HouseId povinné.");
 
         RuleFor(x => x.HouseId)
             .Must(id => Guid.TryParse(id, out _))
-            .WithMessage("HouseId must be a valid GUID.")
+            .WithMessage("HouseId musí být platné GUID.")
             .When(x => x.HouseId is not null);
     }
 }

@@ -25,6 +25,23 @@ public class CreateFinanceRequestValidatorTests
         result.IsValid.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Validate_CategoryFondVoda_IsAllowed()
+    {
+        var request = new CreateFinanceRequest
+        {
+            Type = "Expense",
+            Category = "fond-voda",
+            Amount = 100m,
+            Date = new DateTime(2025, 6, 15, 0, 0, 0, DateTimeKind.Utc),
+            Description = "test",
+        };
+
+        var result = await _sut.ValidateAsync(request);
+
+        result.IsValid.Should().BeTrue();
+    }
+
     [Theory]
     [InlineData("Invalid")]
     [InlineData("")]

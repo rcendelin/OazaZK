@@ -7,7 +7,7 @@ import { getAllReadings } from '../api/readings.ts';
 import { getBillingPeriods } from '../api/billing.ts';
 import { getFinanceSummary, getFinanceBalance, getFinanceRecords } from '../api/finance.ts';
 import { getDocuments } from '../api/documents.ts';
-import { getSettlements } from '../api/settlements.ts';
+import { getSaldo } from '../api/advances.ts';
 import { MetricCard } from '../components/MetricCard.tsx';
 import { ConsumptionChart } from '../components/ConsumptionChart.tsx';
 import { Spinner } from '../components/Spinner.tsx';
@@ -584,7 +584,7 @@ function MemberDashboard() {
     [periods],
   );
 
-  const memberBalance = useMemberBalance(user?.houseId ?? null, periods ?? []);
+  const memberBalance = useMemberBalance(user?.houseId ?? null);
 
   if (loading) {
     return (
@@ -691,33 +691,22 @@ function MemberDashboard() {
   );
 }
 
-function useMemberBalance(
-  houseId: string | null,
-  periods: { id: string; status: string }[],
-): number | null {
-  const closedPeriodIds = useMemo(
-    () => periods.filter((p) => p.status === 'Closed').map((p) => p.id),
-    [periods],
-  );
-
-  const { data: allSettlements, loading } = useApi(
+function useMemberBalance(houseId: string | null): number | null {
+  const { data: saldos, loading } = useApi(
     async () => {
-      if (!houseId || closedPeriodIds.length === 0) return null;
-      const results = await Promise.all(
-        closedPeriodIds.map((periodId) => getSettlements(periodId)),
-      );
-      return results.flat();
+      if (!houseId) return null;
+      return getSaldo(houseId);
     },
-    [houseId, closedPeriodIds.join(',')],
+    [houseId],
   );
 
   return useMemo(() => {
-    if (loading || !allSettlements || !houseId) return null;
-    const mySettlements = allSettlements.filter((s) => s.houseId === houseId);
-    if (mySettlements.length === 0) return null;
-    const totalBalance = mySettlements.reduce((sum, s) => sum + s.balance, 0);
-    return -totalBalance;
-  }, [allSettlements, houseId, loading]);
+    if (loading || !saldos || !houseId) return null;
+    const mine = saldos.find((s) => s.houseId === houseId);
+    if (!mine) return null;
+    // Sign convention: positive = přeplatek, negative = nedoplatek.
+    return -mine.totalSaldo;
+  }, [saldos, houseId, loading]);
 }
 
 export function DashboardPage() {

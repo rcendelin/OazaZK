@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { FileUploadZone } from '../components/FileUploadZone.tsx';
 import { Spinner } from '../components/Spinner.tsx';
-import { importReadings, confirmImport, createReading } from '../api/readings.ts';
+import { importReadings, importReadingsFromClipboard, confirmImport, createReading } from '../api/readings.ts';
 import { getMeters } from '../api/meters.ts';
 import { useApi } from '../hooks/useApi.ts';
 import type { ImportPreviewResponse, ImportValidationMessage, WaterMeter } from '../types/index.ts';
@@ -12,7 +12,7 @@ const czNumber = new Intl.NumberFormat('cs-CZ', {
 });
 
 type ImportState = 'initial' | 'uploading' | 'preview' | 'confirming' | 'success';
-type TabMode = 'file' | 'manual';
+type TabMode = 'file' | 'clipboard' | 'manual';
 
 function ValidationMessages({
   errors,
@@ -53,10 +53,14 @@ function ValidationMessages({
   );
 }
 
-function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
+function PreviewTable({ preview, meters }: { preview: ImportPreviewResponse; meters: WaterMeter[] }) {
   const meterIds = Array.from(
     new Set(preview.rows.flatMap((row) => Object.keys(row.meterValues))),
   );
+  const labelFor = (id: string): string => {
+    const meter = meters.find((m) => m.id === id);
+    return meter ? meter.name || meter.meterNumber : id;
+  };
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-border">
@@ -65,7 +69,7 @@ function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
           <tr>
             <th className="px-4 py-3">Datum</th>
             {meterIds.map((meterId) => (
-              <th key={meterId} className="px-4 py-3">{meterId}</th>
+              <th key={meterId} className="px-4 py-3">{labelFor(meterId)}</th>
             ))}
           </tr>
         </thead>
@@ -131,7 +135,7 @@ function ManualEntry() {
     const errors: string[] = [];
 
     for (const [meterId, rawValue] of entries) {
-      const value = parseFloat(rawValue.replace(',', '.'));
+      const value = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
       if (isNaN(value) || value < 0) {
         const meter = meters?.find((m) => m.id === meterId);
         errors.push(`Neplatná hodnota pro ${meter?.name || meterId}: ${rawValue}`);
@@ -262,7 +266,11 @@ export function ReadingsImportPage() {
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState<number | null>(null);
+  const [clipText, setClipText] = useState('');
+  const [clipDate, setClipDate] = useState(() => new Date().toISOString().split('T')[0]);
   const inFlight = useRef(false);
+
+  const { data: meters } = useApi<WaterMeter[]>(useCallback(() => getMeters(), []));
 
   const handleFileSelected = useCallback((file: File) => {
     setSelectedFile(file);
@@ -285,6 +293,34 @@ export function ReadingsImportPage() {
       inFlight.current = false;
     }
   }, [selectedFile]);
+
+  const handleParseClipboard = useCallback(async () => {
+    if (!clipText.trim() || !clipDate || inFlight.current) return;
+    inFlight.current = true;
+    setState('uploading');
+    setError(null);
+    try {
+      const result = await importReadingsFromClipboard(clipText, new Date(clipDate).toISOString());
+      setPreview(result);
+      setState('preview');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Načtení ze schránky se nezdařilo');
+      setState('initial');
+    } finally {
+      inFlight.current = false;
+    }
+  }, [clipText, clipDate]);
+
+  const handleLoadClipFile = useCallback((file: File | null) => {
+    if (!file) return;
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setClipText(typeof reader.result === 'string' ? reader.result : '');
+    };
+    reader.onerror = () => setError('Soubor se nepodařilo načíst.');
+    reader.readAsText(file);
+  }, []);
 
   const handleConfirm = useCallback(async () => {
     if (!preview || inFlight.current) return;
@@ -309,7 +345,13 @@ export function ReadingsImportPage() {
     setPreview(null);
     setError(null);
     setSuccessCount(null);
+    setClipText('');
   }, []);
+
+  const switchTab = useCallback((next: TabMode) => {
+    setTab(next);
+    handleReset();
+  }, [handleReset]);
 
   const hasErrors = preview !== null && preview.errors.length > 0;
 
@@ -321,13 +363,19 @@ export function ReadingsImportPage() {
       {/* Tabs */}
       <div className="mt-4 flex border-b border-border">
         <button
-          onClick={() => setTab('file')}
+          onClick={() => switchTab('file')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'file' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
         >
-          Import ze souboru
+          Excel (.xlsx)
         </button>
         <button
-          onClick={() => setTab('manual')}
+          onClick={() => switchTab('clipboard')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'clipboard' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
+        >
+          Odečítačka (.txt / schránka)
+        </button>
+        <button
+          onClick={() => switchTab('manual')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'manual' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-secondary'}`}
         >
           Ruční zadání
@@ -341,8 +389,8 @@ export function ReadingsImportPage() {
         </div>
       )}
 
-      {/* File import tab */}
-      {tab === 'file' && (
+      {/* File / clipboard import tab (shared preview + confirm flow) */}
+      {(tab === 'file' || tab === 'clipboard') && (
         <div>
           {state === 'success' && (
             <div className="mt-6 rounded-xl border border-success/20 bg-success-light p-4">
@@ -367,7 +415,7 @@ export function ReadingsImportPage() {
             </div>
           )}
 
-          {(state === 'initial' || state === 'uploading') && (
+          {(state === 'initial' || state === 'uploading') && tab === 'file' && (
             <div className="mt-6 space-y-4">
               <FileUploadZone onFileSelected={handleFileSelected} disabled={state === 'uploading'} />
               {selectedFile && (
@@ -382,12 +430,57 @@ export function ReadingsImportPage() {
             </div>
           )}
 
+          {(state === 'initial' || state === 'uploading') && tab === 'clipboard' && (
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Datum odečtu</label>
+                <input
+                  type="date"
+                  value={clipDate}
+                  onChange={(e) => setClipDate(e.target.value)}
+                  className="border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Soubor z odečítačky (.txt)</label>
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  onChange={(e) => handleLoadClipFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-sm text-text-secondary file:mr-3 file:rounded-xl file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-accent-hover"
+                />
+                <p className="mt-1 text-xs text-text-muted">Vyberte soubor z odečítačky (např. MBWUSB2_....txt) — jeho obsah se načte níže. Nebo data vložte ručně.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Data z odečítačky</label>
+                <textarea
+                  value={clipText}
+                  onChange={(e) => setClipText(e.target.value)}
+                  rows={8}
+                  placeholder={'Vyberte soubor výše, nebo sem vložte zkopírovaná data včetně řádku s názvy sloupců\n(Reception time … Address … Value 1 …), oddělená tabulátory.'}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-xs font-mono bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+              <button
+                onClick={() => void handleParseClipboard()}
+                disabled={state === 'uploading' || !clipText.trim()}
+                className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+              >
+                {state === 'uploading' ? <span className="flex items-center gap-2"><Spinner size="sm" /> Načítám...</span> : 'Načíst náhled'}
+              </button>
+              <p className="text-xs text-text-muted">
+                Vodoměry se párují podle sloupce <strong>Address</strong> — fyzickou adresu vyplňte u vodoměru v Admin → Vodoměry.
+                Odečet se bere ze sloupce <strong>Value 1</strong> (m³) a uloží se k vybranému datu.
+              </p>
+            </div>
+          )}
+
           {(state === 'preview' || state === 'confirming') && preview && (
             <div className="mt-6 space-y-6">
               <ValidationMessages errors={preview.errors} warnings={preview.warnings} />
               <div>
                 <h2 className="mb-3 text-lg font-semibold text-text-primary">Náhled importu</h2>
-                <PreviewTable preview={preview} />
+                <PreviewTable preview={preview} meters={meters ?? []} />
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={handleReset} disabled={state === 'confirming'}

@@ -61,7 +61,7 @@ public class UserFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -75,7 +75,7 @@ public class UserFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateUserRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateUserRequestValidator();
@@ -89,17 +89,17 @@ public class UserFunctions
             var existingUser = await _userRepository.GetByEmailAsync(request.Email);
             if (existingUser is not null)
             {
-                return await WriteErrorResponseAsync(req, 409, $"A user with email '{request.Email}' already exists.");
+                return await WriteErrorResponseAsync(req, 409, $"Uživatel s emailem '{request.Email}' již existuje.");
             }
 
             if (!Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var userRole))
             {
-                return await WriteErrorResponseAsync(req, 400, $"Invalid role: {request.Role}");
+                return await WriteErrorResponseAsync(req, 400, $"Neplatná role: {request.Role}");
             }
 
             if (!Enum.TryParse<AuthMethod>(request.AuthMethod, ignoreCase: true, out var authMethod))
             {
-                return await WriteErrorResponseAsync(req, 400, $"Invalid auth method: {request.AuthMethod}");
+                return await WriteErrorResponseAsync(req, 400, $"Neplatná metoda přihlášení: {request.AuthMethod}");
             }
 
             var user = new User
@@ -169,7 +169,7 @@ public class UserFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -190,7 +190,7 @@ public class UserFunctions
             var request = await JsonSerializer.DeserializeAsync<UpdateUserRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateUserRequestValidator();
@@ -206,7 +206,7 @@ public class UserFunctions
             {
                 if (!Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var updatedRole))
                 {
-                    return await WriteErrorResponseAsync(req, 400, $"Invalid role: {request.Role}");
+                    return await WriteErrorResponseAsync(req, 400, $"Neplatná role: {request.Role}");
                 }
                 existing.Role = updatedRole;
             }
@@ -231,7 +231,7 @@ public class UserFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -271,7 +271,7 @@ public class UserFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -297,6 +297,6 @@ public class UserFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

@@ -8,7 +8,7 @@ public class ConfirmImportRequestValidator : AbstractValidator<ConfirmImportRequ
     public ConfirmImportRequestValidator()
     {
         RuleFor(x => x.ImportSessionId)
-            .NotEmpty().WithMessage("ImportSessionId is required.")
-            .Must(id => Guid.TryParse(id, out _)).WithMessage("ImportSessionId must be a valid GUID.");
+            .NotEmpty().WithMessage("ImportSessionId je povinné.")
+            .Must(id => Guid.TryParse(id, out _)).WithMessage("ImportSessionId musí být platné GUID.");
     }
 }

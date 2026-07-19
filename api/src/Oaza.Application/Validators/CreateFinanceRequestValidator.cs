@@ -6,28 +6,28 @@ namespace Oaza.Application.Validators;
 public class CreateFinanceRequestValidator : AbstractValidator<CreateFinanceRequest>
 {
     private static readonly string[] AllowedTypes = { "Income", "Expense" };
-    private static readonly string[] AllowedCategories = { "voda", "elektro", "udrzba", "pojisteni", "jine" };
+    private static readonly string[] AllowedCategories = { "voda", "elektro", "udrzba", "pojisteni", "jine", "fond-voda" };
 
     public CreateFinanceRequestValidator()
     {
         RuleFor(x => x.Type)
-            .NotEmpty().WithMessage("Type is required.")
+            .NotEmpty().WithMessage("Typ je povinný.")
             .Must(t => AllowedTypes.Contains(t, StringComparer.OrdinalIgnoreCase))
-            .WithMessage($"Type must be one of: {string.Join(", ", AllowedTypes)}.");
+            .WithMessage($"Typ musí být jeden z: {string.Join(", ", AllowedTypes)}.");
 
         RuleFor(x => x.Category)
-            .NotEmpty().WithMessage("Category is required.")
+            .NotEmpty().WithMessage("Kategorie je povinná.")
             .Must(c => AllowedCategories.Contains(c, StringComparer.OrdinalIgnoreCase))
-            .WithMessage($"Category must be one of: {string.Join(", ", AllowedCategories)}.");
+            .WithMessage($"Kategorie musí být jedna z: {string.Join(", ", AllowedCategories)}.");
 
         RuleFor(x => x.Amount)
-            .GreaterThan(0).WithMessage("Amount must be greater than 0.");
+            .GreaterThan(0).WithMessage("Částka musí být větší než 0.");
 
         RuleFor(x => x.Date)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Date must not be in the far future.");
+            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum nesmí být příliš v budoucnosti.");
 
         RuleFor(x => x.Description)
-            .NotEmpty().WithMessage("Description is required.")
-            .MaximumLength(500).WithMessage("Description must not exceed 500 characters.");
+            .NotEmpty().WithMessage("Popis je povinný.")
+            .MaximumLength(500).WithMessage("Popis nesmí přesáhnout 500 znaků.");
     }
 }

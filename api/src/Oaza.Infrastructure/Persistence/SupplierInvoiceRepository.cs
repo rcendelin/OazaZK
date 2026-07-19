@@ -20,8 +20,13 @@ public class SupplierInvoiceRepository : TableStorageRepository<SupplierInvoice>
 
     public async Task<IReadOnlyList<SupplierInvoice>> GetByYearAsync(int year)
     {
+        // Filter by the invoice's issue-date year (when it was received), not the
+        // header Year field (= earliest line-item's year). A multi-year invoice
+        // whose oldest line predates the requested year must still be findable
+        // under the year it was actually issued. Settlement is unaffected — it
+        // reads all invoices via GetByPartitionKeyAsync and matches per line item.
         var all = await GetByPartitionKeyAsync(PartitionKeys.Invoice);
-        return all.Where(i => i.Year == year)
+        return all.Where(i => i.IssuedDate.Year == year)
             .ToList()
             .AsReadOnly();
     }

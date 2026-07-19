@@ -65,6 +65,19 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IJwtService>(),
                 sp.GetRequiredService<ILogger<VerifyMagicLinkUseCase>>()));
 
+        // Use cases: Common fund balance (shared by GET /finance/fund and water-settlement close)
+        services.AddSingleton<GetFundBalanceUseCase>(sp =>
+            new GetFundBalanceUseCase(
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IFinancialRecordRepository>()));
+
+        // Use cases: Unified received-invoices overview (GET /invoices/all)
+        services.AddSingleton<GetReceivedInvoicesUseCase>(sp =>
+            new GetReceivedInvoicesUseCase(
+                sp.GetRequiredService<ISupplierInvoiceRepository>(),
+                sp.GetRequiredService<IFinancialRecordRepository>()));
+
         // Use cases: Settlement calculation
         services.AddSingleton<CalculateSettlementUseCase>(sp =>
             new CalculateSettlementUseCase(
@@ -74,6 +87,7 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IMeterReadingRepository>(),
                 sp.GetRequiredService<ISupplierInvoiceRepository>(),
                 sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
                 sp.GetRequiredService<ILogger<CalculateSettlementUseCase>>()));
 
         // Use cases: Billing period close (persist settlements + lock period)
@@ -82,7 +96,23 @@ var host = new HostBuilder()
                 sp.GetRequiredService<CalculateSettlementUseCase>(),
                 sp.GetRequiredService<IBillingPeriodRepository>(),
                 sp.GetRequiredService<ISettlementRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IFinancialRecordRepository>(),
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
+                sp.GetRequiredService<GetFundBalanceUseCase>(),
                 sp.GetRequiredService<ILogger<CloseBillingPeriodUseCase>>()));
+
+        // Use cases: Per-house saldo (water / electricity / common base)
+        services.AddSingleton<CalculateHouseSaldoUseCase>(sp =>
+            new CalculateHouseSaldoUseCase(
+                sp.GetRequiredService<CalculateSettlementUseCase>(),
+                sp.GetRequiredService<IBillingPeriodRepository>(),
+                sp.GetRequiredService<ISettlementRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
+                sp.GetRequiredService<ILogger<CalculateHouseSaldoUseCase>>()));
 
         // Use cases: Settlement PDF generation
         services.AddSingleton<GenerateSettlementPdfUseCase>(sp =>

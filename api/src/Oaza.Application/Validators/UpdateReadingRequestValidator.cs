@@ -8,6 +8,6 @@ public class UpdateReadingRequestValidator : AbstractValidator<UpdateReadingRequ
     public UpdateReadingRequestValidator()
     {
         RuleFor(x => x.Value)
-            .GreaterThanOrEqualTo(0).WithMessage("Value must be greater than or equal to 0.");
+            .GreaterThanOrEqualTo(0).WithMessage("Hodnota musí být větší nebo rovna 0.");
     }
 }

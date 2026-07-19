@@ -95,7 +95,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -112,7 +112,7 @@ public class BillingPeriodFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateBillingPeriodRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateBillingPeriodRequestValidator();
@@ -148,7 +148,64 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    [Function("UpdateBillingPeriod")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> UpdateBillingPeriodAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "billing-periods/{id}")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _billingPeriodRepository.GetAsync(PartitionKeys.Period, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("BillingPeriod", id);
+            }
+
+            if (existing.Status != BillingPeriodStatus.Open)
+            {
+                return await WriteErrorResponseAsync(req, 409, "Uzavřené období nelze upravit.");
+            }
+
+            var request = await JsonSerializer.DeserializeAsync<CreateBillingPeriodRequest>(req.Body, JsonOptions);
+            if (request is null)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+            }
+
+            var validator = new CreateBillingPeriodRequestValidator();
+            var validationResult = await validator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return await WriteValidationErrorResponseAsync(req, validationResult);
+            }
+
+            existing.Name = request.Name;
+            existing.DateFrom = DateTime.SpecifyKind(request.DateFrom, DateTimeKind.Utc);
+            existing.DateTo = DateTime.SpecifyKind(request.DateTo, DateTimeKind.Utc);
+
+            await _billingPeriodRepository.UpsertAsync(existing);
+
+            _logger.LogInformation("Billing period {PeriodId} updated: {Name} ({From:d}–{To:d}).",
+                existing.Id, existing.Name, existing.DateFrom, existing.DateTo);
+
+            var invoices = await _invoiceRepository.GetByPeriodAsync(existing.DateFrom, existing.DateTo);
+            var totalAmount = invoices.Sum(i => i.Amount);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK,
+                EntityMapper.ToResponse(existing, totalAmount));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -185,7 +242,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -200,7 +257,7 @@ public class BillingPeriodFunctions
         {
             var user = GetAuthenticatedUser(context);
 
-            // Parse loss allocation method from request body
+            // Parse loss allocation method + optional fund draw / price update from the request body.
             var request = await JsonSerializer.DeserializeAsync<CalculateSettlementRequest>(req.Body, JsonOptions);
             var lossMethod = LossAllocationMethod.Equal;
             if (request is not null &&
@@ -210,8 +267,13 @@ public class BillingPeriodFunctions
                 lossMethod = parsed;
             }
 
+            var fundDrawAmount = request?.FundDrawAmount ?? 0m;
+            var applyNewWaterPrice = request?.ApplyNewWaterPrice ?? false;
+            var newWaterPriceValidFrom = request?.NewWaterPriceValidFrom;
+
             // Calculate, persist settlements and lock the period (irreversible).
-            var settlements = await _closeBillingPeriodUseCase.CloseAsync(id, lossMethod);
+            var settlements = await _closeBillingPeriodUseCase.CloseAsync(
+                id, lossMethod, fundDrawAmount, applyNewWaterPrice, newWaterPriceValidFrom);
 
             // Build response with house names
             var houses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
@@ -229,7 +291,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -269,7 +331,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -290,7 +352,7 @@ public class BillingPeriodFunctions
             // Members can only access their own house's PDF
             if (user.Role == UserRole.Member && user.HouseId != houseId)
             {
-                return await WriteErrorResponseAsync(req, 403, "You can only access your own house's settlement PDF.");
+                return await WriteErrorResponseAsync(req, 403, "Máte přístup pouze k PDF vyúčtování vlastní domácnosti.");
             }
 
             // Check if period exists and is closed
@@ -302,7 +364,7 @@ public class BillingPeriodFunctions
 
             if (period.Status != BillingPeriodStatus.Closed)
             {
-                throw new AppException("Settlement PDFs are only available for closed billing periods.");
+                throw new AppException("PDF vyúčtování je dostupné pouze pro uzavřená zúčtovací období.");
             }
 
             var blobPath = $"{id}/{houseId}.pdf";
@@ -322,7 +384,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -349,14 +411,14 @@ public class BillingPeriodFunctions
 
             if (period.Status != BillingPeriodStatus.Closed)
             {
-                throw new AppException("Settlement PDFs are only available for closed billing periods.");
+                throw new AppException("PDF vyúčtování je dostupné pouze pro uzavřená zúčtovací období.");
             }
 
             // Get all settlements for this period
             var settlements = await _settlementRepository.GetByPeriodIdAsync(id);
             if (settlements.Count == 0)
             {
-                throw new AppException("No settlements found for this billing period.");
+                throw new AppException("Pro toto zúčtovací období nebyla nalezena žádná vyúčtování.");
             }
 
             // Generate ZIP with all PDFs
@@ -399,7 +461,7 @@ public class BillingPeriodFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -449,7 +511,11 @@ public class BillingPeriodFunctions
             SharePercent: settlement.SharePercent,
             CalculatedAmount: settlement.CalculatedAmount,
             TotalAdvances: settlement.TotalAdvances,
-            Balance: settlement.Balance
+            Balance: settlement.Balance,
+            ElectricityCharge: settlement.ElectricityCharge,
+            ElectricityAdvances: settlement.ElectricityAdvances,
+            CommonCharge: settlement.CommonCharge,
+            CommonAdvances: settlement.CommonAdvances
         );
 
         var pdfBytes = _generateSettlementPdfUseCase.Generate(
@@ -474,7 +540,7 @@ public class BillingPeriodFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(
@@ -499,6 +565,6 @@ public class BillingPeriodFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

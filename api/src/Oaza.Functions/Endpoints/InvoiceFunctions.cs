@@ -6,7 +6,9 @@ using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Application.Mapping;
+using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
@@ -20,7 +22,11 @@ public class InvoiceFunctions
 {
     private readonly ISupplierInvoiceRepository _invoiceRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
+    private readonly IBlobStorageService _blobStorageService;
+    private readonly GetReceivedInvoicesUseCase _receivedInvoicesUseCase;
     private readonly ILogger<InvoiceFunctions> _logger;
+
+    private const long MaxAttachmentBytes = 20 * 1024 * 1024; // 20 MB
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -31,10 +37,14 @@ public class InvoiceFunctions
     public InvoiceFunctions(
         ISupplierInvoiceRepository invoiceRepository,
         IBillingPeriodRepository billingPeriodRepository,
+        IBlobStorageService blobStorageService,
+        GetReceivedInvoicesUseCase receivedInvoicesUseCase,
         ILogger<InvoiceFunctions> logger)
     {
         _invoiceRepository = invoiceRepository ?? throw new ArgumentNullException(nameof(invoiceRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
+        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _receivedInvoicesUseCase = receivedInvoicesUseCase ?? throw new ArgumentNullException(nameof(receivedInvoicesUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -69,7 +79,31 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    [Function("GetReceivedInvoices")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> GetReceivedInvoicesAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "invoices/all")] HttpRequestData req)
+    {
+        try
+        {
+            var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            int? year = int.TryParse(queryParams["year"], out var y) ? y : null;
+            var category = queryParams["category"];
+
+            var result = await _receivedInvoicesUseCase.GetAsync(year, category);
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, result);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -83,7 +117,7 @@ public class InvoiceFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateInvoiceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateInvoiceRequestValidator();
@@ -93,16 +127,21 @@ public class InvoiceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
+            var lineItems = request.LineItems.Select(ToLineItem).ToList();
+            var firstFrom = lineItems.Min(l => l.DateFrom);
+
             var invoice = new SupplierInvoice
             {
                 Id = Guid.NewGuid().ToString(),
-                Year = request.Year,
-                Month = request.Month,
+                Year = firstFrom.Year,
+                Month = firstFrom.Month,
                 InvoiceNumber = request.InvoiceNumber,
                 IssuedDate = request.IssuedDate,
                 DueDate = request.DueDate,
-                Amount = request.Amount,
-                ConsumptionM3 = request.ConsumptionM3,
+                VatRatePercent = request.VatRatePercent,
+                LineItems = lineItems,
+                ConsumptionM3 = lineItems.Sum(l => l.ConsumptionM3),
+                Amount = TotalInclVat(lineItems, request.VatRatePercent),
             };
 
             await _invoiceRepository.UpsertAsync(invoice);
@@ -119,7 +158,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -140,13 +179,13 @@ public class InvoiceFunctions
             // Check if invoice is in a closed billing period
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot modify an invoice in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze upravit v uzavřeném zúčtovacím období.");
             }
 
             var request = await JsonSerializer.DeserializeAsync<UpdateInvoiceRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateInvoiceRequestValidator();
@@ -156,22 +195,23 @@ public class InvoiceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
+            var lineItems = request.LineItems.Select(ToLineItem).ToList();
+            var firstFrom = lineItems.Min(l => l.DateFrom);
+
             existing.InvoiceNumber = request.InvoiceNumber;
             existing.IssuedDate = request.IssuedDate;
             existing.DueDate = request.DueDate;
-            existing.Amount = request.Amount;
-            existing.ConsumptionM3 = request.ConsumptionM3;
-
-            // Apply optional year/month change
-            if (request.Year.HasValue)
-                existing.Year = request.Year.Value;
-            if (request.Month.HasValue)
-                existing.Month = request.Month.Value;
+            existing.VatRatePercent = request.VatRatePercent;
+            existing.LineItems = lineItems;
+            existing.Year = firstFrom.Year;
+            existing.Month = firstFrom.Month;
+            existing.ConsumptionM3 = lineItems.Sum(l => l.ConsumptionM3);
+            existing.Amount = TotalInclVat(lineItems, request.VatRatePercent);
 
             // Check if the new year/month would fall into a closed period
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot move an invoice into a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze přesunout do uzavřeného zúčtovacího období.");
             }
 
             await _invoiceRepository.UpsertAsync(existing);
@@ -187,7 +227,7 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -208,7 +248,7 @@ public class InvoiceFunctions
             // Check if invoice is in a closed billing period
             if (await IsInvoiceInClosedPeriodAsync(existing))
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot delete an invoice in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze smazat v uzavřeném zúčtovacím období.");
             }
 
             await _invoiceRepository.DeleteAsync(PartitionKeys.Invoice, id);
@@ -223,9 +263,139 @@ public class InvoiceFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
+
+    [Function("UploadInvoiceAttachment")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> UploadInvoiceAttachmentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "invoices/{id}/attachment")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _invoiceRepository.GetAsync(PartitionKeys.Invoice, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("Invoice", id);
+            }
+
+            if (await IsInvoiceInClosedPeriodAsync(existing))
+            {
+                return await WriteErrorResponseAsync(req, 409, "Fakturu nelze upravit v uzavřeném zúčtovacím období.");
+            }
+
+            var contentType = req.Headers.TryGetValues("Content-Type", out var ctValues)
+                ? ctValues.FirstOrDefault() ?? string.Empty
+                : string.Empty;
+            if (!contentType.Contains("application/pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Příloha musí být ve formátu PDF.");
+            }
+
+            var bytes = await ReadBodyBytesWithLimitAsync(req.Body, MaxAttachmentBytes);
+            if (bytes.Length == 0)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Prázdný soubor.");
+            }
+
+            var blobPath = $"{id}/faktura-{existing.Year}-{existing.Month:D2}.pdf";
+            await _blobStorageService.UploadAsync(BlobContainerNames.Invoices, blobPath, bytes, "application/pdf");
+
+            existing.AttachmentBlobName = blobPath;
+            await _invoiceRepository.UpsertAsync(existing);
+
+            _logger.LogInformation("Attachment uploaded for invoice {InvoiceId} ({Size} bytes).", id, bytes.Length);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, EntityMapper.ToResponse(existing));
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    [Function("DownloadInvoiceAttachment")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public async Task<HttpResponseData> DownloadInvoiceAttachmentAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "invoices/{id}/attachment")] HttpRequestData req,
+        string id)
+    {
+        try
+        {
+            var existing = await _invoiceRepository.GetAsync(PartitionKeys.Invoice, id);
+            if (existing is null)
+            {
+                throw new NotFoundException("Invoice", id);
+            }
+
+            if (string.IsNullOrEmpty(existing.AttachmentBlobName))
+            {
+                return await WriteErrorResponseAsync(req, 404, "Faktura nemá přílohu.");
+            }
+
+            var stream = await _blobStorageService.DownloadAsync(BlobContainerNames.Invoices, existing.AttachmentBlobName);
+            if (stream is null)
+            {
+                return await WriteErrorResponseAsync(req, 404, "Soubor nebyl ve storage nalezen.");
+            }
+
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", "application/pdf");
+            var fileName = $"faktura-{SanitizeFileName(existing.InvoiceNumber)}.pdf";
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+            response.Body = new MemoryStream(ms.ToArray());
+            return response;
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception)
+        {
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    private static async Task<byte[]> ReadBodyBytesWithLimitAsync(Stream body, long limit)
+    {
+        using var ms = new MemoryStream();
+        await body.CopyToAsync(ms);
+        if (ms.Length > limit)
+        {
+            throw new AppException("Soubor je příliš velký (max 20 MB).", 400);
+        }
+        return ms.ToArray();
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var clean = new string(name.Where(c => !invalid.Contains(c)).ToArray());
+        return string.IsNullOrWhiteSpace(clean) ? "faktura" : clean;
+    }
+
+    private static InvoiceLineItem ToLineItem(InvoiceLineItemDto d) => new()
+    {
+        DateFrom = DateTime.SpecifyKind(d.DateFrom, DateTimeKind.Utc),
+        DateTo = DateTime.SpecifyKind(d.DateTo, DateTimeKind.Utc),
+        StartReading = d.StartReading,
+        EndReading = d.EndReading,
+        ConsumptionM3 = d.ConsumptionM3,
+        UnitPrice = d.UnitPrice,
+        AmountExclVat = d.AmountExclVat,
+    };
+
+    private static decimal TotalInclVat(IEnumerable<InvoiceLineItem> lines, decimal vatRatePercent) =>
+        Math.Round(lines.Sum(l => l.AmountExclVat) * (1m + vatRatePercent / 100m), 2);
 
     private async Task<bool> IsInvoiceInClosedPeriodAsync(SupplierInvoice invoice)
     {
@@ -246,7 +416,7 @@ public class InvoiceFunctions
             return user;
         }
 
-        throw new AppException("User not authenticated.", 401);
+        throw new AppException("Uživatel není přihlášen.", 401);
     }
 
     private static async Task<HttpResponseData> WriteJsonResponseAsync<T>(
@@ -271,6 +441,6 @@ public class InvoiceFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

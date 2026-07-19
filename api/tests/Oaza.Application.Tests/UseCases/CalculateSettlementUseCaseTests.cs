@@ -18,6 +18,7 @@ public class CalculateSettlementUseCaseTests
     private readonly Mock<IMeterReadingRepository> _readingRepo = new();
     private readonly Mock<ISupplierInvoiceRepository> _invoiceRepo = new();
     private readonly Mock<IAdvancePaymentRepository> _advanceRepo = new();
+    private readonly Mock<IAdvanceSettingsRepository> _settingsRepo = new();
     private readonly Mock<ILogger<CalculateSettlementUseCase>> _logger = new();
 
     private readonly CalculateSettlementUseCase _sut;
@@ -27,6 +28,9 @@ public class CalculateSettlementUseCaseTests
 
     public CalculateSettlementUseCaseTests()
     {
+        // Default settings: no electricity/common charges so water assertions are isolated.
+        _settingsRepo.Setup(r => r.GetAsync()).ReturnsAsync(new AdvanceSettings());
+
         _sut = new CalculateSettlementUseCase(
             _billingPeriodRepo.Object,
             _houseRepo.Object,
@@ -34,6 +38,7 @@ public class CalculateSettlementUseCaseTests
             _readingRepo.Object,
             _invoiceRepo.Object,
             _advanceRepo.Object,
+            _settingsRepo.Object,
             _logger.Object);
     }
 
@@ -264,7 +269,7 @@ public class CalculateSettlementUseCaseTests
         // Act & Assert
         await _sut.Invoking(s => s.CalculateAsync(periodId, LossAllocationMethod.Equal))
             .Should().ThrowAsync<AppException>()
-            .WithMessage("*No readings found*Main meter*");
+            .WithMessage("*Nebyly nalezeny žádné odečty*Main meter*");
     }
 
     [Fact]
@@ -318,13 +323,13 @@ public class CalculateSettlementUseCaseTests
 
         SetupInvoices(3000m);
 
-        // Multiple advance payments
+        // Multiple advance payments (water component drives the water balance)
         _advanceRepo.Setup(r => r.GetByHouseAndPeriodAsync("house-1", PeriodStart, PeriodEnd))
             .ReturnsAsync(new List<AdvancePayment>
             {
-                new() { HouseId = "house-1", Year = 2025, Month = 1, Amount = 500m },
-                new() { HouseId = "house-1", Year = 2025, Month = 2, Amount = 500m },
-                new() { HouseId = "house-1", Year = 2025, Month = 3, Amount = 500m },
+                new() { HouseId = "house-1", Year = 2025, Month = 1, Amount = 500m, WaterAmount = 500m },
+                new() { HouseId = "house-1", Year = 2025, Month = 2, Amount = 500m, WaterAmount = 500m },
+                new() { HouseId = "house-1", Year = 2025, Month = 3, Amount = 500m, WaterAmount = 500m },
             });
 
         // Act
@@ -376,7 +381,7 @@ public class CalculateSettlementUseCaseTests
         // Act & Assert
         await _sut.Invoking(s => s.CalculateAsync("period-1", LossAllocationMethod.Equal))
             .Should().ThrowAsync<AppException>()
-            .WithMessage("*already closed*");
+            .WithMessage("*již uzavřeno*");
     }
 
     [Fact]
@@ -444,7 +449,7 @@ public class CalculateSettlementUseCaseTests
         SetupReadings("meter-2", (PeriodStart, 0m), (PeriodEnd, 60m));
 
         // No invoices
-        _invoiceRepo.Setup(r => r.GetByPeriodAsync(PeriodStart, PeriodEnd))
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice))
             .ReturnsAsync(new List<SupplierInvoice>());
 
         SetupAdvances("house-1", 1000m);
@@ -526,6 +531,100 @@ public class CalculateSettlementUseCaseTests
         house.Balance.Should().Be(0m); // exact match
     }
 
+    [Fact]
+    public async Task CalculateAsync_InvoiceWithLineItems_UsesOnlyLinesInPeriod_InclVat()
+    {
+        // Arrange: one invoice with two sub-readings; only the 2025-03 line falls in
+        // the billing period (2025-01..2025-06). VAT 12 % must be applied.
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A");
+        SetupMeters("main-meter", "meter-1", "house-1");
+        SetupReadings("main-meter", (PeriodStart, 0m), (PeriodEnd, 50m));
+        SetupReadings("meter-1", (PeriodStart, 0m), (PeriodEnd, 50m));
+        SetupAdvances("house-1", 0m);
+
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice))
+            .ReturnsAsync(new List<SupplierInvoice>
+            {
+                new()
+                {
+                    Id = "inv-1",
+                    InvoiceNumber = "FA-1",
+                    VatRatePercent = 12m,
+                    LineItems = new List<InvoiceLineItem>
+                    {
+                        new() { DateFrom = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc), DateTo = new DateTime(2025, 3, 31, 0, 0, 0, DateTimeKind.Utc), AmountExclVat = 1000m, ConsumptionM3 = 10m },
+                        new() { DateFrom = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc), DateTo = new DateTime(2024, 3, 31, 0, 0, 0, DateTimeKind.Utc), AmountExclVat = 5000m, ConsumptionM3 = 50m },
+                    },
+                },
+            });
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert: only the in-period line, incl. 12% VAT → 1000 * 1.12 = 1120
+        result.TotalInvoiceAmount.Should().Be(1120m);
+        result.Houses.Should().HaveCount(1);
+        result.Houses[0].CalculatedAmount.Should().Be(1120m); // single house = 100 %
+    }
+
+    [Fact]
+    public async Task CalculateAsync_ElectricityAndCommonCharges_AccrueOverPeriodMonths()
+    {
+        // Arrange: period spans 6 months (Jan–Jun 2025). Electricity 1200/mo at 100%
+        // coefficient and common base 200/mo accrue over those 6 months.
+        var periodId = "period-1";
+        SetupOpenPeriod(periodId);
+        SetupHouses("house-1", "House A");
+        SetupMeters("main-meter", "meter-1", "house-1");
+        SetupReadings("main-meter", (PeriodStart, 0m), (PeriodEnd, 50m));
+        SetupReadings("meter-1", (PeriodStart, 0m), (PeriodEnd, 50m));
+        SetupInvoices(3000m);
+
+        _settingsRepo.Setup(r => r.GetAsync()).ReturnsAsync(new AdvanceSettings
+        {
+            MonthlyElectricityCost = 1200m,
+            MonthlyCommonBaseFee = 200m,
+            ElectricityCoefficients = new Dictionary<string, decimal> { ["house-1"] = 100m },
+        });
+
+        // Payment split across all three components.
+        _advanceRepo.Setup(r => r.GetByHouseAndPeriodAsync("house-1", PeriodStart, PeriodEnd))
+            .ReturnsAsync(new List<AdvancePayment>
+            {
+                new() { HouseId = "house-1", Year = 2025, Month = 3, Amount = 1600m, WaterAmount = 1000m, ElectricityAmount = 500m, CommonAmount = 100m },
+            });
+
+        // Act
+        var result = await _sut.CalculateAsync(periodId, LossAllocationMethod.Equal);
+
+        // Assert
+        result.MonthsInPeriod.Should().Be(6);
+        var house = result.Houses[0];
+        house.CalculatedAmount.Should().Be(3000m);   // water charge
+        house.TotalAdvances.Should().Be(1000m);       // water advances only
+        house.Balance.Should().Be(2000m);             // 3000 - 1000
+        house.ElectricityCharge.Should().Be(7200m);   // 1200 * 100% * 6
+        house.ElectricityAdvances.Should().Be(500m);
+        house.CommonCharge.Should().Be(1200m);        // 200 * 6
+        house.CommonAdvances.Should().Be(100m);
+        result.TotalElectricityCharge.Should().Be(7200m);
+        result.TotalCommonCharge.Should().Be(1200m);
+    }
+
+    [Theory]
+    [InlineData(2025, 1, 2025, 6, 6)]   // Jan–Jun inclusive
+    [InlineData(2025, 1, 2025, 1, 1)]   // single month
+    [InlineData(2025, 1, 2025, 12, 12)] // full year
+    [InlineData(2023, 11, 2026, 6, 32)] // multi-year span
+    public void MonthsInPeriod_CountsInclusiveMonths(int fy, int fm, int ty, int tm, int expected)
+    {
+        var from = new DateTime(fy, fm, 1, 0, 0, 0, DateTimeKind.Utc);
+        var to = new DateTime(ty, tm, 28, 0, 0, 0, DateTimeKind.Utc);
+        CalculateSettlementUseCase.MonthsInPeriod(from, to).Should().Be(expected);
+    }
+
     #region Test Setup Helpers
 
     private void SetupOpenPeriod(string periodId)
@@ -600,7 +699,7 @@ public class CalculateSettlementUseCaseTests
 
     private void SetupInvoices(decimal totalAmount)
     {
-        _invoiceRepo.Setup(r => r.GetByPeriodAsync(PeriodStart, PeriodEnd))
+        _invoiceRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Invoice))
             .ReturnsAsync(new List<SupplierInvoice>
             {
                 new()
@@ -626,6 +725,7 @@ public class CalculateSettlementUseCaseTests
                     Year = 2025,
                     Month = 3,
                     Amount = totalAmount,
+                    WaterAmount = totalAmount,
                     PaymentDate = new DateTime(2025, 3, 15, 0, 0, 0, DateTimeKind.Utc),
                 },
             }

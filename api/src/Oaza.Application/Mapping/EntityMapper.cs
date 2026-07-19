@@ -16,6 +16,7 @@ public static class EntityMapper
             ContactPerson = house.ContactPerson,
             Email = house.Email,
             IsActive = house.IsActive,
+            DissolveOverpayment = house.DissolveOverpayment,
         };
     }
 
@@ -29,6 +30,7 @@ public static class EntityMapper
             Type = meter.Type.ToString(),
             HouseId = meter.HouseId,
             HouseName = houseName,
+            RadioAddress = meter.RadioAddress,
             InstallationDate = meter.InstallationDate,
         };
     }
@@ -45,7 +47,18 @@ public static class EntityMapper
             DueDate = invoice.DueDate,
             Amount = invoice.Amount,
             ConsumptionM3 = invoice.ConsumptionM3,
+            VatRatePercent = invoice.VatRatePercent,
             AttachmentBlobName = invoice.AttachmentBlobName,
+            LineItems = invoice.LineItems.Select(li => new InvoiceLineItemDto
+            {
+                DateFrom = li.DateFrom,
+                DateTo = li.DateTo,
+                StartReading = li.StartReading,
+                EndReading = li.EndReading,
+                ConsumptionM3 = li.ConsumptionM3,
+                UnitPrice = li.UnitPrice,
+                AmountExclVat = li.AmountExclVat,
+            }).ToList(),
         };
     }
 
@@ -58,7 +71,14 @@ public static class EntityMapper
             Year = payment.Year,
             Month = payment.Month,
             Amount = payment.Amount,
+            WaterAmount = payment.WaterAmount,
+            ElectricityAmount = payment.ElectricityAmount,
+            CommonAmount = payment.CommonAmount,
             PaymentDate = payment.PaymentDate,
+            Type = payment.Type.ToString(),
+            Note = payment.Note,
+            IsFundTransfer = payment.IsFundTransfer,
+            RowKey = payment.RowKey,
         };
     }
 
@@ -86,7 +106,11 @@ public static class EntityMapper
             CalculatedAmount: settlement.CalculatedAmount,
             TotalAdvances: settlement.TotalAdvances,
             Balance: settlement.Balance,
-            LossAllocatedM3: settlement.LossAllocatedM3
+            LossAllocatedM3: settlement.LossAllocatedM3,
+            ElectricityCharge: settlement.ElectricityCharge,
+            ElectricityAdvances: settlement.ElectricityAdvances,
+            CommonCharge: settlement.CommonCharge,
+            CommonAdvances: settlement.CommonAdvances
         );
     }
 

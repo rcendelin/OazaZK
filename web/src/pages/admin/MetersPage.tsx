@@ -12,14 +12,16 @@ interface CreateFormData {
   name: string;
   type: MeterType;
   houseId: string;
+  radioAddress: string;
 }
 
-const emptyCreate: CreateFormData = { meterNumber: '', name: '', type: 'Individual', houseId: '' };
+const emptyCreate: CreateFormData = { meterNumber: '', name: '', type: 'Individual', houseId: '', radioAddress: '' };
 
 interface EditFormData {
   meterNumber: string;
   name: string;
   houseId: string;
+  radioAddress: string;
 }
 
 export function MetersPage() {
@@ -36,7 +38,7 @@ export function MetersPage() {
   const submittingRef = useRef(false);
 
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EditFormData>({ meterNumber: '', name: '', houseId: '' });
+  const [editForm, setEditForm] = useState<EditFormData>({ meterNumber: '', name: '', houseId: '', radioAddress: '' });
   const [editError, setEditError] = useState<string | null>(null);
 
   const mainMeter = meters?.find((m) => m.type === 'Main');
@@ -56,6 +58,7 @@ export function MetersPage() {
         name: createForm.name,
         type: createForm.type,
         houseId: createForm.houseId || null,
+        radioAddress: createForm.radioAddress.trim() || null,
       });
       setCreateForm(emptyCreate);
       setShowCreate(false);
@@ -73,6 +76,7 @@ export function MetersPage() {
       meterNumber: meter.meterNumber,
       name: meter.name,
       houseId: meter.houseId ?? '',
+      radioAddress: meter.radioAddress ?? '',
     });
     setEditError(null);
   };
@@ -86,6 +90,7 @@ export function MetersPage() {
         meterNumber: editForm.meterNumber,
         name: editForm.name,
         houseId: editForm.houseId || null,
+        radioAddress: editForm.radioAddress.trim() || null,
       });
       setEditId(null);
       refetch();
@@ -123,6 +128,14 @@ export function MetersPage() {
                 placeholder="např. HV-001 nebo DV-001"
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               <p className="text-xs text-text-muted mt-1">Tento identifikátor se použije jako záhlaví sloupce v importním Excel souboru</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Adresa (rádiová)</label>
+              <input type="text" value={createForm.radioAddress}
+                onChange={(e) => setCreateForm({ ...createForm, radioAddress: e.target.value })}
+                placeholder="např. 22040724"
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
+              <p className="text-xs text-text-muted mt-1">Fyzická adresa vodoměru z odečítačky — použije se pro import odečtů ze schránky</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Název *</label>
@@ -188,6 +201,12 @@ export function MetersPage() {
                 <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" />
               </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-text-secondary mb-1">Adresa (rádiová)</label>
+                <input type="text" value={editForm.radioAddress} onChange={(e) => setEditForm({ ...editForm, radioAddress: e.target.value })}
+                  placeholder="např. 22040724"
+                  className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" />
+              </div>
               <div className="md:col-span-2 flex gap-2">
                 <button onClick={handleUpdate} className="bg-accent text-white px-3 py-1 rounded-xl text-xs hover:bg-accent-hover">Uložit</button>
                 <button onClick={() => setEditId(null)} className="bg-surface-sunken text-text-secondary px-3 py-1 rounded-xl text-xs hover:bg-surface-sunken">Zrušit</button>
@@ -206,6 +225,7 @@ export function MetersPage() {
             <thead>
               <tr className="bg-surface-sunken border-b border-border">
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Identifikátor</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Adresa</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Název</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Domácnost</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Instalace</th>
@@ -217,6 +237,7 @@ export function MetersPage() {
                 editId === meter.id ? (
                   <tr key={meter.id} className="border-b border-border bg-accent-light">
                     <td className="px-4 py-2"><input type="text" value={editForm.meterNumber} onChange={(e) => setEditForm({ ...editForm, meterNumber: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
+                    <td className="px-4 py-2"><input type="text" value={editForm.radioAddress} onChange={(e) => setEditForm({ ...editForm, radioAddress: e.target.value })} placeholder="22040724" className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
                     <td className="px-4 py-2"><input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
                     <td className="px-4 py-2">
                       <select value={editForm.houseId} onChange={(e) => setEditForm({ ...editForm, houseId: e.target.value })} className="border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised">
@@ -238,6 +259,7 @@ export function MetersPage() {
                 ) : (
                   <tr key={meter.id} className="border-b border-border hover:bg-surface-sunken/50">
                     <td className="px-4 py-3"><code className="bg-surface-sunken px-1.5 py-0.5 rounded text-xs">{meter.meterNumber}</code></td>
+                    <td className="px-4 py-3 text-text-secondary text-xs">{meter.radioAddress ?? <span className="text-text-muted">—</span>}</td>
                     <td className="px-4 py-3 font-medium">{meter.name}</td>
                     <td className="px-4 py-3 text-text-secondary">{meter.houseName ?? <span className="text-text-muted">— nepřiřazeno —</span>}</td>
                     <td className="px-4 py-3 text-text-muted text-xs">{czDate.format(new Date(meter.installationDate))}</td>
@@ -248,7 +270,7 @@ export function MetersPage() {
                 ),
               )}
               {individualMeters.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-text-muted">Žádné individuální vodoměry</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-text-muted">Žádné individuální vodoměry</td></tr>
               )}
             </tbody>
           </table>

@@ -9,6 +9,7 @@ export const createMeter = (data: {
   name: string;
   type: MeterType;
   houseId: string | null;
+  radioAddress?: string | null;
 }): Promise<WaterMeter> =>
   apiClient.post<WaterMeter>('/meters', data);
 
@@ -16,5 +17,6 @@ export const updateMeter = (id: string, data: {
   meterNumber: string;
   name: string;
   houseId: string | null;
+  radioAddress?: string | null;
 }): Promise<WaterMeter> =>
   apiClient.put<WaterMeter>(`/meters/${encodeURIComponent(id)}`, data);

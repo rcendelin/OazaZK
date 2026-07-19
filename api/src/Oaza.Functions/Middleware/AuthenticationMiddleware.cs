@@ -199,7 +199,7 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
     {
         var response = request.CreateResponse(HttpStatusCode.Unauthorized);
         response.Headers.Add("Content-Type", "application/json");
-        await response.WriteStringAsync("{\"error\":\"Unauthorized\"}");
+        await response.WriteStringAsync("{\"error\":\"Nejste přihlášeni.\"}");
         context.GetInvocationResult().Value = response;
     }
 
@@ -207,7 +207,7 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
     {
         var response = request.CreateResponse(HttpStatusCode.Forbidden);
         response.Headers.Add("Content-Type", "application/json");
-        await response.WriteStringAsync("{\"error\":\"User not registered in the system\"}");
+        await response.WriteStringAsync("{\"error\":\"Uživatel není v systému registrován.\"}");
         context.GetInvocationResult().Value = response;
     }
 }

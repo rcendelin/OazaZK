@@ -6,6 +6,7 @@ import { getHouses } from '../api/houses';
 import { Spinner } from '../components/Spinner';
 import type { AdvanceSettingsData, AdvanceCalculation, HouseAdvanceOverride } from '../api/advanceSettings';
 import type { House } from '../types';
+import { parseCzechNumber } from '../utils/number';
 
 const fmt = (v: number | null | undefined) => {
   const n = typeof v === 'number' && !isNaN(v) ? v : 0;
@@ -19,6 +20,8 @@ const fmtDate = (s: string | null | undefined) => {
   if (!s || s.startsWith('0001')) return '—';
   try { return new Intl.DateTimeFormat('cs-CZ').format(new Date(s)); } catch { return '—'; }
 };
+const lossMethodLabel = (m: string | null | undefined) =>
+  m === 'Equal' ? 'Rovnoměrně' : 'Dle spotřeby';
 
 export function AdvancesPage() {
   const { user } = useAuth();
@@ -59,7 +62,7 @@ export function AdvancesPage() {
     setMsg(null);
     const parsedCoeffs: Record<string, number> = {};
     for (const [k, v] of Object.entries(coeffs)) {
-      const p = parseFloat(v.replace(',', '.'));
+      const p = parseFloat(v.replace(/\s/g, '').replace(',', '.'));
       if (!isNaN(p)) parsedCoeffs[k] = p;
     }
     try {
@@ -123,7 +126,7 @@ export function AdvancesPage() {
     }
   };
 
-  const coeffSum = Object.values(coeffs).reduce((s, v) => s + (parseFloat(v.replace(',', '.')) || 0), 0);
+  const coeffSum = Object.values(coeffs).reduce((s, v) => s + parseCzechNumber(v), 0);
   const activeHouses = houses?.filter((h) => h.isActive) ?? [];
 
   if (sLoading || cLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
@@ -171,6 +174,11 @@ export function AdvancesPage() {
               <p className="text-xs font-medium text-danger uppercase">Průměrná ztráta</p>
               <p className="text-xl font-bold mt-1">{fmtD(calc?.monthlyLossM3)} <span className="text-sm font-normal text-text-muted">m³/měsíc</span></p>
             </div>
+            <div className="p-3 bg-surface-sunken rounded-xl sm:col-span-2 lg:col-span-4">
+              <p className="text-xs font-medium text-text-secondary uppercase">Rozdělení ztráty na síti</p>
+              <p className="text-xl font-bold mt-1">{lossMethodLabel(settings?.lossAllocationMethod)}</p>
+              <p className="text-xs text-text-muted mt-0.5">Používá se pro vyúčtování i saldo domácností.</p>
+            </div>
           </div>
         ) : form && (
           <div className="space-y-5">
@@ -207,6 +215,17 @@ export function AdvancesPage() {
                   onChange={(e) => setForm({ ...form, monthlyCommonBaseFee: parseFloat(e.target.value) || 0 })}
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
               </div>
+            </div>
+
+            <div className="max-w-md">
+              <label htmlFor="loss-method" className="block text-sm font-medium text-text-secondary mb-1">Rozdělení ztráty na síti</label>
+              <select id="loss-method" value={form.lossAllocationMethod ?? 'ProportionalToConsumption'}
+                onChange={(e) => setForm({ ...form, lossAllocationMethod: e.target.value })}
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20">
+                <option value="ProportionalToConsumption">Dle spotřeby</option>
+                <option value="Equal">Rovnoměrně</option>
+              </select>
+              <p className="text-xs text-text-muted mt-1">Výchozí metoda pro vyúčtování a saldo domácností.</p>
             </div>
 
             <div>

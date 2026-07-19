@@ -4,11 +4,16 @@ import { useApi } from '../hooks/useApi';
 import {
   getBillingPeriods,
   createBillingPeriod,
+  updateBillingPeriod,
   calculateSettlement,
   closeBillingPeriod,
   getSettlements,
 } from '../api/billing';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { InvoicesSection } from '../components/InvoicesSection';
+import { getFundBalance } from '../api/finance';
+import { getHouses } from '../api/houses';
+import { getAdvanceSettings } from '../api/advanceSettings';
 import type {
   BillingPeriodResponse,
   CreateBillingPeriodRequest,
@@ -157,6 +162,8 @@ function AdminBillingView({
           )}
         </>
       )}
+
+      <InvoicesSection />
     </div>
   );
 }
@@ -369,6 +376,7 @@ function OpenPeriodDetail({
   onPeriodClosed: () => void;
 }) {
   const [method, setMethod] = useState<string>('Equal');
+  const methodTouched = useRef(false);
   const [preview, setPreview] = useState<SettlementPreviewResponse | null>(
     null,
   );
@@ -379,14 +387,85 @@ function OpenPeriodDetail({
   const [closeError, setCloseError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(period.name);
+  const [editFrom, setEditFrom] = useState(period.dateFrom.split('T')[0]);
+  const [editTo, setEditTo] = useState(period.dateTo.split('T')[0]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [fundBalance, setFundBalance] = useState<number | null>(null);
+  const [activeHouseCount, setActiveHouseCount] = useState<number | null>(null);
+  const [currentWaterPrice, setCurrentWaterPrice] = useState<{ price: number; validFrom: string } | null>(null);
+  const [fundDraw, setFundDraw] = useState(0);
+  const [applyNewPrice, setApplyNewPrice] = useState(true);
+  const [newPriceValidFrom, setNewPriceValidFrom] = useState(period.dateTo.split('T')[0]);
+
+  const startEdit = () => {
+    setEditName(period.name);
+    setEditFrom(period.dateFrom.split('T')[0]);
+    setEditTo(period.dateTo.split('T')[0]);
+    setEditError(null);
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (inFlight.current) return;
+    if (!editName.trim() || !editFrom || !editTo) {
+      setEditError('Vyplňte název a období.');
+      return;
+    }
+    if (new Date(editFrom) >= new Date(editTo)) {
+      setEditError('Datum od musí být před datem do.');
+      return;
+    }
+    inFlight.current = true;
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateBillingPeriod(period.id, {
+        name: editName.trim(),
+        dateFrom: editFrom,
+        dateTo: editTo,
+      });
+      setEditing(false);
+      onPeriodClosed(); // reload the periods list
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Uložení období selhalo.');
+    } finally {
+      setSavingEdit(false);
+      inFlight.current = false;
+    }
+  };
+
   const handleCalculate = async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     setCalculating(true);
     setCalcError(null);
     try {
-      const result = await calculateSettlement(period.id, method);
+      // Default to the loss-allocation method configured in Nastavení záloh
+      // (the same source CalculateHouseSaldoUseCase uses for the live Saldo
+      // preview) so this preview doesn't silently disagree with Saldo until
+      // the admin explicitly picks a different method for this period.
+      const settings = await getAdvanceSettings();
+      const effectiveMethod = methodTouched.current ? method : settings.lossAllocationMethod;
+      if (!methodTouched.current && effectiveMethod !== method) {
+        setMethod(effectiveMethod);
+      }
+      const [result, fund, houses] = await Promise.all([
+        calculateSettlement(period.id, effectiveMethod),
+        getFundBalance(),
+        getHouses(),
+      ]);
       setPreview(result);
+      setFundBalance(fund.fundBalance);
+      setActiveHouseCount(houses.filter((h) => h.isActive).length);
+      setCurrentWaterPrice({ price: settings.waterPricePerM3, validFrom: settings.waterPriceValidFrom });
+      setFundDraw(0);
+      setNewPriceValidFrom(
+        new Date(new Date(period.dateTo).getTime() + 86_400_000).toISOString().split('T')[0],
+      );
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Nastala neočekávaná chyba';
@@ -403,7 +482,11 @@ function OpenPeriodDetail({
     setClosing(true);
     setCloseError(null);
     try {
-      await closeBillingPeriod(period.id, method);
+      await closeBillingPeriod(period.id, method, {
+        fundDrawAmount: fundDraw,
+        applyNewWaterPrice: applyNewPrice && effectiveWaterPrice !== null,
+        newWaterPriceValidFrom: newPriceValidFrom,
+      });
       setShowCloseConfirm(false);
       onPeriodClosed();
     } catch (err: unknown) {
@@ -417,8 +500,78 @@ function OpenPeriodDetail({
     }
   };
 
+  const effectiveWaterPrice =
+    preview && preview.totalHouseConsumption + preview.totalLoss > 0
+      ? preview.totalInvoiceAmount / (preview.totalHouseConsumption + preview.totalLoss)
+      : null;
+  const perHouseFundCredit =
+    activeHouseCount && activeHouseCount > 0 ? fundDraw / activeHouseCount : 0;
+
   return (
     <div className="space-y-4">
+      {/* Edit period (name + date range) */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-text-secondary">
+          Období: {formatDate(period.dateFrom)} – {formatDate(period.dateTo)}
+        </p>
+        <button
+          onClick={() => (editing ? setEditing(false) : startEdit())}
+          className="text-sm font-medium text-accent hover:text-accent-hover"
+        >
+          {editing ? 'Zrušit úpravu' : 'Upravit období'}
+        </button>
+      </div>
+
+      {editing && (
+        <div className="rounded-xl border border-border bg-surface-sunken/30 p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Název</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Datum od</label>
+              <input
+                type="date"
+                value={editFrom}
+                onChange={(e) => setEditFrom(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-text-secondary">Datum do</label>
+              <input
+                type="date"
+                value={editTo}
+                onChange={(e) => setEditTo(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+            </div>
+          </div>
+          {editError && <p className="mt-2 text-sm text-danger">{editError}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => void handleSaveEdit()}
+              disabled={savingEdit}
+              className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+            >
+              {savingEdit ? 'Ukládání...' : 'Uložit období'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-xl bg-surface-sunken px-4 py-2 text-sm text-text-secondary hover:bg-surface-sunken"
+            >
+              Zrušit
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Calculate controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:max-w-xs">
@@ -431,7 +584,10 @@ function OpenPeriodDetail({
           <select
             id="method-select"
             value={method}
-            onChange={(e) => setMethod(e.target.value)}
+            onChange={(e) => {
+              methodTouched.current = true;
+              setMethod(e.target.value);
+            }}
             className="mt-1 block w-full rounded-xl border border-border bg-surface-raised px-3 py-2 text-sm shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           >
             <option value="Equal">Rovnoměrně</option>
@@ -483,8 +639,62 @@ function OpenPeriodDetail({
             />
           </div>
 
+          {/* ① Fund draw */}
+          {fundBalance !== null && fundBalance > 0 && activeHouseCount && (
+            <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
+              <h3 className="text-sm font-semibold">① Čerpání ze společného fondu</h3>
+              <p className="mt-1 text-sm text-text-secondary">
+                Zůstatek fondu: <strong>{formatCZK(fundBalance)} Kč</strong>
+              </p>
+              <input
+                type="range"
+                min={0}
+                max={fundBalance}
+                step={100}
+                value={fundDraw}
+                onChange={(e) => setFundDraw(Number(e.target.value))}
+                className="mt-2 w-full"
+              />
+              <div className="mt-2 flex justify-between text-sm">
+                <span>Použít nyní: <strong>{formatCZK(fundDraw)} Kč</strong></span>
+                <span>Na dům: <strong>{formatCZK(perHouseFundCredit)} Kč</strong></span>
+                <span>Zbyde ve fondu: <strong>{formatCZK(fundBalance - fundDraw)} Kč</strong></span>
+              </div>
+            </div>
+          )}
+
+          {/* ② Water price carry-forward */}
+          {effectiveWaterPrice !== null && currentWaterPrice && (
+            <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
+              <h3 className="text-sm font-semibold">② Cena vody pro příští zálohy</h3>
+              <p className="mt-1 text-sm text-text-secondary">
+                Efektivní cena v tomto období: <strong>{formatCZK(effectiveWaterPrice)} Kč/m³</strong>
+                {' '}(nyní nastaveno: {formatCZK(currentWaterPrice.price)} Kč/m³ od {formatDate(currentWaterPrice.validFrom)})
+              </p>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={applyNewPrice}
+                  onChange={(e) => setApplyNewPrice(e.target.checked)}
+                />
+                Nastavit {formatCZK(effectiveWaterPrice)} Kč/m³ jako novou cenu vody
+              </label>
+              {applyNewPrice && (
+                <div className="mt-2 flex items-center gap-2 text-sm">
+                  <span>platnou od</span>
+                  <input
+                    type="date"
+                    value={newPriceValidFrom}
+                    onChange={(e) => setNewPriceValidFrom(e.target.value)}
+                    className="rounded-xl border border-border bg-surface-raised px-3 py-1.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Settlement table */}
-          <SettlementTable houses={preview.houses} />
+          <SettlementTable houses={preview.houses} fundCreditPerHouse={perHouseFundCredit} />
 
           {/* Close button */}
           <div className="flex justify-end">
@@ -618,8 +828,10 @@ function ClosedPeriodDetail({ period }: { period: BillingPeriodResponse }) {
 
 function SettlementTable({
   houses,
+  fundCreditPerHouse = 0,
 }: {
   houses: SettlementPreviewResponse['houses'];
+  fundCreditPerHouse?: number;
 }) {
   const totals = houses.reduce(
     (acc, h) => ({
@@ -629,8 +841,9 @@ function SettlementTable({
       amount: acc.amount + h.calculatedAmount,
       advances: acc.advances + h.totalAdvances,
       balance: acc.balance + h.balance,
+      finalBalance: acc.finalBalance + (h.balance - fundCreditPerHouse),
     }),
-    { consumption: 0, loss: 0, share: 0, amount: 0, advances: 0, balance: 0 },
+    { consumption: 0, loss: 0, share: 0, amount: 0, advances: 0, balance: 0, finalBalance: 0 },
   );
 
   return (
@@ -659,48 +872,71 @@ function SettlementTable({
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
               Výsledek Kč
             </th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Z fondu Kč
+            </th>
+            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Finální saldo Kč
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border bg-surface-raised">
-          {houses.map((house) => (
-            <tr key={house.houseId} className="hover:bg-surface-sunken/50">
-              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-text-primary">
-                {house.houseName}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
-                {formatNumber(house.consumptionM3)}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
-                {formatNumber(house.lossAllocatedM3)}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
-                {formatPercent(house.sharePercent)}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
-                {formatCZK(house.calculatedAmount)}
-              </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
-                {formatCZK(house.totalAdvances)}
-              </td>
-              <td
-                className={`whitespace-nowrap px-4 py-3 text-right text-sm font-mono font-semibold ${
-                  house.balance > 0
-                    ? 'text-danger'
-                    : house.balance < 0
-                      ? 'text-success'
-                      : 'text-text-secondary'
-                }`}
-              >
-                {formatCZK(house.balance)}
-                {house.balance > 0 && (
-                  <span className="ml-1 text-xs font-normal">doplatek</span>
-                )}
-                {house.balance < 0 && (
-                  <span className="ml-1 text-xs font-normal">přeplatek</span>
-                )}
-              </td>
-            </tr>
-          ))}
+          {houses.map((house) => {
+            const finalBalance = house.balance - fundCreditPerHouse;
+            return (
+              <tr key={house.houseId} className="hover:bg-surface-sunken/50">
+                <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-text-primary">
+                  {house.houseName}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
+                  {formatNumber(house.consumptionM3)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
+                  {formatNumber(house.lossAllocatedM3)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
+                  {formatPercent(house.sharePercent)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
+                  {formatCZK(house.calculatedAmount)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
+                  {formatCZK(house.totalAdvances)}
+                </td>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right text-sm font-mono font-semibold ${
+                    house.balance > 0
+                      ? 'text-danger'
+                      : house.balance < 0
+                        ? 'text-success'
+                        : 'text-text-secondary'
+                  }`}
+                >
+                  {formatCZK(house.balance)}
+                  {house.balance > 0 && (
+                    <span className="ml-1 text-xs font-normal">doplatek</span>
+                  )}
+                  {house.balance < 0 && (
+                    <span className="ml-1 text-xs font-normal">přeplatek</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-secondary">
+                  {fundCreditPerHouse > 0 ? `-${formatCZK(fundCreditPerHouse)}` : '—'}
+                </td>
+                <td
+                  className={`whitespace-nowrap px-4 py-3 text-right text-sm font-mono font-semibold ${
+                    finalBalance > 0
+                      ? 'text-danger'
+                      : finalBalance < 0
+                        ? 'text-success'
+                        : 'text-text-secondary'
+                  }`}
+                >
+                  {formatCZK(finalBalance)}
+                </td>
+              </tr>
+            );
+          })}
           {/* Totals row */}
           <tr className="bg-surface-sunken font-bold">
             <td className="whitespace-nowrap px-4 py-3 text-sm text-text-primary">
@@ -723,6 +959,12 @@ function SettlementTable({
             </td>
             <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
               {formatCZK(totals.balance)}
+            </td>
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
+              {totals.balance - totals.finalBalance > 0 ? `-${formatCZK(totals.balance - totals.finalBalance)}` : '—'}
+            </td>
+            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-mono text-text-primary">
+              {formatCZK(totals.finalBalance)}
             </td>
           </tr>
         </tbody>

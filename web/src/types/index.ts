@@ -24,6 +24,7 @@ export interface House {
   contactPerson: string;
   email: string;
   isActive: boolean;
+  dissolveOverpayment: boolean;
 }
 
 export interface WaterMeter {
@@ -33,6 +34,7 @@ export interface WaterMeter {
   type: MeterType;
   houseId: string | null;
   houseName: string | null;
+  radioAddress: string | null;
   installationDate: string;
 }
 
@@ -53,6 +55,16 @@ export interface BillingPeriod {
   status: BillingPeriodStatus;
 }
 
+export interface InvoiceLineItem {
+  dateFrom: string;
+  dateTo: string;
+  startReading: number;
+  endReading: number;
+  consumptionM3: number;
+  unitPrice: number;
+  amountExclVat: number;
+}
+
 export interface SupplierInvoice {
   id: string;
   year: number;
@@ -62,8 +74,25 @@ export interface SupplierInvoice {
   dueDate: string;
   amount: number;
   consumptionM3: number;
+  vatRatePercent: number;
   attachmentBlobName: string | null;
+  lineItems: InvoiceLineItem[];
 }
+
+export interface ReceivedInvoice {
+  source: 'voda' | 'ostatni';
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  dueDate: string | null;
+  countsTowardWaterSettlement: boolean;
+  hasAttachment: boolean;
+  attachmentDownloadPath: string | null;
+}
+
+export type PaymentType = 'Advance' | 'Doplatek' | 'Payout' | 'OpeningBalance';
 
 export interface AdvancePayment {
   houseId: string;
@@ -71,7 +100,14 @@ export interface AdvancePayment {
   year: number;
   month: number;
   amount: number;
+  waterAmount: number;
+  electricityAmount: number;
+  commonAmount: number;
   paymentDate: string;
+  type: PaymentType;
+  note: string | null;
+  isFundTransfer: boolean;
+  rowKey: string;
 }
 
 export interface Settlement {
@@ -84,6 +120,53 @@ export interface Settlement {
   totalAdvances: number;
   balance: number;
   lossAllocatedM3: number;
+  electricityCharge: number;
+  electricityAdvances: number;
+  commonCharge: number;
+  commonAdvances: number;
+}
+
+// Per-house saldo (water / electricity / common base)
+export interface SaldoComponent {
+  charged: number;
+  paid: number;
+  saldo: number; // charged - paid: positive = nedoplatek, negative = přeplatek
+}
+
+export interface PeriodSaldoBreakdown {
+  periodId: string;
+  periodName: string;
+  closed: boolean;
+  water: SaldoComponent;
+  electricity: SaldoComponent;
+  common: SaldoComponent;
+}
+
+// Net-level adjustments are only ever payouts or opening balances.
+export type AdjustmentType = 'Payout' | 'OpeningBalance';
+
+export interface SaldoAdjustment {
+  type: AdjustmentType;
+  amount: number; // signed effect on saldo (positive = increases nedoplatek)
+  date: string;
+  note: string | null;
+  rowKey: string;
+}
+
+export interface HouseSaldo {
+  houseId: string;
+  houseName: string;
+  water: SaldoComponent;
+  electricity: SaldoComponent;
+  common: SaldoComponent;
+  componentSaldo: number;
+  netAdjustments: number;
+  totalSaldo: number; // the net balance: positive = nedoplatek, negative = přeplatek
+  prescribedMonthly: number;
+  monthsCovered: number | null;
+  dissolving: boolean;
+  periods: PeriodSaldoBreakdown[];
+  adjustments: SaldoAdjustment[];
 }
 
 // API response types
@@ -154,6 +237,9 @@ export interface SettlementPreviewResponse {
   totalLoss: number;
   totalInvoiceAmount: number;
   lossAllocationMethod: string;
+  monthsInPeriod: number;
+  totalElectricityCharge: number;
+  totalCommonCharge: number;
   houses: HouseSettlementDetail[];
 }
 
@@ -166,6 +252,10 @@ export interface HouseSettlementDetail {
   calculatedAmount: number;
   totalAdvances: number;
   balance: number;
+  electricityCharge: number;
+  electricityAdvances: number;
+  commonCharge: number;
+  commonAdvances: number;
 }
 
 export interface SettlementResponse {
@@ -178,6 +268,10 @@ export interface SettlementResponse {
   totalAdvances: number;
   balance: number;
   lossAllocatedM3: number;
+  electricityCharge: number;
+  electricityAdvances: number;
+  commonCharge: number;
+  commonAdvances: number;
 }
 
 // Document types

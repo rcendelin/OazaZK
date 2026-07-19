@@ -53,7 +53,7 @@ public class MeterFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -67,7 +67,7 @@ public class MeterFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateMeterRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateMeterRequestValidator();
@@ -79,7 +79,7 @@ public class MeterFunctions
 
             if (!Enum.TryParse<MeterType>(request.Type, ignoreCase: true, out var meterType))
             {
-                return await WriteErrorResponseAsync(req, 400, $"Invalid meter type: {request.Type}");
+                return await WriteErrorResponseAsync(req, 400, $"Neplatný typ vodoměru: {request.Type}");
             }
 
             var meter = new WaterMeter
@@ -89,6 +89,7 @@ public class MeterFunctions
                 Name = request.Name,
                 Type = meterType,
                 HouseId = request.HouseId,
+                RadioAddress = string.IsNullOrWhiteSpace(request.RadioAddress) ? null : request.RadioAddress.Trim(),
                 InstallationDate = DateTime.UtcNow,
             };
 
@@ -105,7 +106,7 @@ public class MeterFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -126,7 +127,7 @@ public class MeterFunctions
             var request = await JsonSerializer.DeserializeAsync<UpdateMeterRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateMeterRequestValidator();
@@ -139,6 +140,7 @@ public class MeterFunctions
             existing.MeterNumber = request.MeterNumber;
             existing.Name = request.Name;
             existing.HouseId = request.HouseId;
+            existing.RadioAddress = string.IsNullOrWhiteSpace(request.RadioAddress) ? null : request.RadioAddress.Trim();
 
             await _meterRepository.UpsertAsync(existing);
 
@@ -153,7 +155,7 @@ public class MeterFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -179,6 +181,6 @@ public class MeterFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }

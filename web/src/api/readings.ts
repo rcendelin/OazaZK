@@ -19,6 +19,15 @@ export const importReadings = (
 ): Promise<ImportPreviewResponse> =>
   apiClient.uploadFile<ImportPreviewResponse>('/readings/import', file);
 
+export const importReadingsFromClipboard = (
+  text: string,
+  readingDate: string,
+): Promise<ImportPreviewResponse> =>
+  apiClient.post<ImportPreviewResponse>('/readings/import/clipboard', {
+    text,
+    readingDate,
+  });
+
 export const confirmImport = (
   sessionId: string,
 ): Promise<{ count: number }> =>

@@ -98,6 +98,85 @@ public class ImportReadingsUseCaseTests
     }
 
     [Fact]
+    public async Task ParseClipboardAndValidateAsync_MapsByRadioAddress_UsesValue1_AndChosenDate()
+    {
+        // Arrange: meters carry their physical radio addresses
+        _mainMeter.RadioAddress = "22040724";
+        _houseMeter1.RadioAddress = "22040725";
+        _houseMeter2.RadioAddress = "22040726";
+        var meters = new List<WaterMeter> { _mainMeter, _houseMeter1, _houseMeter2 };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
+
+        var date = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        var text = string.Join("\n", new[]
+        {
+            "Reception time\tMode\tManuf.\tAddress\tCount\tSignal [%]\tValue 1\tUnit 1\tValue 4\tUnit 4",
+            "2026-06-12 00:08:49\tT1\tELR\t22040724\t4\t54\t426,576\tm3\t426,545\tm3",
+            "2026-06-12 00:08:43\tT1\tELR\t22040725\t3\t47\t306,552\tm3\t305,128\tm3",
+            "2026-06-12 00:09:42\tT1\tELR\t22040726\t7\t40\t723,061\tm3\t715,975\tm3",
+        });
+
+        // Act
+        var result = await _useCase.ParseClipboardAndValidateAsync(text, date, "user-1");
+
+        // Assert: matched by Address, value taken from Value 1 (Czech comma), assigned the chosen date
+        result.Errors.Should().BeEmpty();
+        result.Rows.Should().HaveCount(1);
+        result.Rows[0].ReadingDate.Should().Be(date);
+        result.Rows[0].MeterValues.Should().HaveCount(3);
+        result.Rows[0].MeterValues["meter-main"].Should().Be(426.576m);
+        result.Rows[0].MeterValues["meter-house1"].Should().Be(306.552m);
+        result.Rows[0].MeterValues["meter-house2"].Should().Be(723.061m);
+        result.ImportSessionId.Should().NotBeNullOrEmpty();
+        _cacheMock.Verify(c => c.Store(It.IsAny<string>(), It.IsAny<ImportSessionData>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ParseClipboardAndValidateAsync_UnknownAddress_ReturnsError()
+    {
+        // Arrange
+        _mainMeter.RadioAddress = "22040724";
+        var meters = new List<WaterMeter> { _mainMeter };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
+
+        var text = "Address\tValue 1\tUnit 1\n99999999\t100,5\tm3";
+
+        // Act
+        var result = await _useCase.ParseClipboardAndValidateAsync(
+            text, new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), "user-1");
+
+        // Assert
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].Message.Should().Contain("neodpovídá");
+        result.Rows.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ParseClipboardAndValidateAsync_MatchesByMeterNumber_WhenAddressFieldEmpty()
+    {
+        // Admin put the physical address straight into the identifier (MeterNumber),
+        // leaving the dedicated Address field empty — the import must still match.
+        _mainMeter.MeterNumber = "22040724";
+        _mainMeter.RadioAddress = null;
+        var meters = new List<WaterMeter> { _mainMeter };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
+
+        var text = "Address\tValue 1\tUnit 1\n22040724\t426,576\tm3";
+
+        // Act
+        var result = await _useCase.ParseClipboardAndValidateAsync(
+            text, new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), "user-1");
+
+        // Assert
+        result.Errors.Should().BeEmpty();
+        result.Rows.Should().ContainSingle();
+        result.Rows[0].MeterValues["meter-main"].Should().Be(426.576m);
+    }
+
+    [Fact]
     public async Task ParseAndValidateAsync_DuplicateReading_ReturnsError()
     {
         // Arrange
@@ -132,7 +211,7 @@ public class ImportReadingsUseCaseTests
         // Assert
         result.Errors.Should().HaveCount(1);
         result.Errors[0].Type.Should().Be("error");
-        result.Errors[0].Message.Should().Contain("already exists");
+        result.Errors[0].Message.Should().Contain("již existuje");
     }
 
     [Fact]
@@ -171,7 +250,7 @@ public class ImportReadingsUseCaseTests
         // Assert
         result.Errors.Should().HaveCount(1);
         result.Errors[0].Type.Should().Be("error");
-        result.Errors[0].Message.Should().Contain("already exists");
+        result.Errors[0].Message.Should().Contain("již existuje");
     }
 
     [Fact]
@@ -209,7 +288,7 @@ public class ImportReadingsUseCaseTests
 
         // Assert
         result.Errors.Should().HaveCount(1);
-        result.Errors[0].Message.Should().Contain("Negative consumption");
+        result.Errors[0].Message.Should().Contain("Záporná spotřeba");
     }
 
     [Fact]
@@ -231,7 +310,7 @@ public class ImportReadingsUseCaseTests
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Warnings.Should().Contain(w => w.Message.Contains("Missing value"));
+        result.Warnings.Should().Contain(w => w.Message.Contains("Chybí hodnota"));
     }
 
     [Fact]
@@ -271,7 +350,7 @@ public class ImportReadingsUseCaseTests
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Warnings.Should().Contain(w => w.Message.Contains("Anomaly"));
+        result.Warnings.Should().Contain(w => w.Message.Contains("Anomálie"));
         result.Errors.Should().BeEmpty();
     }
 
@@ -295,7 +374,7 @@ public class ImportReadingsUseCaseTests
         var result = await _useCase.ParseAndValidateAsync(stream, "user-1");
 
         // Assert
-        result.Errors.Should().Contain(e => e.Message.Contains("UNKNOWN-999") && e.Message.Contains("does not match"));
+        result.Errors.Should().Contain(e => e.Message.Contains("UNKNOWN-999") && e.Message.Contains("neodpovídá"));
     }
 
     [Fact]
@@ -317,7 +396,7 @@ public class ImportReadingsUseCaseTests
 
         // Assert
         result.Errors.Should().HaveCount(1);
-        result.Errors[0].Message.Should().Contain("No meters configured");
+        result.Errors[0].Message.Should().Contain("nejsou nakonfigurované");
     }
 
     [Fact]
@@ -401,7 +480,7 @@ public class ImportReadingsUseCaseTests
         // Act & Assert
         var act = () => _useCase.ConfirmImportAsync("nonexistent", "user-1");
         await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*not found or expired*");
+            .WithMessage("*nebyla nalezena nebo vypršela*");
     }
 
     [Fact]
@@ -427,7 +506,7 @@ public class ImportReadingsUseCaseTests
         // Act & Assert
         var act = () => _useCase.ConfirmImportAsync(sessionId, "user-1");
         await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*validation error*");
+            .WithMessage("*chybami validace*");
     }
 
     [Fact]
@@ -447,7 +526,7 @@ public class ImportReadingsUseCaseTests
         // Act & Assert
         var act = () => _useCase.ConfirmImportAsync(sessionId, "user-1");
         await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*No readings to import*");
+            .WithMessage("*Nejsou žádné odečty k importu*");
     }
 
     [Fact]

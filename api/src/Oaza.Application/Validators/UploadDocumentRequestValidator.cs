@@ -10,12 +10,12 @@ public class UploadDocumentRequestValidator : AbstractValidator<UploadDocumentRe
     public UploadDocumentRequestValidator()
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Document name is required.")
-            .MaximumLength(200).WithMessage("Document name must not exceed 200 characters.");
+            .NotEmpty().WithMessage("Název dokumentu je povinný.")
+            .MaximumLength(200).WithMessage("Název dokumentu nesmí přesáhnout 200 znaků.");
 
         RuleFor(x => x.Category)
-            .NotEmpty().WithMessage("Category is required.")
+            .NotEmpty().WithMessage("Kategorie je povinná.")
             .Must(c => AllowedCategories.Contains(c, StringComparer.OrdinalIgnoreCase))
-            .WithMessage($"Category must be one of: {string.Join(", ", AllowedCategories)}.");
+            .WithMessage($"Kategorie musí být jedna z: {string.Join(", ", AllowedCategories)}.");
     }
 }

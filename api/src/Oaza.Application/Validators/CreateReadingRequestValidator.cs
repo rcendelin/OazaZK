@@ -8,14 +8,14 @@ public class CreateReadingRequestValidator : AbstractValidator<CreateReadingRequ
     public CreateReadingRequestValidator()
     {
         RuleFor(x => x.MeterId)
-            .NotEmpty().WithMessage("MeterId is required.")
-            .Must(id => Guid.TryParse(id, out _)).WithMessage("MeterId must be a valid GUID.");
+            .NotEmpty().WithMessage("MeterId je povinné.")
+            .Must(id => Guid.TryParse(id, out _)).WithMessage("MeterId musí být platné GUID.");
 
         RuleFor(x => x.ReadingDate)
-            .NotEmpty().WithMessage("ReadingDate is required.")
-            .LessThanOrEqualTo(DateTime.UtcNow.AddDays(1)).WithMessage("ReadingDate cannot be in the future.");
+            .NotEmpty().WithMessage("Datum odečtu je povinné.")
+            .LessThanOrEqualTo(DateTime.UtcNow.AddDays(1)).WithMessage("Datum odečtu nesmí být v budoucnosti.");
 
         RuleFor(x => x.Value)
-            .GreaterThanOrEqualTo(0).WithMessage("Value must be greater than or equal to 0.");
+            .GreaterThanOrEqualTo(0).WithMessage("Hodnota musí být větší nebo rovna 0.");
     }
 }

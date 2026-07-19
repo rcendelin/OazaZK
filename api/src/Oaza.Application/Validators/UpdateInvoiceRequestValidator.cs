@@ -8,19 +8,23 @@ public class UpdateInvoiceRequestValidator : AbstractValidator<UpdateInvoiceRequ
     public UpdateInvoiceRequestValidator()
     {
         RuleFor(x => x.InvoiceNumber)
-            .NotEmpty().WithMessage("Invoice number is required.")
-            .MaximumLength(50).WithMessage("Invoice number must not exceed 50 characters.");
+            .NotEmpty().WithMessage("Číslo faktury je povinné.")
+            .MaximumLength(50).WithMessage("Číslo faktury smí mít max 50 znaků.");
 
-        RuleFor(x => x.Amount)
-            .GreaterThan(0).WithMessage("Amount must be greater than 0.");
+        RuleFor(x => x.VatRatePercent)
+            .InclusiveBetween(0, 100).WithMessage("Sazba DPH musí být v rozsahu 0–100 %.");
 
-        RuleFor(x => x.ConsumptionM3)
-            .GreaterThanOrEqualTo(0).WithMessage("Consumption must be greater than or equal to 0.");
+        RuleFor(x => x.LineItems)
+            .NotEmpty().WithMessage("Faktura musí mít alespoň jeden řádek (dílčí odečet).");
 
-        RuleFor(x => x.IssuedDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Issued date must not be in the far future.");
-
-        RuleFor(x => x.DueDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Due date must not be in the far future.");
+        RuleForEach(x => x.LineItems).ChildRules(line =>
+        {
+            line.RuleFor(l => l.DateFrom)
+                .LessThanOrEqualTo(l => l.DateTo).WithMessage("Období od musí být před nebo rovno období do.");
+            line.RuleFor(l => l.ConsumptionM3)
+                .GreaterThanOrEqualTo(0).WithMessage("Spotřeba řádku musí být ≥ 0.");
+            line.RuleFor(l => l.AmountExclVat)
+                .GreaterThanOrEqualTo(0).WithMessage("Cena řádku musí být ≥ 0.");
+        });
     }
 }

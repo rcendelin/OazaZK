@@ -77,7 +77,7 @@ public class ReadingFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during readings import.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred during import.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba během importu.");
         }
     }
 
@@ -94,7 +94,7 @@ public class ReadingFunctions
             var request = await JsonSerializer.DeserializeAsync<ConfirmImportRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new ConfirmImportRequestValidator();
@@ -115,7 +115,42 @@ public class ReadingFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during import confirmation.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    [Function("ImportReadingsClipboard")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> ImportReadingsClipboardAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "readings/import/clipboard")] HttpRequestData req,
+        FunctionContext context)
+    {
+        try
+        {
+            var user = GetAuthenticatedUser(context);
+
+            var request = await JsonSerializer.DeserializeAsync<ClipboardImportRequest>(req.Body, JsonOptions);
+            if (request is null || string.IsNullOrWhiteSpace(request.Text))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Chybí vložený text.");
+            }
+            if (request.ReadingDate == default)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Vyberte datum odečtu.");
+            }
+
+            var result = await _importUseCase.ParseClipboardAndValidateAsync(request.Text, request.ReadingDate, user.Id);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, result);
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during clipboard import.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba během importu.");
         }
     }
 
@@ -132,7 +167,7 @@ public class ReadingFunctions
             var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             if (!int.TryParse(query["year"], out var year) || !int.TryParse(query["month"], out var month))
             {
-                return await WriteErrorResponseAsync(req, 400, "Query parameters 'year' and 'month' are required and must be integers.");
+                return await WriteErrorResponseAsync(req, 400, "Parametry 'year' a 'month' jsou povinné a musí být celá čísla.");
             }
 
             if (year < 2000 || year > 2100 || month < 1 || month > 12)
@@ -226,7 +261,7 @@ public class ReadingFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error getting readings.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -243,7 +278,7 @@ public class ReadingFunctions
             var request = await JsonSerializer.DeserializeAsync<CreateReadingRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new CreateReadingRequestValidator();
@@ -269,7 +304,7 @@ public class ReadingFunctions
             if (duplicate is not null)
             {
                 throw new AppException(
-                    $"A reading already exists for meter '{meter.MeterNumber}' in {readingDate:yyyy-MM}.");
+                    $"Odečet pro vodoměr '{meter.MeterNumber}' za {readingDate:yyyy-MM} již existuje.");
             }
 
             // Check for negative consumption
@@ -281,7 +316,7 @@ public class ReadingFunctions
             if (previousReading is not null && request.Value < previousReading.Value)
             {
                 throw new AppException(
-                    $"Negative consumption: new value {request.Value} is less than previous value {previousReading.Value}.");
+                    $"Záporná spotřeba: nová hodnota {request.Value} je nižší než předchozí hodnota {previousReading.Value}.");
             }
 
             var reading = new MeterReading
@@ -330,7 +365,7 @@ public class ReadingFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error creating reading.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -356,7 +391,7 @@ public class ReadingFunctions
             var request = await JsonSerializer.DeserializeAsync<UpdateReadingRequest>(req.Body, JsonOptions);
             if (request is null)
             {
-                return await WriteErrorResponseAsync(req, 400, "Invalid request body.");
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
             }
 
             var validator = new UpdateReadingRequestValidator();
@@ -388,7 +423,7 @@ public class ReadingFunctions
                 readingDate >= p.DateFrom && readingDate <= p.DateTo);
             if (inClosedPeriod)
             {
-                return await WriteErrorResponseAsync(req, 409, "Cannot modify a reading in a closed billing period.");
+                return await WriteErrorResponseAsync(req, 409, "Odečet nelze upravit v uzavřeném zúčtovacím období.");
             }
 
             // Check for negative consumption after correction
@@ -401,7 +436,7 @@ public class ReadingFunctions
             if (previousReading is not null && request.Value < previousReading.Value)
             {
                 throw new AppException(
-                    $"Negative consumption: new value {request.Value} is less than previous value {previousReading.Value}.");
+                    $"Záporná spotřeba: nová hodnota {request.Value} je nižší než předchozí hodnota {previousReading.Value}.");
             }
 
             // Also check that the next reading is not less than the new value
@@ -413,7 +448,7 @@ public class ReadingFunctions
             if (nextReading is not null && nextReading.Value < request.Value)
             {
                 throw new AppException(
-                    $"Negative consumption: next reading value {nextReading.Value} would be less than corrected value {request.Value}.");
+                    $"Záporná spotřeba: následující odečet {nextReading.Value} by byl nižší než opravená hodnota {request.Value}.");
             }
 
             // Check if date is being changed
@@ -496,7 +531,7 @@ public class ReadingFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error updating reading.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -569,7 +604,7 @@ public class ReadingFunctions
         }
         catch (Exception)
         {
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -617,7 +652,7 @@ public class ReadingFunctions
             {
                 // Member can only see their own house's data
                 if (!string.IsNullOrEmpty(houseIdParam) && houseIdParam != user.HouseId)
-                    return await WriteErrorResponseAsync(req, 403, "Access denied.");
+                    return await WriteErrorResponseAsync(req, 403, "Přístup odepřen.");
                 effectiveHouseId = user.HouseId;
                 if (!string.IsNullOrEmpty(effectiveHouseId))
                 {
@@ -719,7 +754,7 @@ public class ReadingFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error getting chart data.");
-            return await WriteErrorResponseAsync(req, 500, "An unexpected error occurred.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
 
@@ -739,7 +774,7 @@ public class ReadingFunctions
         // Check content type
         if (!req.Headers.TryGetValues("Content-Type", out var contentTypeValues))
         {
-            throw new AppException("Content-Type header is required.");
+            throw new AppException("Hlavička Content-Type je povinná.");
         }
 
         var contentType = contentTypeValues.FirstOrDefault() ?? string.Empty;
@@ -751,7 +786,7 @@ public class ReadingFunctions
             var boundaryIndex = contentType.IndexOf("boundary=", StringComparison.OrdinalIgnoreCase);
             if (boundaryIndex < 0)
             {
-                throw new AppException("Multipart boundary not found in Content-Type header.");
+                throw new AppException("V hlavičce Content-Type nebyl nalezen multipart boundary.");
             }
 
             var boundary = contentType[(boundaryIndex + "boundary=".Length)..].Trim().Trim('"');
@@ -827,7 +862,7 @@ public class ReadingFunctions
         {
             totalRead += bytesRead;
             if (totalRead > maxBytes)
-                throw new AppException($"File exceeds maximum size of {maxBytes / (1024 * 1024)} MB.", 400);
+                throw new AppException($"Soubor přesahuje maximální velikost {maxBytes / (1024 * 1024)} MB.", 400);
             ms.Write(buffer, 0, bytesRead);
         }
         return ms.ToArray();
@@ -893,6 +928,6 @@ public class ReadingFunctions
             .ToList();
 
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
-            new { error = "Validation failed.", errors });
+            new { error = "Formulář obsahuje chyby.", errors });
     }
 }
