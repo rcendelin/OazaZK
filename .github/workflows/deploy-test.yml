@@ -1,16 +1,15 @@
-name: Build and Deploy (PROD)
+name: Build and Deploy (TEST)
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    branches: ['release/**']
+  workflow_dispatch:
 
 env:
   DOTNET_VERSION: '8.0.x'
   NODE_VERSION: '20.x'
-  AZURE_FUNCTIONAPP_NAME: func-oaza-prod
-  AZURE_RESOURCE_GROUP: rg-oaza-prod
+  AZURE_FUNCTIONAPP_NAME: func-oaza-test
+  AZURE_RESOURCE_GROUP: rg-oaza-test
 
 jobs:
   build-api:
@@ -44,13 +43,11 @@ jobs:
         run: dotnet test Oaza.sln --configuration Release --no-restore --verbosity normal
 
       - name: Publish
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
           dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
           cp -r src/Oaza.Functions/bin/Release/net8.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
 
       - name: Upload API artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: api-artifact
@@ -82,23 +79,21 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_ENTRA_CLIENT_ID: ${{ secrets.PROD_ENTRA_CLIENT_ID }}
-          VITE_ENTRA_TENANT_ID: ${{ secrets.PROD_ENTRA_TENANT_ID }}
-          VITE_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
+          VITE_ENTRA_CLIENT_ID: ${{ secrets.TEST_ENTRA_CLIENT_ID }}
+          VITE_ENTRA_TENANT_ID: ${{ secrets.TEST_ENTRA_TENANT_ID }}
+          VITE_API_BASE_URL: ${{ secrets.TEST_API_BASE_URL }}
 
       - name: Upload web artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: web-artifact
           path: web/dist
 
   deploy-api:
-    name: Deploy API (PROD)
+    name: Deploy API (TEST)
     needs: [build-api, build-web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    environment: production
+    environment: test
     steps:
       - name: Download API artifact
         uses: actions/download-artifact@v4
@@ -122,11 +117,10 @@ jobs:
             --src deploy.zip
 
   deploy-web:
-    name: Deploy Frontend (PROD)
+    name: Deploy Frontend (TEST)
     needs: [build-api, build-web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    environment: production
+    environment: test
     steps:
       - uses: actions/checkout@v4
 
@@ -139,7 +133,7 @@ jobs:
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.PROD_SWA_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.TEST_SWA_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: web/dist
