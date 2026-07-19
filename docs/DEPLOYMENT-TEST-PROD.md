@@ -158,3 +158,45 @@ V `Settings → Environments` vytvoř (pokud ještě nejsou): **`dev`**, **`test
 - PROD workflow staví i na **pull requestu do `master`** (build+test jako CI brána), ale **deployuje jen** na push do `master`.
 - Frontend se sestavuje **per prostředí** s vlastními `VITE_*` (API URL + Entra), takže jeden build míří vždy na správné API.
 - Odhad nákladů zůstává jako u DEV (~jednotky Kč/měsíc na prostředí; sdílená ACS a doména náklady dál nezvyšují).
+
+---
+
+## Skutečně naprovisionováno (2026-07-19)
+
+Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-4e91-b6b5-75ef920d181d` („Provozní", tenant `cendelinovi.cz`)**, stejné jako DEV, region westeurope. Mirror DEV: Storage `Standard_LRS`/`StorageV2`/`TLS1_2`, Functions Linux Consumption `dotnet-isolated 8`, SWA Free.
+
+| Resource | TEST | PROD |
+|----------|------|------|
+| Resource Group | `rg-oaza-test` | `rg-oaza-prod` |
+| Storage | `stoazatest` | `stoaza` |
+| Function App | `func-oaza-test` (`func-oaza-test.azurewebsites.net`) | `func-oaza-prod` (`func-oaza-prod.azurewebsites.net`) |
+| SWA default host | `ambitious-mushroom-088260103.7.azurestaticapps.net` | `purple-ocean-088639603.7.azurestaticapps.net` |
+| App Insights | auto (`func-oaza-test`) | auto (`func-oaza-prod`) |
+
+**App Settings nastavené** (hodnoty nezobrazeny): `TableStorageConnection`/`BlobStorageConnection` (vlastní storage), unikátní `JwtSecret`, `JwtIssuer`+`AppUrl` per prostředí, `EntraId__TenantId` (sdílený `1161192b-7829-4c40-8920-31eb4bd5573f`), **sdílené** `AzureCommunicationServices__ConnectionString`/`FromEmail` (zkopírováno z DEV). TEST má navíc `ENABLE_SEED=true`. **CORS** povoluje custom doménu + SWA default host (+ localhost na TEST). Function Apps běží (state Running).
+
+### Zbývá dokončit (vyžaduje tajné klíče / bezpečnostní nastavení / DNS — mimo automatizaci)
+
+1. **RBAC** — deploy service principal (objectId `7724f095-0799-4679-aab1-cc159136d465`, ten z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG:
+   ```bash
+   SUB=ac40c613-8832-4e91-b6b5-75ef920d181d
+   for rg in rg-oaza-test rg-oaza-prod; do
+     az role assignment create --assignee-object-id 7724f095-0799-4679-aab1-cc159136d465 \
+       --assignee-principal-type ServicePrincipal --role Contributor \
+       --scope /subscriptions/$SUB/resourceGroups/$rg
+   done
+   ```
+2. **GitHub environments** `test` a `production` + **secrety** (SWA tokeny se nezobrazí, čtou se přímo z Azure):
+   ```bash
+   gh secret set TEST_SWA_API_TOKEN --env test --body "$(az staticwebapp secrets list -n swa-oaza-test -g rg-oaza-test --query properties.apiKey -o tsv)"
+   gh secret set PROD_SWA_API_TOKEN --env production --body "$(az staticwebapp secrets list -n swa-oaza-prod -g rg-oaza-prod --query properties.apiKey -o tsv)"
+   gh secret set TEST_API_BASE_URL --env test --body "https://func-oaza-test.azurewebsites.net/api"
+   gh secret set PROD_API_BASE_URL --env production --body "https://func-oaza-prod.azurewebsites.net/api"
+   gh secret set TEST_ENTRA_TENANT_ID --env test --body "1161192b-7829-4c40-8920-31eb4bd5573f"
+   gh secret set PROD_ENTRA_TENANT_ID --env production --body "1161192b-7829-4c40-8920-31eb4bd5573f"
+   # TEST_/PROD_ENTRA_CLIENT_ID až po Entra registraci (bod 3)
+   ```
+3. **Entra App Registration** (portál) pro TEST a PROD — redirect URI `https://oaza-test.cendelinovi.cz` resp. `https://oaza.cendelinovi.cz`, Access+ID tokens, admin consent. Pak nastav `EntraId__ClientId` na příslušný Function App (`az functionapp config appsettings set … EntraId__ClientId=<id>`) a jako GitHub secret `TEST_/PROD_ENTRA_CLIENT_ID`.
+4. **DNS** v `cendelinovi.cz`: `CNAME oaza-test → ambitious-mushroom-088260103.7.azurestaticapps.net`, `CNAME oaza → purple-ocean-088639603.7.azurestaticapps.net`; pak `az staticwebapp hostname set …`.
+5. **Seed TEST** (po deployi): `curl -X POST https://func-oaza-test.azurewebsites.net/api/seed`, poté odeber `ENABLE_SEED`.
+6. **Aktivace deploye**: TEST → větev `release/…`; PROD → merge `develop`→`master` (až budou secrety z bodů 1–2).
