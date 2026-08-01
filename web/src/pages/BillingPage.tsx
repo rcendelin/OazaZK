@@ -725,7 +725,31 @@ function OpenPeriodDetail({
       <ConfirmDialog
         isOpen={showCloseConfirm}
         title="Uzavřít zúčtovací období"
-        message="Opravdu chcete uzavřít období? Tato akce je nevratná. Budou vygenerovány PDF vyúčtování pro všechny domácnosti."
+        message={
+          <>
+            <p>
+              Uzavřením se zapíše vyúčtování pro {preview?.houses.length ?? 0} domácností
+              a vygenerují se PDF. Období už nepůjde otevřít ani upravit.
+            </p>
+            {(fundDraw > 0 || (applyNewPrice && effectiveWaterPrice !== null)) && (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {fundDraw > 0 && (
+                  <li>
+                    Z fondu se čerpá <strong>{formatCZK(fundDraw)} Kč</strong> —{' '}
+                    {formatCZK(perHouseFundCredit)} Kč na domácnost.
+                  </li>
+                )}
+                {applyNewPrice && effectiveWaterPrice !== null && (
+                  <li>
+                    Cena vody se přepíše na <strong>{formatCZK(effectiveWaterPrice)} Kč/m³</strong>{' '}
+                    s platností od {formatDate(newPriceValidFrom)}.
+                  </li>
+                )}
+              </ul>
+            )}
+            <p className="mt-2">Tato akce je nevratná.</p>
+          </>
+        }
         confirmLabel="Uzavřít období"
         confirmVariant="danger"
         onConfirm={() => void handleClose()}
