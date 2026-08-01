@@ -838,6 +838,7 @@ function ClosedPeriodDetail({ period }: { period: BillingPeriodResponse }) {
 
   return (
     <div className="space-y-4">
+      <HelpNote sectionId="closedSnapshot" />
       {downloadError && (
         <div className="rounded-xl bg-danger-light p-3">
           <p className="text-sm text-danger">{downloadError}</p>
@@ -1127,6 +1128,8 @@ function MemberBillingView({
         <p className="mt-1 text-sm text-text-secondary">
           Přehled vašeho vyúčtování za uzavřená období
         </p>
+        <HelpNote sectionId="billingMember" />
+        <HelpDisclosure sectionId="billingMember" />
       </div>
 
       {periodsLoading && (
@@ -1287,6 +1290,7 @@ function MemberSettlementDetail({
 
   return (
     <div className="space-y-4">
+      <HelpNote sectionId="closedSnapshot" />
       {downloadError && (
         <div className="rounded-xl bg-danger-light p-3">
           <p className="text-sm text-danger">{downloadError}</p>
