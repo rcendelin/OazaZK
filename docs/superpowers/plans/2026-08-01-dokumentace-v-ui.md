@@ -154,11 +154,13 @@ Expected: PASS, žádný výstup.
 Dočasně přidej na konec souboru:
 
 ```ts
-const _guard: Term = terms['neexistujici' as TermId];
+const _guard: Term = terms['neexistujici'];
 ```
 
 Run: `cd web && npx tsc -b`
-Expected: **FAIL** — `Property 'neexistujici' does not exist` / `Type '"neexistujici"' is not assignable to type 'TermId'`.
+Expected: **FAIL** — `TS7053: Property 'neexistujici' does not exist on type 'Record<TermId, Term>'`.
+
+**Bez přetypování.** Varianta `terms['neexistujici' as TermId]` **neselže** — TypeScript cast na užší union propustí bez ohledu na to, jestli hodnota do unionu patří, takže by pojistka tiše prošla a dala falešnou jistotu. Ověřeno při implementaci Tasku 1.
 
 Tohle je jediná automatická pojistka, kterou v tomto projektu máme. Když **neselže**, jsou union typy špatně napsané (typicky `string` místo literálů) — oprav je, než pokračuješ.
 
