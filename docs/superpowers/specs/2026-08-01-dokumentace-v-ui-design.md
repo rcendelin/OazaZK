@@ -56,7 +56,7 @@ interface Term {
 }
 
 interface Section {
-  note: string;          // vždy viditelná věta
+  note?: string;         // vždy viditelná věta; chybí u sekcí, které mají jen rozklikávačku (lossMethod)
   disclosureTitle?: string;
   disclosure?: string;   // plný výklad
 }
@@ -100,14 +100,15 @@ export const guides: Guide[];   // dlouhé výklady pro /jak-to-funguje
 | Blok ② Cena vody pro příští zálohy | `HelpNote` `waterPriceCarry` + `HelpDisclosure` |
 | `ConfirmDialog` uzávěrky | **Rekapitulace nastavených hodnot** nad stávajícím textem |
 | `BillingPage` → member, hlavička | `HelpNote` `billingMember` + `HelpDisclosure` „Odkud se bere moje částka" |
-| `BillingPage` → uzavřené období | `HelpNote` `closedSnapshot` |
+| `BillingPage` → uzavřené období | `HelpNote` `closedSnapshot` — **dvě místa**: `ClosedPeriodDetail` (admin) a `MemberSettlementDetail` (člen) |
 
 ### Tier 2 — pojmy, které si nikdo nezapamatuje
 
 | Místo | Co přibude |
 |---|---|
 | `HousesPage` → „Rozpouští přeplatek" | `HelpTerm` `rozpoustiPreplatek` |
-| `AdvancesPage` → „Metoda rozdělení ztrát" | `HelpDisclosure` `lossMethod` |
+| `BillingPage` → „Metoda rozdělení ztrát" | `HelpDisclosure` `lossMethod` — **primární místo**, tady se metoda volí pro konkrétní výpočet |
+| `AdvancesPage` → „Rozdělení ztráty na síti" | `HelpDisclosure` `lossMethod` — read-only dlaždice, kde se nastavuje výchozí hodnota |
 | `SaldoPage` → `<th>` | `HelpTerm` na Úpravy, Čistý zůstatek |
 | `SaldoPage` → formulář plateb | `HelpNote` `paymentTypes` + `HelpDisclosure` |
 | `SaldoPage` → hlavička | `HelpNote` `saldoLive` |
@@ -117,7 +118,7 @@ export const guides: Guide[];   // dlouhé výklady pro /jak-to-funguje
 
 | Místo | Co přibude |
 |---|---|
-| `ReadingsImportPage` | `HelpNote` `importTwoStep`; `HelpTerm` na varování „chybí odečet" a „anomálie" |
+| `ReadingsImportPage` | `HelpNote` `importTwoStep` (jen záložky Soubor a Schránka — Ruční zadání ukládá okamžitě); oba `HelpTerm` u **nadpisu bloku varování**, ne u jednotlivých hlášek |
 | `InvoicesSection` | `HelpDisclosure` `invoiceLineItems` |
 | `DocumentsPage` | `HelpNote` `documentVersions` |
 | `UsersPage` | `HelpTerm` `role` |
@@ -321,10 +322,12 @@ export const guides: Guide[];   // dlouhé výklady pro /jak-to-funguje
 >
 > *disclosure — „Čtyři typy záznamů":*
 >
-> • **Záloha** — pravidelná měsíční platba, jedna na domácnost a měsíc. Vstupuje do vyúčtování.
+> • **Měsíční záloha** — pravidelná platba, jedna na domácnost a měsíc. Vstupuje do vyúčtování.
 > • **Doplatek** — mimořádná platba, může jich být víc. Vstupuje do vyúčtování.
-> • **Výplata** — vrácení přeplatku domácnosti. Sníží její kredit, do vyúčtování nevstupuje.
+> • **Výplata přeplatku** — vrácení přeplatku domácnosti. Sníží její kredit, do vyúčtování nevstupuje.
 > • **Počáteční stav** — jednorázové nastartování zůstatku při zavádění systému. Do vyúčtování nevstupuje.
+
+*(Popisky musí doslova odpovídat lište tlačítek v `PaymentForm` — uživatel si jinak odrážky s tlačítky nespojí.)*
 
 **`importTwoStep`**
 
@@ -332,6 +335,8 @@ export const guides: Guide[];   // dlouhé výklady pro /jak-to-funguje
 
 **`invoiceLineItems`**
 
+> *note:* Jedna faktura = celková částka + více dílčích odečtů (řádků). Do vyúčtování vstupují řádky dle období.
+>
 > *disclosure — „Proč má faktura řádky":*
 >
 > Faktura od dodavatele je jedna celková částka, ale skládá se z několika dílčích odečtů — řádků. Každý řádek má vlastní datum.
@@ -346,11 +351,11 @@ export const guides: Guide[];   // dlouhé výklady pro /jak-to-funguje
 
 *(Doloženo: `DocumentFunctions.cs:28` `MaxVersions = 10`, ořez na `:331-336`.)*
 
-**`receivedInvoicesFund`** — rozšíření stávající věty na `InvoicesOverviewPage`
+**`receivedInvoicesFund`** — nahrazuje stávající větu na `InvoicesOverviewPage`
 
-> Stávající text zůstává: „Všechny přijaté faktury — voda i ostatní výdaje. Položky „voda" vstupují do vyúčtování vody."
->
-> Přibude: Položka kategorie „fond-voda" není přijatá faktura — je to interní převod peněz ze společného fondu na vyúčtování vody, který vznikl při uzávěrce období. Do součtu „Celkem" se přesto započítává.
+> *note:* Všechny přijaté faktury — voda i ostatní výdaje. Položky „voda" vstupují do vyúčtování vody. Položka kategorie „fond-voda" není přijatá faktura, ale interní převod ze společného fondu — do součtu „Celkem" se přesto započítává.
+
+Stávající dvě věty se do `note` přebírají doslova a přibývá třetí; celkem tedy 3 věty, na hraně limitu. Stávající `<p>` se **nahrazuje** komponentou `HelpNote`, ne doplňuje — jinak by text existoval na dvou místech a porušil pravidlo jednoho zdroje.
 
 ### 8.3 Rekapitulace v potvrzovacím dialogu uzávěrky
 
@@ -404,3 +409,16 @@ Zaznamenáno, protože několik z nich odporuje tomu, co by čtenář čekal:
 - `DocumentFunctions.cs:28,331-336` — `MaxVersions = 10` platí; ořez je v endpointu, ne v repozitáři.
 - `Layout.tsx:38-65` — Účetní vidí navíc jen „Přehled faktur"; širší přístup k datům všech domácností mu dávají endpointy, ne navigace.
 - Potvrzovací dialog uzávěrky **už dnes říká, že akce je nevratná**. Chybí mu rekapitulace nastavených hodnot, ne varování.
+
+## 13. Opravy po ověření kotev v kódu
+
+Před psaním implementačního plánu byly všechny body mapy ověřeny přímo v souborech. Šest z nich neodpovídalo původnímu návrhu a je výše opraveno:
+
+1. **`lossMethod` byl přiřazen ke špatné stránce.** Doslovný popisek „Metoda rozdělení ztrát" je v `BillingPage.tsx`, kde se metoda volí pro konkrétní výpočet. `AdvancesPage` má popisek „Rozdělení ztráty na síti" a nastavuje se tam výchozí hodnota. Nápověda patří na obě místa.
+2. **`closedSnapshot` potřebuje dvě umístění** — `ClosedPeriodDetail` (admin) a `MemberSettlementDetail` (člen) jsou oddělené komponenty s vlastními návratovými větvemi.
+3. **`invoiceLineItems` měl definovaný jen disclosure.** Kdyby nahradil stávající větu, zmizela by jediná vždy viditelná nápověda v sekci. Stávající věta se proto zachovává jako `note`.
+4. **`receivedInvoicesFund` by natáhl note na 4 věty** a překročil vlastní limit z §11. Zkráceno na jednu přidanou větu.
+5. **Popisky typů plateb v `paymentTypes` neodpovídaly UI** — lišta tlačítek říká „Měsíční záloha / Doplatek / Výplata přeplatku / Počáteční stav".
+6. **Varování při importu nejsou typovaná.** Pole `ImportValidationMessage.Type` nese jen závažnost (`"warning"` / `"error"`), druh je zakódovaný pouze v české větě. Per-varování `HelpTerm` by vyžadoval porovnávání prefixů textu; oba pojmy proto míří na nadpis bloku varování.
+
+Dále platí, že `SettlementTable` dostane **sedm** `HelpTerm`, ne osm — pro sloupec „Spotřeba m³" žádný pojem definovaný není a nepovažuji ho za potřebný. Sesterská `ClosedSettlementTable` má znak po znaku shodný markup záhlaví, ale nápovědy nedostává.
