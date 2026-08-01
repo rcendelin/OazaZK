@@ -157,7 +157,56 @@ export const sections: Record<SectionId, Section> = {
   },
 };
 
-export const guides: Guide[] = []; // naplní Task 11
+export const guides: Guide[] = [
+  {
+    id: 'co-aplikace-dela',
+    title: 'Co aplikace dělá',
+    body: [
+      'Portál spravuje sdílený vodovod sdružení — 8 domácností na jednom přívodu. Eviduje odečty, faktury, zálohy a jejich vyúčtování; vedle toho slouží jako úložiště společných dokumentů a přehled hospodaření. Klíčová věc, kterou řeší: voda se nakupuje společně na jeden hlavní vodoměr, ale spotřebovává se individuálně.',
+    ],
+  },
+  {
+    id: 'rocni-cyklus',
+    title: 'Roční cyklus',
+    body: [
+      '1. Každý měsíc odečty vodoměrů (import z Excelu, ze souboru odečítačky, nebo ručně).',
+      '2. Průběžně faktury za vodu s dílčími odečty.',
+      '3. Průběžně zálohy domácností rozdělené na vodu, elektřinu a společný základ.',
+      '4. Na konci období uzávěrka — náhled, případné čerpání z fondu, uzavření, PDF pro všechny domácnosti.',
+      '5. Po uzávěrce doplatky a výplaty; ty vidíte v Saldu, uzavřené vyúčtování se jimi už nemění.',
+    ],
+  },
+  {
+    id: 'vyuctovani',
+    title: 'Vyúčtování krok za krokem',
+    body: [sections.billingAdmin.disclosure!, sections.lossMethod.disclosure!],
+  },
+  {
+    id: 'zalohy-a-saldo',
+    title: 'Zálohy, doplatky a saldo',
+    body: [sections.paymentTypes.disclosure!, terms.cistyZustatek.long!],
+  },
+  {
+    id: 'fond',
+    title: 'Společný fond',
+    body: [sections.fundDraw.disclosure!, sections.waterPriceCarry.disclosure!],
+  },
+  {
+    id: 'odecty',
+    title: 'Odečty a import',
+    body: [sections.importTwoStep.note!, terms.chybiOdecet.long!, terms.anomalie.long!],
+  },
+  {
+    id: 'role-a-pristup',
+    title: 'Role a přístup',
+    body: [terms.role.long!],
+  },
+  {
+    id: 'prihlaseni',
+    title: 'Přihlášení',
+    body: ['Do portálu se přihlásíte odkazem zaslaným e-mailem. Odkaz platí 15 minut a lze ho použít jen jednou. Pokud vám nedorazil, zkontrolujte složku s nevyžádanou poštou a zkuste odkaz vyžádat znovu.'],
+  },
+];
 
 /** Rozdělí odstavec na úseky podle `**tučného**` vyznačení. */
 export function splitBold(paragraph: string): { text: string; bold: boolean }[] {

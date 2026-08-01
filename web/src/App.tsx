@@ -19,6 +19,7 @@ import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { SaldoPage } from './pages/SaldoPage';
 import { InvoicesOverviewPage } from './pages/InvoicesOverviewPage';
+import { JakToFungujePage } from './pages/JakToFungujePage';
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
               />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/finance" element={<FinancePage />} />
+              <Route path="/jak-to-funguje" element={<JakToFungujePage />} />
               <Route
                 path="/admin/houses"
                 element={
