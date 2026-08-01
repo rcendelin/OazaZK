@@ -11,6 +11,9 @@ import {
 } from '../api/billing';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { InvoicesSection } from '../components/InvoicesSection';
+import { HelpNote } from '../components/help/HelpNote';
+import { HelpDisclosure } from '../components/help/HelpDisclosure';
+import { HelpTerm } from '../components/help/HelpTerm';
 import { getFundBalance } from '../api/finance';
 import { getHouses } from '../api/houses';
 import { getAdvanceSettings } from '../api/advanceSettings';
@@ -101,6 +104,7 @@ function AdminBillingView({
           <p className="mt-1 text-sm text-text-secondary">
             Správa zúčtovacích období a vyúčtování
           </p>
+          <HelpNote sectionId="billingAdmin" />
         </div>
         <button
           onClick={() => setShowCreateForm((prev) => !prev)}
@@ -109,6 +113,8 @@ function AdminBillingView({
           {showCreateForm ? 'Zavřít formulář' : 'Nové zúčtovací období'}
         </button>
       </div>
+
+      <HelpDisclosure sectionId="billingAdmin" />
 
       {/* Create form */}
       {showCreateForm && (
@@ -858,25 +864,25 @@ function SettlementTable({
               Spotřeba m³
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Ztráta m³
+              Ztráta m³ <HelpTerm id="ztrata" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Podíl %
+              Podíl % <HelpTerm id="podil" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Částka Kč
+              Částka Kč <HelpTerm id="castka" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Zálohy Kč
+              Zálohy Kč <HelpTerm id="zalohy" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Výsledek Kč
+              Výsledek Kč <HelpTerm id="vysledek" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Z fondu Kč
+              Z fondu Kč <HelpTerm id="zFondu" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Finální saldo Kč
+              Finální saldo Kč <HelpTerm id="finalniSaldo" />
             </th>
           </tr>
         </thead>
