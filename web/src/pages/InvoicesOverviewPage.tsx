@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { getReceivedInvoices, downloadReceivedAttachment } from '../api/receivedInvoices';
 import { Spinner } from '../components/Spinner';
+import { HelpNote } from '../components/help/HelpNote';
 import { Download } from 'lucide-react';
 import type { ReceivedInvoice } from '../types';
 
@@ -109,9 +110,7 @@ export function InvoicesOverviewPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Přehled faktur</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Všechny přijaté faktury — voda i ostatní výdaje. Položky „voda" vstupují do vyúčtování vody.
-        </p>
+        <HelpNote sectionId="receivedInvoicesFund" />
       </div>
 
       {/* Summary */}

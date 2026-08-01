@@ -13,6 +13,7 @@ import {
 } from '../api/invoices';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Spinner } from './Spinner';
+import { HelpDisclosure } from './help/HelpDisclosure';
 import type { SupplierInvoice } from '../types';
 import { parseCzechNumber } from '../utils/number';
 
@@ -184,6 +185,7 @@ export function InvoicesSection() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Faktury za vodu</h2>
           <p className="text-xs text-text-muted mt-0.5">Jedna faktura = celková částka + více dílčích odečtů (řádků). Do vyúčtování vstupují řádky dle období.</p>
+          <HelpDisclosure sectionId="invoiceLineItems" />
         </div>
         <div className="flex items-center gap-2">
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}
