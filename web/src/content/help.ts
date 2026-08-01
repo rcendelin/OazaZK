@@ -184,7 +184,7 @@ export const guides: Guide[] = [
   {
     id: 'zalohy-a-saldo',
     title: 'Zálohy, doplatky a saldo',
-    body: [sections.paymentTypes.disclosure!, terms.cistyZustatek.long!],
+    body: [sections.paymentTypes.disclosure!, terms.cistyZustatek.short, terms.cistyZustatek.long!],
   },
   {
     id: 'fond',
@@ -194,7 +194,13 @@ export const guides: Guide[] = [
   {
     id: 'odecty',
     title: 'Odečty a import',
-    body: [sections.importTwoStep.note!, terms.chybiOdecet.long!, terms.anomalie.long!],
+    body: [
+      sections.importTwoStep.note!,
+      terms.chybiOdecet.short,
+      terms.chybiOdecet.long!,
+      terms.anomalie.short,
+      terms.anomalie.long!,
+    ],
   },
   {
     id: 'role-a-pristup',
@@ -208,7 +214,17 @@ export const guides: Guide[] = [
   },
 ];
 
-/** Rozdělí odstavec na úseky podle `**tučného**` vyznačení. */
+/**
+ * Rozdělí odstavec na úseky podle `**tučného**` vyznačení.
+ *
+ * Zpracovává jen PÁROVÉ `**` — osamocené nebo liché `**` projdou jako
+ * doslovný text (žádné escapování). Komponenta `HelpNote` vykresluje `note`
+ * bez rozkladu na tučné a `HelpTerm` dává `short` do atributu `title` (taky
+ * bez rozkladu) — pokud ale stejný `note`/`short` text někdo zkopíruje do
+ * `guides[].body`, tamní cestou už přes `splitBold` projde. Ať se `**`
+ * v daném místě rozloží, nebo ne, do `note`/`short` nepatří — tato pole
+ * nesmí obsahovat `**` ani jinou markdown syntaxi.
+ */
 export function splitBold(paragraph: string): { text: string; bold: boolean }[] {
   return paragraph
     .split(/\*\*(.+?)\*\*/g)

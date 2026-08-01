@@ -58,13 +58,16 @@ export function JakToFungujePage() {
             <div key={id} id={id} className="scroll-mt-8">
               <dt className="text-sm font-semibold text-text-primary">{terms[id].label}</dt>
               <dd className="mt-1 space-y-2 text-sm text-text-secondary">
-                {(terms[id].long ?? terms[id].short).split('\n\n').map((p, i) => (
-                  <p key={i}>
-                    {splitBold(p).map((segment, j) =>
-                      segment.bold ? <strong key={j}>{segment.text}</strong> : <span key={j}>{segment.text}</span>,
-                    )}
-                  </p>
-                ))}
+                {/* short je vždy zobrazen; long (pokud je) na něj navazuje jako další odstavce — ne náhrada. */}
+                {[terms[id].short, ...(terms[id].long ? [terms[id].long] : [])].flatMap((text, i) =>
+                  text.split('\n\n').map((p, j) => (
+                    <p key={`${i}-${j}`}>
+                      {splitBold(p).map((segment, k) =>
+                        segment.bold ? <strong key={k}>{segment.text}</strong> : <span key={k}>{segment.text}</span>,
+                      )}
+                    </p>
+                  )),
+                )}
               </dd>
             </div>
           ))}
