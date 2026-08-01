@@ -24,6 +24,8 @@
 - **Barevné tokeny** jsou v `web/src/index.css` ř. 3–51 (Tailwind v4 `@theme`): `text-text-secondary`, `text-text-muted`, `bg-surface-raised`, `bg-surface-sunken`, `text-accent`, `border-border`.
 - **`HelpNote` nejvýše 3 věty.** Seznamy a delší obsah povinně do `HelpDisclosure`.
 - **Commituj po každé úloze.** Conventional commits anglicky (`feat:`, `refactor:`, `docs:`).
+- **Kroky „Ruční kontrola" implementátor NEPROVÁDÍ.** Zůstávají v plánu jako popis toho, co se má ověřit, ale souhrnný průchod prohlížečem proběhne jednou po dokončení všech úloh. Implementátor končí na `npx tsc -b && npm run lint && npm run build` a v reportu uvede, co by se mělo ověřit ručně.
+- **Odkazy uvnitř aplikace vždy přes `Link` z `react-router-dom`, nikdy `<a href>`.** JWT z magic linku žije v `useState` (`AuthContext.tsx:38`) — plné načtení stránky odhlásí každého člena přihlášeného odkazem z e-mailu.
 
 ---
 
@@ -238,9 +240,10 @@ export function HelpDisclosure({ sectionId }: HelpDisclosureProps) {
 
 - [ ] **Step 3: HelpTerm**
 
-Také `<details>` — vyhne se to stavu i knihovně na popovery. `inline` varianta `<details>` se stylizuje jako značka za textem.
+Žádný popover. `(?)` je odkaz do slovníku s nativním `title` jako okamžitou nápovědou.
 
 ```tsx
+import { Link } from 'react-router-dom';
 import type { TermId } from '../../content/help';
 import { terms } from '../../content/help';
 
@@ -252,28 +255,24 @@ export function HelpTerm({ id }: HelpTermProps) {
   const term = terms[id];
 
   return (
-    <details className="relative inline-block align-middle">
-      <summary
-        className="ml-1 cursor-pointer list-none rounded-full border border-border px-1.5 text-xs text-text-muted hover:text-accent"
-        aria-label={`Nápověda: ${term.label}`}
-      >
-        ?
-      </summary>
-      <div className="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-border bg-surface-raised p-3 text-left text-xs font-normal normal-case tracking-normal text-text-secondary shadow-dialog">
-        <strong className="block text-text-primary">{term.label}</strong>
-        <span className="mt-1 block">{term.short}</span>
-        {term.long && (
-          <a href={`/jak-to-funguje#${id}`} className="mt-2 block text-accent hover:underline">
-            Více
-          </a>
-        )}
-      </div>
-    </details>
+    <Link
+      to={`/jak-to-funguje#${id}`}
+      title={term.short}
+      aria-label={`Nápověda k pojmu ${term.label}`}
+      className="ml-1 inline-block rounded-full border border-border px-1.5 align-middle text-xs font-normal normal-case tracking-normal text-text-muted hover:border-accent hover:text-accent"
+    >
+      ?
+    </Link>
   );
 }
 ```
 
-`normal-case tracking-normal font-normal text-left` je nutné: komponenta se vkládá do `<th>`, které má `uppercase tracking-wider font-semibold text-right` — bez resetu by popover zdědil verzálky.
+Dvě věci, na kterých to stojí, a obě mají konkrétní důvod:
+
+1. **Žádný absolutně pozicovaný popover.** Obě cílové tabulky jsou zabalené v `overflow-x-auto` (`BillingPage.tsx:850`, `SaldoPage.tsx:180`), který vytváří ořezávací kontext — popover uvnitř `<th>` by se oříznul nebo vyrobil vodorovný posuvník. Nativní `title` bublinu kreslí prohlížeč mimo DOM, takže ji nic neořízne.
+2. **`Link`, nikdy `<a href>`.** JWT z magic linku žije v `useState` (`AuthContext.tsx:38`), tedy čistě v paměti. Plné načtení stránky, které `<a href>` vyvolá, by **odhlásilo každého člena přihlášeného odkazem z e-mailu**. `Link` drží SPA navigaci a token přežije.
+
+`normal-case tracking-normal font-normal` je nutné: komponenta se vkládá do `<th>` s `uppercase tracking-wider font-semibold` a bez resetu by otazník zdědil verzálky.
 
 - [ ] **Step 4: Ověř překlad a lint**
 
@@ -908,11 +907,21 @@ Křížové odkazy přes `sections.X.disclosure!` jsou to, co drží stránku a 
 - [ ] **Step 2: Stránka**
 
 ```tsx
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { guides, terms } from '../content/help';
 import type { TermId } from '../content/help';
 
 export function JakToFungujePage() {
+  const { hash } = useLocation();
   const termIds = Object.keys(terms) as TermId[];
+
+  // React Router na kotvu sám neskroluje — bez tohoto by odkaz „?" z tabulek
+  // otevřel stránku na začátku místo u pojmu.
+  useEffect(() => {
+    if (!hash) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' });
+  }, [hash]);
 
   return (
     <div className="space-y-8">
