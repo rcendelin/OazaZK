@@ -158,3 +158,11 @@ export const sections: Record<SectionId, Section> = {
 };
 
 export const guides: Guide[] = []; // naplní Task 11
+
+/** Rozdělí odstavec na úseky podle `**tučného**` vyznačení. */
+export function splitBold(paragraph: string): { text: string; bold: boolean }[] {
+  return paragraph
+    .split(/\*\*(.+?)\*\*/g)
+    .map((text, i) => ({ text, bold: i % 2 === 1 }))
+    .filter((segment) => segment.text !== '');
+}
