@@ -600,6 +600,7 @@ function OpenPeriodDetail({
             <option value="ProportionalToConsumption">Dle spotřeby</option>
           </select>
         </div>
+        <HelpDisclosure sectionId="lossMethod" />
         <button
           onClick={() => void handleCalculate()}
           disabled={calculating}
@@ -649,6 +650,8 @@ function OpenPeriodDetail({
           {fundBalance !== null && fundBalance > 0 && activeHouseCount && (
             <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
               <h3 className="text-sm font-semibold">① Čerpání ze společného fondu</h3>
+              <HelpNote sectionId="fundDraw" />
+              <HelpDisclosure sectionId="fundDraw" />
               <p className="mt-1 text-sm text-text-secondary">
                 Zůstatek fondu: <strong>{formatCZK(fundBalance)} Kč</strong>
               </p>
@@ -673,6 +676,8 @@ function OpenPeriodDetail({
           {effectiveWaterPrice !== null && currentWaterPrice && (
             <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
               <h3 className="text-sm font-semibold">② Cena vody pro příští zálohy</h3>
+              <HelpNote sectionId="waterPriceCarry" />
+              <HelpDisclosure sectionId="waterPriceCarry" />
               <p className="mt-1 text-sm text-text-secondary">
                 Efektivní cena v tomto období: <strong>{formatCZK(effectiveWaterPrice)} Kč/m³</strong>
                 {' '}(nyní nastaveno: {formatCZK(currentWaterPrice.price)} Kč/m³ od {formatDate(currentWaterPrice.validFrom)})
