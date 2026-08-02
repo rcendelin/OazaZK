@@ -4,6 +4,8 @@ import { Spinner } from '../components/Spinner.tsx';
 import { importReadings, importReadingsFromClipboard, confirmImport, createReading } from '../api/readings.ts';
 import { getMeters } from '../api/meters.ts';
 import { useApi } from '../hooks/useApi.ts';
+import { HelpNote } from '../components/help/HelpNote';
+import { HelpTerm } from '../components/help/HelpTerm';
 import type { ImportPreviewResponse, ImportValidationMessage, WaterMeter } from '../types/index.ts';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
@@ -39,7 +41,7 @@ function ValidationMessages({
       )}
       {warnings.length > 0 && (
         <div className="rounded-xl border border-warning/20 bg-warning-light p-4">
-          <h4 className="text-sm font-semibold text-warning">Upozornění ({warnings.length})</h4>
+          <h4 className="text-sm font-semibold text-warning">Upozornění ({warnings.length}) <HelpTerm id="chybiOdecet" /> <HelpTerm id="anomalie" /></h4>
           <ul className="mt-2 space-y-1">
             {warnings.map((msg, i) => (
               <li key={i} className="text-sm text-warning">
@@ -392,6 +394,7 @@ export function ReadingsImportPage() {
       {/* File / clipboard import tab (shared preview + confirm flow) */}
       {(tab === 'file' || tab === 'clipboard') && (
         <div>
+          <HelpNote sectionId="importTwoStep" />
           {state === 'success' && (
             <div className="mt-6 rounded-xl border border-success/20 bg-success-light p-4">
               <div className="flex items-center gap-2">

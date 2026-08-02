@@ -3,6 +3,7 @@ import { useApi } from '../../hooks/useApi';
 import { getHouses, createHouse, updateHouse } from '../../api/houses';
 import { getUsers } from '../../api/users';
 import { Spinner } from '../../components/Spinner';
+import { HelpTerm } from '../../components/help/HelpTerm';
 import type { House, User } from '../../types/index';
 
 interface HouseFormData {
@@ -199,10 +200,10 @@ export function HousesPage() {
                         <option value="true">Aktivní</option>
                         <option value="false">Neaktivní</option>
                       </select>
-                      <label className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary" title="Dům neplatí pravidelně, přeplatek se postupně rozpouští">
+                      <label className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary">
                         <input type="checkbox" checked={editForm.dissolveOverpayment} onChange={(e) => setEditForm({ ...editForm, dissolveOverpayment: e.target.checked })} />
                         Rozpouští přeplatek
-                      </label>
+                      </label><HelpTerm id="rozpoustiPreplatek" />
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex gap-1 justify-end">

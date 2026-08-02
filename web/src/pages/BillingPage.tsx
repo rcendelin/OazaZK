@@ -11,6 +11,9 @@ import {
 } from '../api/billing';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { InvoicesSection } from '../components/InvoicesSection';
+import { HelpNote } from '../components/help/HelpNote';
+import { HelpDisclosure } from '../components/help/HelpDisclosure';
+import { HelpTerm } from '../components/help/HelpTerm';
 import { getFundBalance } from '../api/finance';
 import { getHouses } from '../api/houses';
 import { getAdvanceSettings } from '../api/advanceSettings';
@@ -101,6 +104,7 @@ function AdminBillingView({
           <p className="mt-1 text-sm text-text-secondary">
             Správa zúčtovacích období a vyúčtování
           </p>
+          <HelpNote sectionId="billingAdmin" />
         </div>
         <button
           onClick={() => setShowCreateForm((prev) => !prev)}
@@ -109,6 +113,8 @@ function AdminBillingView({
           {showCreateForm ? 'Zavřít formulář' : 'Nové zúčtovací období'}
         </button>
       </div>
+
+      <HelpDisclosure sectionId="billingAdmin" />
 
       {/* Create form */}
       {showCreateForm && (
@@ -594,6 +600,7 @@ function OpenPeriodDetail({
             <option value="ProportionalToConsumption">Dle spotřeby</option>
           </select>
         </div>
+        <HelpDisclosure sectionId="lossMethod" />
         <button
           onClick={() => void handleCalculate()}
           disabled={calculating}
@@ -643,6 +650,8 @@ function OpenPeriodDetail({
           {fundBalance !== null && fundBalance > 0 && activeHouseCount && (
             <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
               <h3 className="text-sm font-semibold">① Čerpání ze společného fondu</h3>
+              <HelpNote sectionId="fundDraw" />
+              <HelpDisclosure sectionId="fundDraw" />
               <p className="mt-1 text-sm text-text-secondary">
                 Zůstatek fondu: <strong>{formatCZK(fundBalance)} Kč</strong>
               </p>
@@ -667,6 +676,8 @@ function OpenPeriodDetail({
           {effectiveWaterPrice !== null && currentWaterPrice && (
             <div className="rounded-2xl border border-border bg-surface-raised p-4 shadow-card">
               <h3 className="text-sm font-semibold">② Cena vody pro příští zálohy</h3>
+              <HelpNote sectionId="waterPriceCarry" />
+              <HelpDisclosure sectionId="waterPriceCarry" />
               <p className="mt-1 text-sm text-text-secondary">
                 Efektivní cena v tomto období: <strong>{formatCZK(effectiveWaterPrice)} Kč/m³</strong>
                 {' '}(nyní nastaveno: {formatCZK(currentWaterPrice.price)} Kč/m³ od {formatDate(currentWaterPrice.validFrom)})
@@ -714,7 +725,31 @@ function OpenPeriodDetail({
       <ConfirmDialog
         isOpen={showCloseConfirm}
         title="Uzavřít zúčtovací období"
-        message="Opravdu chcete uzavřít období? Tato akce je nevratná. Budou vygenerovány PDF vyúčtování pro všechny domácnosti."
+        message={
+          <>
+            <p>
+              Uzavřením se zapíše vyúčtování pro {preview?.houses.length ?? 0} domácností
+              a vygenerují se PDF. Období už nepůjde otevřít ani upravit.
+            </p>
+            {(fundDraw > 0 || (applyNewPrice && effectiveWaterPrice !== null)) && (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {fundDraw > 0 && (
+                  <li>
+                    Z fondu se čerpá <strong>{formatCZK(fundDraw)} Kč</strong> —{' '}
+                    {formatCZK(perHouseFundCredit)} Kč na domácnost.
+                  </li>
+                )}
+                {applyNewPrice && effectiveWaterPrice !== null && (
+                  <li>
+                    Cena vody se přepíše na <strong>{formatCZK(effectiveWaterPrice)} Kč/m³</strong>{' '}
+                    s platností od {formatDate(newPriceValidFrom)}.
+                  </li>
+                )}
+              </ul>
+            )}
+            <p className="mt-2">Tato akce je nevratná.</p>
+          </>
+        }
         confirmLabel="Uzavřít období"
         confirmVariant="danger"
         onConfirm={() => void handleClose()}
@@ -803,6 +838,7 @@ function ClosedPeriodDetail({ period }: { period: BillingPeriodResponse }) {
 
   return (
     <div className="space-y-4">
+      <HelpNote sectionId="closedSnapshot" />
       {downloadError && (
         <div className="rounded-xl bg-danger-light p-3">
           <p className="text-sm text-danger">{downloadError}</p>
@@ -858,25 +894,25 @@ function SettlementTable({
               Spotřeba m³
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Ztráta m³
+              Ztráta m³ <HelpTerm id="ztrata" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Podíl %
+              Podíl % <HelpTerm id="podil" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Částka Kč
+              Částka Kč <HelpTerm id="castka" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Zálohy Kč
+              Zálohy Kč <HelpTerm id="zalohy" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Výsledek Kč
+              Výsledek Kč <HelpTerm id="vysledek" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Z fondu Kč
+              Z fondu Kč <HelpTerm id="zFondu" />
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Finální saldo Kč
+              Finální saldo Kč <HelpTerm id="finalniSaldo" />
             </th>
           </tr>
         </thead>
@@ -1092,6 +1128,8 @@ function MemberBillingView({
         <p className="mt-1 text-sm text-text-secondary">
           Přehled vašeho vyúčtování za uzavřená období
         </p>
+        <HelpNote sectionId="billingMember" />
+        <HelpDisclosure sectionId="billingMember" />
       </div>
 
       {periodsLoading && (
@@ -1252,6 +1290,7 @@ function MemberSettlementDetail({
 
   return (
     <div className="space-y-4">
+      <HelpNote sectionId="closedSnapshot" />
       {downloadError && (
         <div className="rounded-xl bg-danger-light p-3">
           <p className="text-sm text-danger">{downloadError}</p>
