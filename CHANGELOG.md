@@ -143,6 +143,13 @@ se sekce přejmenuje na verzi s datem.
   ruční přepis zálohy zůstal.
 
 ### Opraveno
+- **Počáteční stavy nešly uložit na nasazeném prostředí.** Dvě funkce API měly stejné jméno, takže po nasazení
+  chyběl endpoint `POST /opening-balances` (průvodce počátečními stavy hlásil chybu). Nový test hlídá unikátní jména
+  i cesty všech funkcí. Nalezeno živým E2E testem na DEV.
+- **Členové a účetní neviděli odečty.** Přehled člena a stránka Odečty volaly seznam odečtů dostupný jen správci;
+  člen teď dostane hlavní vodoměr a vodoměry svého domu, účetní všechny.
+- **Písmo Inter se nenačítalo** (blokovala ho bezpečnostní politika stránky). Písmo je teď součástí aplikace — žádné
+  načítání z Google Fonts.
 - **Filtry období se znovu načtou.** Tlačítko „Zobrazit“ na stránkách Voda a ztráty, Saldo domu, Pokladna, Náklady,
   Nákladové složky a Audit a výběr období vlastnictví v saldu domu teď opravdu načtou data pro zvolené období
   (dřív zůstala zobrazená původní data). Odhalily to regresní scénáře T14.
