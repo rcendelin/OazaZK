@@ -6,7 +6,6 @@ public class ImportPreviewResponse
     public List<ImportPreviewRow> Rows { get; set; } = new();
     public List<ImportValidationMessage> Errors { get; set; } = new();
     public List<ImportValidationMessage> Warnings { get; set; } = new();
-    public string ImportSessionId { get; set; } = string.Empty;
 }
 
 public class ImportPreviewRow
@@ -23,10 +22,17 @@ public class ImportValidationMessage
     public string? MeterId { get; set; }
 }
 
-// Confirm import request
+// Confirm import request — the readings from the preview, re-validated on the server.
 public class ConfirmImportRequest
 {
-    public string ImportSessionId { get; set; } = string.Empty;
+    public List<ConfirmImportReading> Readings { get; set; } = new();
+}
+
+public class ConfirmImportReading
+{
+    public string MeterId { get; set; } = string.Empty;
+    public DateTime ReadingDate { get; set; }
+    public decimal Value { get; set; }
 }
 
 // Clipboard import request (paste from meter-reader export)

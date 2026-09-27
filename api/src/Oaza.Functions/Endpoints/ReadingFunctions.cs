@@ -104,7 +104,7 @@ public class ReadingFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
-            var count = await _importUseCase.ConfirmImportAsync(request.ImportSessionId, user.Id);
+            var count = await _importUseCase.ConfirmImportAsync(request, user.Id);
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new { count, message = $"Successfully imported {count} readings." });
         }

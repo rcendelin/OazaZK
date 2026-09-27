@@ -26,6 +26,9 @@ se sekce přejmenuje na verzi s datem.
   `IAuditLogger` pro use casy nového modelu, endpoint `GET /api/audit-log` a stránka Administrace → Audit změn.
 
 ### Opraveno
+- **Potvrzení importu odečtů (X7 §8.6/§8.7)** už nezávisí na paměti serveru (dřív mohlo skončit „relace vypršela“,
+  když požadavek obsloužila jiná instance) a neukládá napůl: celá dávka se ověří předem a opakované potvrzení po
+  výpadku dokončí zbytek.
 - **Nápověda k importu odečtů na stránce Vodoměry (X7 §8.9)** popisovala Excel obráceně; nově odpovídá parseru
   (vodoměry ve sloupci A, data v řádku 1).
 
