@@ -10,6 +10,7 @@ Stav k 27. 9. 2026.
 | **X2** | Jen nový výpočetní model (`CostComponent` / `ComponentAllocationRule` / `Participation` / `CostEntry` / `OpeningBalance` / `InterimClosing` / ledger). Produkční data neexistují, nic se nemigruje. | Pravidlo 2 (zpětná kompatibilita) se pro výpočetní model neuplatní; testovací instance se po nasazení přeseeduje. Starý kód se odstraní až po zprovoznění náhrady. |
 | **X7** | Import bankovního výpisu (Fio CSV) dokončí samostatná session mimo zadání. | Hotovo v PR #4 (tabulky `BankTransactions`, `BankAccountMappings`). T09 `bankTransactionRef` se páruje na `BankTransactions`, T06 `paidFrom = BANK` zatím jen evidenčně. |
 | **T09** | Pokladnu čtou členové, zapisují **Admin a Accountant**; nová role se nezavádí. | `[RequireRole(Admin, Accountant)]` na zápisových endpointech. |
+| **X5** | Varianta B z `docs/superpowers/specs/2026-09-27-x5-kalendarni-data-design.md`: nový model (T02–T10) používá `DateOnly` + `DateRange` (uzavřený interval po dnech), „dnes“ vždy z `IClock` v `Europe/Prague` — i pro uživatele mimo ČR; starý model se jen opraví (D1–D3). | Implementace kroků 1–3 návrhu před T02. |
 
 ## Rizika
 
@@ -22,12 +23,12 @@ Stav k 27. 9. 2026.
 
 ## Otevřené otázky
 
-Znění otázek O1–O4 je v zadání („Portál Oáza – zadání tasků pro Claude Code“, setkání 27. 9. 2026), které
-v repozitáři není. Doplnit doslovně ze zadání spolu s odpovědí, až padne.
+Znění podle zadání (`docs/ZADANI.md` §2.2). Všechny se implementují jako konfigurovatelné s auditní stopou (pravidlo 8).
 
-| Id | Otázka | Souvisí | Stav |
-|---|---|---|---|
-| O1 | *(doplnit ze zadání)* | | otevřená |
-| O2 | *(doplnit ze zadání)* | | otevřená |
-| O3 | *(doplnit ze zadání)* — souvisí se skutečnými náklady elektřiny a společných (`CostEntry`), které dnes nahrazují jen rozpočtové sazby | T06 | otevřená |
-| O4 | *(doplnit ze zadání)* | | otevřená |
+| Id | Otázka | Požadavek na implementaci | Default | Souvisí | Stav |
+|---|---|---|---|---|---|
+| O1 | Ztráty vody lineárně, nebo poměrově? Rozhodne hlasování. | Přepínač per složka, efektivně datovaný, s auditem. | `EQUAL` (návrh Jindry) | T02, T05 | otevřená |
+| O2 | Jak rozdělit přeplatek za elektřinu vodárny (cca 20 tis. Kč)? | Kredit složky se zadá jako počáteční stav. Metodu i okruh domů lze nastavit. | 4 domy, `EQUAL` | T03 | otevřená |
+| O3 | Elektřina vodárny podle plateb, nebo podle elektroměru? | Složka podporuje obojí. Pro vodárnu se nastaví „podle nákladových záznamů“ (zálohy + vyúčtování). | podle záznamů | T02, T06 | otevřená |
+| O4 | Oddělený fond: právní a daňové řešení | Feature flag, default vypnuto. | `OFF` | T10 | otevřená |
+| O5 | Členské příspěvky vs. odpracování | **Neimplementovat** (zadání §5). | – | – | mimo rozsah |
