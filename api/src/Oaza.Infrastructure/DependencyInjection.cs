@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<IDocumentRepository, DocumentRepository>();
         services.AddSingleton<IDocumentVersionRepository, DocumentVersionRepository>();
         services.AddSingleton<IFinancialRecordRepository, FinancialRecordRepository>();
+        services.AddSingleton<IAuditLogRepository, AuditLogRepository>();
 
         // Import session cache
         services.AddSingleton<IImportSessionCache, InMemoryImportSessionCache>();
