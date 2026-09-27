@@ -191,6 +191,8 @@ Pozor: některá data jsou pro všechny přihlášené bez omezení — seznam d
 | `/finance` | Hospodaření | přihlášení |
 | `/jak-to-funguje` | Nápověda a slovník pojmů | přihlášení |
 | `/admin/houses`, `/admin/users`, `/admin/meters` | Administrace | Admin |
+| `/admin/cost-components` | Nákladové složky (T02): metoda a účast domů v čase, úseky | Admin |
+| `/admin/audit` | Audit změn (X4) | Admin |
 
 ### Nápověda v UI (`web/src/content/help.ts`)
 

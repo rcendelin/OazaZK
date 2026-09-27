@@ -27,3 +27,16 @@ export function shiftIsoDate(iso: string, { days = 0, months = 0 }: { days?: num
   const shifted = new Date(Date.UTC(y, m - 1 + months, d + days));
   return shifted.toISOString().slice(0, 10);
 }
+
+/** `yyyy-MM-dd` → „1. 11. 2023“ (Czech, no time zone involved). */
+export function formatIsoDay(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return `${d}. ${m}. ${y}`;
+}
+
+/** Whole days since 1970-01-01 of a `yyyy-MM-dd` day (for placing days on a time axis). */
+export function isoDayNumber(iso: string): number {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return Date.UTC(y, m - 1, d) / 86_400_000;
+}

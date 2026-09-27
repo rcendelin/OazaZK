@@ -1,11 +1,22 @@
 export class ApiError extends Error {
   status: number;
+  /** Every reason from a `{ error, errors: [{ field, message }] }` answer (business rules, validation). */
+  details: string[];
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, details: string[] = []) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.details = details;
   }
+}
+
+function errorDetails(body: unknown): string[] {
+  const errors = (body as { errors?: unknown }).errors;
+  if (!Array.isArray(errors)) return [];
+  return errors
+    .map((e) => (typeof e === 'object' && e !== null ? (e as { message?: unknown }).message : undefined))
+    .filter((m): m is string => typeof m === 'string' && m.length > 0);
 }
 
 class ApiClient {
@@ -38,6 +49,7 @@ class ApiClient {
         (error as Record<string, string>).error ||
           (error as Record<string, string>).message ||
           'Požadavek se nezdařil',
+        errorDetails(error),
       );
     }
 
