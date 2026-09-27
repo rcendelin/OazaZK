@@ -24,4 +24,6 @@ public static class TableNames
     public const string CostEntries = "CostEntries";
     public const string InterimClosings = "InterimClosings";
     public const string CashBook = "CashBook";
+    public const string OffBookFunds = "OffBookFunds";
+    public const string OffBookFundRecords = "OffBookFundRecords";
 }

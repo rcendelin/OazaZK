@@ -13,7 +13,8 @@
     "AzureCommunicationServices__ConnectionString": "",
     "AzureCommunicationServices__FromEmail": "",
     "AzureCommunicationServices__FromName": "Oáza Zadní Kopanina (local)",
-    "ENABLE_SEED": "true"
+    "ENABLE_SEED": "true",
+    "OFF_BOOK_FUND_ENABLED": "false"
   },
   "Host": {
     "CORS": "http://localhost:5173",

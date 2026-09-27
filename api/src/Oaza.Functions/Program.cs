@@ -57,6 +57,9 @@ var host = new HostBuilder()
         services.AddSingleton<Oaza.Application.UseCases.InterimClosingsUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.HouseTransferUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.CashBookUseCase>();
+        services.AddSingleton(new Oaza.Application.Deployment.FeatureFlags(
+            Oaza.Application.Deployment.FeatureFlags.IsOn(context.Configuration[Oaza.Application.Deployment.FeatureFlags.OffBookFundKey])));
+        services.AddSingleton<Oaza.Application.OffBookFunds.OffBookFundUseCase>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
         // Infrastructure: Table Storage, Blob Storage, all repositories, email

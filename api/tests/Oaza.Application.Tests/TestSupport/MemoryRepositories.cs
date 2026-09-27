@@ -105,3 +105,18 @@ public sealed class MemoryCashBook() : MemoryRepo<CashBookEntry>(_ => PartitionK
 {
     public Task<IReadOnlyList<CashBookEntry>> GetAllEntriesAsync() => GetByPartitionKeyAsync(PartitionKeys.CashBook);
 }
+
+public sealed class MemoryOffBookFunds : IOffBookFundRepository
+{
+    public readonly Dictionary<string, OffBookFund> Funds = new();
+    public readonly Dictionary<(string, string), FundRecord> Records = new();
+
+    public Task<IReadOnlyList<OffBookFund>> GetFundsAsync() => Task.FromResult<IReadOnlyList<OffBookFund>>(Funds.Values.ToList());
+    public Task<OffBookFund?> GetFundAsync(string fundId) => Task.FromResult(Funds.GetValueOrDefault(fundId));
+    public Task UpsertFundAsync(OffBookFund fund) { Funds[fund.Id] = fund; return Task.CompletedTask; }
+    public Task<IReadOnlyList<FundRecord>> GetRecordsAsync(string fundId) =>
+        Task.FromResult<IReadOnlyList<FundRecord>>(Records.Values.Where(r => r.FundId == fundId).ToList());
+    public Task<FundRecord?> GetRecordAsync(string fundId, string recordId) => Task.FromResult(Records.GetValueOrDefault((fundId, recordId)));
+    public Task UpsertRecordAsync(FundRecord record) { Records[(record.FundId, record.Id)] = record; return Task.CompletedTask; }
+    public Task DeleteRecordAsync(string fundId, string recordId) { Records.Remove((fundId, recordId)); return Task.CompletedTask; }
+}
