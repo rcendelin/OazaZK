@@ -17,6 +17,7 @@ import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
+import { BankImportPage } from './pages/BankImportPage';
 import { SaldoPage } from './pages/SaldoPage';
 import { InvoicesOverviewPage } from './pages/InvoicesOverviewPage';
 import { JakToFungujePage } from './pages/JakToFungujePage';
@@ -55,6 +56,14 @@ function App() {
                 }
               />
               <Route path="/advances" element={<AdvancesPage />} />
+              <Route
+                path="/advances/import"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <BankImportPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/saldo" element={<SaldoPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route

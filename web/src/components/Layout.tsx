@@ -6,6 +6,7 @@ import {
   FileText,
   Wallet,
   Banknote,
+  Landmark,
   Receipt,
   ReceiptText,
   Droplets,
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Zálohy', path: '/advances', icon: <Banknote size={iconSize} /> },
       { label: 'Saldo a platby', path: '/saldo', icon: <Scale size={iconSize} /> },
+      { label: 'Import z banky', path: '/advances/import', icon: <Landmark size={iconSize} />, adminOnly: true },
       { label: 'Vyúčtování', path: '/billing', icon: <Receipt size={iconSize} /> },
       { label: 'Přehled faktur', path: '/prehled-faktur', icon: <ReceiptText size={iconSize} />, financeManager: true },
     ],
@@ -137,6 +139,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         <NavLink
                           key={child.path}
                           to={child.path}
+                          end
                           className={({ isActive }) => childLinkClasses(isActive)}
                           onClick={onNavigate}
                         >
