@@ -16,6 +16,7 @@ import {
   Users,
   Gauge,
   History,
+  Layers,
   Scale,
   CircleHelp,
   LogOut,
@@ -68,6 +69,7 @@ const adminNavItems: NavItem[] = [
   { label: 'Domácnosti', path: '/admin/houses', icon: <Home size={iconSize} />, adminOnly: true },
   { label: 'Uživatelé', path: '/admin/users', icon: <Users size={iconSize} />, adminOnly: true },
   { label: 'Vodoměry', path: '/admin/meters', icon: <Gauge size={iconSize} />, adminOnly: true },
+  { label: 'Nákladové složky', path: '/admin/cost-components', icon: <Layers size={iconSize} />, adminOnly: true },
   { label: 'Audit změn', path: '/admin/audit', icon: <History size={iconSize} />, adminOnly: true },
 ];
 

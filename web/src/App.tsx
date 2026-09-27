@@ -17,6 +17,7 @@ import { HousesPage } from './pages/admin/HousesPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
+import { CostComponentsPage } from './pages/admin/CostComponentsPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
@@ -93,6 +94,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Admin">
                     <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/cost-components"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <CostComponentsPage />
                   </ProtectedRoute>
                 }
               />

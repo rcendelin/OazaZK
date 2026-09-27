@@ -41,6 +41,9 @@ se sekce přejmenuje na verzi s datem.
 - **Nákladové složky – API (T02, část B).** Tabulky `CostComponents`, `ComponentAllocationRules`, `Participations`
   a endpointy `/cost-components…`: založení složky (s prvním pravidlem), změna metody od data s povinným důvodem,
   přidání, ukončení a smazání účasti, výpis úseků. Čtou Admin a Accountant, zapisuje jen Admin, každá změna jde do auditu.
+- **Nákladové složky – stránka (T02, část C).** Administrace → Nákladové složky: seznam složek s dnešní metodou
+  a počtem domů, založení složky, časová osa metody a účasti domů, změna metody od data s důvodem, přidání, ukončení
+  a smazání účasti a výpis úseků rozpočtu. Chyby z pravidel se zobrazí všechny najednou.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
