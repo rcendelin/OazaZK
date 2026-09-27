@@ -15,6 +15,7 @@ using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
 using Oaza.Functions.Attributes;
+using Oaza.Domain.Time;
 
 namespace Oaza.Functions.Endpoints;
 
@@ -27,6 +28,7 @@ public class FinanceFunctions
     private readonly GetFundBalanceUseCase _getFundBalanceUseCase;
     private readonly GenerateFinanceReportUseCase _generatePdfUseCase;
     private readonly GenerateFinanceExcelUseCase _generateExcelUseCase;
+    private readonly IClock _clock;
     private readonly ILogger<FinanceFunctions> _logger;
 
     private const long MaxAttachmentBytes = 20 * 1024 * 1024; // 20 MB
@@ -45,6 +47,7 @@ public class FinanceFunctions
         GetFundBalanceUseCase getFundBalanceUseCase,
         GenerateFinanceReportUseCase generatePdfUseCase,
         GenerateFinanceExcelUseCase generateExcelUseCase,
+        IClock clock,
         ILogger<FinanceFunctions> logger)
     {
         _financialRecordRepository = financialRecordRepository ?? throw new ArgumentNullException(nameof(financialRecordRepository));
@@ -54,6 +57,7 @@ public class FinanceFunctions
         _getFundBalanceUseCase = getFundBalanceUseCase ?? throw new ArgumentNullException(nameof(getFundBalanceUseCase));
         _generatePdfUseCase = generatePdfUseCase ?? throw new ArgumentNullException(nameof(generatePdfUseCase));
         _generateExcelUseCase = generateExcelUseCase ?? throw new ArgumentNullException(nameof(generateExcelUseCase));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -523,7 +527,7 @@ public class FinanceFunctions
     private async Task<FinancialRecord?> FindFinancialRecordByIdAsync(string id)
     {
         // Search current year and a few years back
-        var currentYear = DateTime.UtcNow.Year;
+        var currentYear = _clock.Today.Year;
         for (var year = currentYear + 1; year >= currentYear - 10; year--)
         {
             var record = await _financialRecordRepository.GetAsync(year.ToString(), id);

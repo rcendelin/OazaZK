@@ -8,6 +8,7 @@ using Oaza.Application.DTOs;
 using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
 using Oaza.Functions.Attributes;
+using Oaza.Domain.Time;
 
 namespace Oaza.Functions.Endpoints;
 
@@ -17,7 +18,7 @@ public class AuditFunctions
     private const int MaxRangeDays = 731;
 
     private readonly IAuditLogRepository _repository;
-    private readonly TimeProvider _timeProvider;
+    private readonly IClock _clock;
     private readonly ILogger<AuditFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -25,10 +26,10 @@ public class AuditFunctions
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public AuditFunctions(IAuditLogRepository repository, TimeProvider timeProvider, ILogger<AuditFunctions> logger)
+    public AuditFunctions(IAuditLogRepository repository, IClock clock, ILogger<AuditFunctions> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -44,7 +45,7 @@ public class AuditFunctions
         try
         {
             var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-            var today = _timeProvider.GetUtcNow().UtcDateTime.Date;
+            var today = PragueClock.AsUtcMidnight(_clock.Today);
 
             if (!TryParseDate(query["from"], today.AddDays(-90), out var from) ||
                 !TryParseDate(query["to"], today, out var to))
