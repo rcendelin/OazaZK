@@ -1,11 +1,12 @@
 using FluentValidation;
 using Oaza.Application.DTOs;
+using Oaza.Application.Documents;
 
 namespace Oaza.Application.Validators;
 
 public class UploadDocumentRequestValidator : AbstractValidator<UploadDocumentRequest>
 {
-    private static readonly string[] AllowedCategories = { "stanovy", "zapisy", "smlouvy", "ostatni" };
+    private static readonly string[] AllowedCategories = DocumentUploadRules.Categories;
 
     public UploadDocumentRequestValidator()
     {

@@ -14,6 +14,8 @@ import { FileUploadZone } from '../components/FileUploadZone';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
 import { HelpNote } from '../components/help/HelpNote';
+import { Link } from 'react-router-dom';
+import { BulkInvoiceUpload } from '../components/BulkInvoiceUpload';
 import type { DocumentResponse, DocumentVersionResponse } from '../types';
 
 const CATEGORIES = [
@@ -21,6 +23,7 @@ const CATEGORIES = [
   { key: 'stanovy', label: 'Stanovy' },
   { key: 'zapisy', label: 'Zápisy' },
   { key: 'smlouvy', label: 'Smlouvy' },
+  { key: 'faktury', label: 'Faktury a vyúčtování' },
   { key: 'ostatni', label: 'Ostatní' },
 ] as const;
 
@@ -28,6 +31,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   stanovy: 'Stanovy',
   zapisy: 'Zápisy',
   smlouvy: 'Smlouvy',
+  faktury: 'Faktury a vyúčtování',
   ostatni: 'Ostatní',
 };
 
@@ -35,6 +39,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   stanovy: 'bg-accent-light text-accent',
   zapisy: 'bg-success-light text-success',
   smlouvy: 'bg-purple-50 text-purple-600',
+  faktury: 'bg-warning-light text-warning',
   ostatni: 'bg-surface-sunken text-text-secondary',
 };
 
@@ -46,6 +51,17 @@ const formatFileSize = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+/** „Vytvořit náklad“ from an invoice (T11): opens Costs with the component and the document prefilled. */
+function CostLink({ doc }: { doc: DocumentResponse }) {
+  const params = new URLSearchParams({ document: doc.id });
+  if (doc.componentId) params.set('component', doc.componentId);
+  return (
+    <Link to={`/naklady?${params.toString()}`} className="text-sm font-medium text-accent hover:text-accent-hover">
+      Vytvořit náklad
+    </Link>
+  );
+}
 
 export function DocumentsPage() {
   const { user, getAccessToken } = useAuth();
@@ -136,6 +152,7 @@ export function DocumentsPage() {
         )}
       </div>
       <HelpNote sectionId="documentVersions" />
+      {isAdmin && <BulkInvoiceUpload getAccessToken={getAccessToken} onUploaded={refetch} />}
 
       {/* Category tabs */}
       <div className="mt-6 border-b border-border">
@@ -271,6 +288,7 @@ export function DocumentsPage() {
                   >
                     {expandedDocId === doc.id ? 'Skrýt verze' : 'Verze'}
                   </button>
+                  {isAdmin && doc.category === 'faktury' && <CostLink doc={doc} />}
                   {isAdmin && (
                     <>
                       <button
@@ -427,6 +445,7 @@ function DocumentRow({
           >
             Stáhnout
           </button>
+          {isAdmin && doc.category === 'faktury' && <span className="ml-4"><CostLink doc={doc} /></span>}
           {isAdmin && (
             <>
               <button

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { FormEvent } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useApi } from '../hooks/useApi';
@@ -6,7 +7,8 @@ import { Spinner } from '../components/Spinner';
 import { ApiError } from '../api/client';
 import { getCostComponents, methodLabels } from '../api/costComponents';
 import type { CostComponent } from '../api/costComponents';
-import { downloadDocument, getDocuments } from '../api/documents';
+import { downloadDocument, getDocuments, getUnaccountedDocuments } from '../api/documents';
+import type { UnaccountedDocument } from '../api/documents';
 import {
   createCostEntry,
   createRecurringAdvances,
@@ -51,7 +53,11 @@ export function CostsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
   const { data: components, loading, error } = useApi<CostComponent[]>(useCallback(() => getCostComponents(), []));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get('component');
+  const prefillDocument = searchParams.get('document') ?? undefined;
+  const setSelectedId = (id: string) => setSearchParams({ component: id });
+  const [version, setVersion] = useState(0);
   const component = components?.find((c) => c.id === selectedId) ?? components?.[0] ?? null;
 
   return (
@@ -86,12 +92,25 @@ export function CostsPage() {
         </div>
       )}
 
-      {component && <ComponentCosts key={component.id} component={component} isAdmin={isAdmin} />}
+      <UnaccountedDocuments
+        key={version}
+        onBook={(d) => setSearchParams(d.document.componentId
+          ? { component: d.document.componentId, document: d.document.id }
+          : { ...(component ? { component: component.id } : {}), document: d.document.id })}
+      />
+
+      {component && <ComponentCosts key={`${component.id}-${prefillDocument ?? ''}`} component={component} isAdmin={isAdmin} prefillDocument={prefillDocument}
+        onChanged={() => { setVersion((v) => v + 1); if (prefillDocument) setSearchParams({ component: component.id }); }} />}
     </div>
   );
 }
 
-function ComponentCosts({ component, isAdmin }: { component: CostComponent; isAdmin: boolean }) {
+function ComponentCosts({ component, isAdmin, prefillDocument, onChanged }: {
+  component: CostComponent;
+  isAdmin: boolean;
+  prefillDocument?: string;
+  onChanged: () => void;
+}) {
   const metered = component.allocationBasis === 'Metered';
   const [range, setRange] = useState({ from: shiftIsoDate(todayIso(), { months: -12 }), to: todayIso() });
   const [draft, setDraft] = useState(range);
@@ -191,7 +210,7 @@ function ComponentCosts({ component, isAdmin }: { component: CostComponent; isAd
 
       {isAdmin && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <EntryForm componentId={component.id} metered={metered} documents={documents ?? []} onSaved={refetch} />
+          <EntryForm componentId={component.id} metered={metered} documents={documents ?? []} initialDocumentId={prefillDocument} onSaved={() => { refetch(); onChanged(); }} />
           {!metered && <RecurringForm componentId={component.id} onSaved={refetch} />}
         </div>
       )}
@@ -279,10 +298,11 @@ function Allocation({ entry }: { entry: CostEntry }) {
   );
 }
 
-function EntryForm({ componentId, metered, documents, onSaved }: {
+function EntryForm({ componentId, metered, documents, initialDocumentId, onSaved }: {
   componentId: string;
   metered: boolean;
   documents: DocumentResponse[];
+  initialDocumentId?: string;
   onSaved: () => void;
 }) {
   const [type, setType] = useState<CostEntryType>(metered ? 'OneOff' : 'Settlement');
@@ -292,7 +312,7 @@ function EntryForm({ componentId, metered, documents, onSaved }: {
   const [quantity, setQuantity] = useState('');
   const [supplier, setSupplier] = useState('');
   const [paidFrom, setPaidFrom] = useState<PaidFrom>('Bank');
-  const [documentId, setDocumentId] = useState('');
+  const [documentId, setDocumentId] = useState(initialDocumentId ?? '');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -453,3 +473,32 @@ function RecurringForm({ componentId, onSaved }: { componentId: string; onSaved:
     </form>
   );
 }
+
+/** „Dokumenty bez zaúčtování“ (T11): uploaded invoices no cost entry refers to yet. Admin and Accountant. */
+function UnaccountedDocuments({ onBook }: { onBook: (d: UnaccountedDocument) => void }) {
+  const { user } = useAuth();
+  const canSee = user?.role === 'Admin' || user?.role === 'Accountant';
+  const { data } = useApi<UnaccountedDocument[]>(
+    useCallback(() => (canSee ? getUnaccountedDocuments() : Promise.resolve([])), [canSee]),
+  );
+  if (!data || data.length === 0) return null;
+  return (
+    <section className="space-y-2 rounded-2xl border border-warning bg-warning-light/40 p-4" aria-label="Dokumenty bez zaúčtování">
+      <h2 className="font-semibold text-text-primary">Dokumenty bez zaúčtování ({data.length})</h2>
+      <ul className="divide-y divide-border text-sm">
+        {data.map((d) => (
+          <li key={d.document.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+            <span>
+              {d.document.name}
+              <span className="text-text-muted"> · nahráno {formatIsoDay(d.document.uploadedAt)}{d.componentName ? ` · ${d.componentName}` : ''}</span>
+            </span>
+            {user?.role === 'Admin' && (
+              <button type="button" onClick={() => onBook(d)} className="text-xs font-medium text-accent hover:text-accent-hover">Zaúčtovat</button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+

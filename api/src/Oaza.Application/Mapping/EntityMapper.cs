@@ -124,7 +124,8 @@ public static class EntityMapper
             FileSizeBytes: document.FileSizeBytes,
             ContentType: document.ContentType,
             UploadedAt: document.UploadedAt,
-            UploadedBy: document.UploadedBy);
+            UploadedBy: document.UploadedBy,
+            ComponentId: document.ComponentId);
     }
 
     public static DocumentVersionResponse ToResponse(DocumentVersion version)

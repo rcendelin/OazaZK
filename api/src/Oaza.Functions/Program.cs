@@ -60,6 +60,7 @@ var host = new HostBuilder()
         services.AddSingleton(new Oaza.Application.Deployment.FeatureFlags(
             Oaza.Application.Deployment.FeatureFlags.IsOn(context.Configuration[Oaza.Application.Deployment.FeatureFlags.OffBookFundKey])));
         services.AddSingleton<Oaza.Application.OffBookFunds.OffBookFundUseCase>();
+        services.AddSingleton<Oaza.Application.Documents.UnaccountedDocumentsUseCase>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
         // Infrastructure: Table Storage, Blob Storage, all repositories, email
