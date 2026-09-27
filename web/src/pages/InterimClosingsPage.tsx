@@ -5,6 +5,7 @@ import { useApi } from '../hooks/useApi';
 import { Spinner } from '../components/Spinner';
 import { HelpDisclosure } from '../components/help/HelpDisclosure';
 import { HelpNote } from '../components/help/HelpNote';
+import { HelpTerm } from '../components/help/HelpTerm';
 import { ApiError } from '../api/client';
 import { getHouses } from '../api/houses';
 import { downloadLedgerExport } from '../api/ledger';
@@ -118,7 +119,7 @@ function CreateForm({ onCreated }: { onCreated: (c: InterimClosing) => void }) {
 
   return (
     <form onSubmit={(e) => void submit(e)} className="space-y-2 rounded-2xl border border-border bg-surface-raised p-4 shadow-card" aria-label="Nová mezizávěrka">
-      <h2 className="font-semibold text-text-primary">Nová mezizávěrka</h2>
+      <h2 className="font-semibold text-text-primary">Nová mezizávěrka<HelpTerm id="mezizaverka" /></h2>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-xs text-text-secondary">
           <span className="mb-1 block">Uzavřít do (včetně)</span>

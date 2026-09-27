@@ -1,10 +1,35 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { useApi } from '../hooks/useApi';
+import { getCostComponents } from '../api/costComponents';
+import type { AllocationMethod, CostComponent } from '../api/costComponents';
 import { guides, terms, splitBold } from '../content/help';
 import type { TermId } from '../content/help';
 
+const methodLabels: Record<AllocationMethod, string> = {
+  Metered: 'podle odečtů',
+  Equal: 'rovným dílem mezi připojené domy',
+  Ratio: 'poměrem podle spotřeby vody domů',
+  Percent: 'pevnými procenty',
+};
+
+/** The losses method valid today (T05) — live, for Admin and Accountant (members can't read the components). */
+function CurrentLossMethod() {
+  const { data } = useApi<CostComponent[]>(useCallback(() => getCostComponents(), []));
+  const losses = data?.find((c) => c.waterRole === 'Losses');
+  if (!losses?.currentMethod) return null;
+  return (
+    <p className="rounded-xl bg-accent-light px-3 py-2 text-sm text-text-primary" data-testid="current-loss-method">
+      Dnes se ztráty dělí <strong>{methodLabels[losses.currentMethod]}</strong> (složka „{losses.name}“, {losses.currentParticipants} domů).
+    </p>
+  );
+}
+
 export function JakToFungujePage() {
   const { hash } = useLocation();
+  const { user } = useAuth();
+  const canSeeComponents = user?.role === 'Admin' || user?.role === 'Accountant';
   const termIds = Object.keys(terms) as TermId[];
 
   // React Router na kotvu sám neskroluje — bez tohoto by odkaz „?" z tabulek
@@ -47,6 +72,7 @@ export function JakToFungujePage() {
                 </p>
               )),
             )}
+            {g.id === 'voda-ztraty' && canSeeComponents && <CurrentLossMethod />}
           </div>
         </section>
       ))}
