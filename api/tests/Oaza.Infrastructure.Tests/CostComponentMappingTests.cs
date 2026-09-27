@@ -14,7 +14,7 @@ public class CostComponentMappingTests
         var component = new CostComponent
         {
             Id = "c1", Name = "Voda PVK", Code = "VODA_PVK", StartDate = new DateOnly(2023, 11, 1),
-            AllocationBasis = AllocationBasis.Metered, Active = false, Note = "R1",
+            AllocationBasis = AllocationBasis.Metered, WaterRole = WaterRole.Consumption, Active = false, Note = "R1",
         };
 
         var entity = TableEntityMapper.ToTableEntity(component);

@@ -58,6 +58,10 @@ se sekce přejmenuje na verzi s datem.
 - **Náklady – stránka (T06, část B).** Hospodaření → Náklady: záznamy po složkách s filtrem období, součtem a u vody
   s průměrnou cenou za m³, rozpad každého nákladu na domy s výpočtem po úsecích, odkaz na PDF doklad, přidání nákladu
   nebo faktury a formulář „Opakovaná záloha“.
+- **Voda a ztráty – výpočet (T05, část A).** Za každý interval mezi odečty hlavního vodoměru: spotřeba domů, ztráta,
+  cena za m³ z faktur PVK, náklad vody podle spotřeby a ztráty podle metody složky „Ztráty vody“ (rovným dílem, nebo
+  poměrem spotřeby; změna metody platí od svého data). Záporná ztráta se nerozpočítá a ukáže varování, chybějící odečet
+  se dopočítá a označí jako odhad. Složky mají roli ve vyúčtování vody (Voda PVK / Ztráty vody).
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

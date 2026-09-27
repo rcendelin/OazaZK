@@ -4,6 +4,7 @@ import { apiClient } from './client.ts';
 
 export type AllocationBasis = 'Metered' | 'CostEntries';
 export type AllocationMethod = 'Metered' | 'Equal' | 'Ratio' | 'Percent';
+export type WaterRole = 'None' | 'Consumption' | 'Losses';
 
 export interface CostComponent {
   id: string;
@@ -11,6 +12,7 @@ export interface CostComponent {
   code: string;
   startDate: string;
   allocationBasis: AllocationBasis;
+  waterRole: WaterRole;
   active: boolean;
   note: string | null;
   currentMethod: AllocationMethod | null;
@@ -60,6 +62,12 @@ export const methodLabels: Record<AllocationMethod, string> = {
   Percent: 'Pevná procenta',
 };
 
+export const waterRoleLabels: Record<WaterRole, string> = {
+  None: '—',
+  Consumption: 'Voda PVK (spotřeba domů)',
+  Losses: 'Ztráty vody',
+};
+
 export const basisLabels: Record<AllocationBasis, string> = {
   Metered: 'Z odečtů vodoměrů',
   CostEntries: 'Z nákladových záznamů',
@@ -77,6 +85,7 @@ export const createCostComponent = (data: {
   code: string;
   startDate: string;
   allocationBasis: AllocationBasis;
+  waterRole?: WaterRole;
   method?: AllocationMethod;
   note?: string;
 }): Promise<CostComponent> => apiClient.post(base, data);

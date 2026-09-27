@@ -11,6 +11,7 @@ public class CostComponentResponse
     public string Code { get; set; } = string.Empty;
     public DateOnly StartDate { get; set; }
     public AllocationBasis AllocationBasis { get; set; }
+    public WaterRole WaterRole { get; set; }
     public bool Active { get; set; }
     public string? Note { get; set; }
 
@@ -66,6 +67,9 @@ public class CreateCostComponentRequest
     public string Code { get; set; } = string.Empty;
     public DateOnly StartDate { get; set; }
     public AllocationBasis AllocationBasis { get; set; }
+
+    /// <summary>Metered components only: water PVK (Consumption) or water losses (Losses).</summary>
+    public WaterRole WaterRole { get; set; }
 
     /// <summary>Method of the first rule from <see cref="StartDate"/>; default Metered for metered components, else Equal.</summary>
     public AllocationMethod? Method { get; set; }

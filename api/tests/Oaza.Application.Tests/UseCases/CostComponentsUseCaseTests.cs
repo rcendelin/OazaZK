@@ -107,6 +107,29 @@ public class CostComponentsUseCaseTests
         await missing.Should().ThrowAsync<NotFoundException>();
     }
 
+    [Fact]
+    public async Task WaterRoleOnlyForMeteredComponents_AndOncePerRole()
+    {
+        var nonMetered = () => Sut().CreateAsync(new CreateCostComponentRequest
+        {
+            Name = "Ztráty", Code = "ZTRATY", StartDate = D(2023, 11, 1), AllocationBasis = AllocationBasis.CostEntries, WaterRole = WaterRole.Losses,
+        }, _actor);
+        (await nonMetered.Should().ThrowAsync<BusinessRuleException>()).Which.Message.Should().Contain("podle odečtů");
+
+        var created = await Sut().CreateAsync(new CreateCostComponentRequest
+        {
+            Name = "Ztráty vody", Code = "ZTRATY_VODY", StartDate = D(2023, 11, 1), AllocationBasis = AllocationBasis.Metered,
+            WaterRole = WaterRole.Losses, Method = AllocationMethod.Equal,
+        }, _actor);
+        created.WaterRole.Should().Be(WaterRole.Losses);
+
+        var second = () => Sut().CreateAsync(new CreateCostComponentRequest
+        {
+            Name = "Ztráty 2", Code = "ZTRATY_2", StartDate = D(2023, 11, 1), AllocationBasis = AllocationBasis.Metered, WaterRole = WaterRole.Losses,
+        }, _actor);
+        (await second.Should().ThrowAsync<AppException>()).Which.StatusCode.Should().Be(409);
+    }
+
     // ───────── participation ─────────
 
     [Fact]

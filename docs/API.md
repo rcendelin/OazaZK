@@ -163,7 +163,7 @@ Nový model (T02). Data `RRRR-MM-DD`, metody `Metered` | `Equal` | `Ratio` | `Pe
 | GET | `/cost-components` | Admin, Accountant | Seznam složek s dnešní metodou a počtem účastníků. |
 | GET | `/cost-components/{id}` | Admin, Accountant | Detail: složka, pravidla, účasti (se jménem domu), `lastClosedDay`. |
 | GET | `/cost-components/{id}/segments?from=&to=` | Admin, Accountant | Úseky, ve kterých je rozpočet konstantní (metoda + účastníci), max. 10 let. |
-| POST | `/cost-components` | Admin | `{ name, code, startDate, allocationBasis, method?, note? }` → 201. Kód `A–Z0–9_` (převede se na velká), unikátní (409). Založí i první pravidlo od `startDate` (výchozí `Metered` u měřených, jinak `Equal`). |
+| POST | `/cost-components` | Admin | `{ name, code, startDate, allocationBasis, waterRole?, method?, note? }` (`waterRole` = `Consumption` \| `Losses` jen u složky podle odečtů, každá role nejvýš jednou) → 201. Kód `A–Z0–9_` (převede se na velká), unikátní (409). Založí i první pravidlo od `startDate` (výchozí `Metered` u měřených, jinak `Equal`). |
 | PUT | `/cost-components/{id}` | Admin | `{ name, active, note? }` — kód, start a základ se nemění. |
 | POST | `/cost-components/{id}/rules` | Admin | `{ validFrom, method, ratioSource?, reason }` → 201. Důvod povinný. Otevřené pravidlo před `validFrom` se ukončí den předem. |
 | DELETE | `/cost-components/{id}/rules/{ruleId}?reason=` | Admin | Smaže pravidlo zadané omylem, předchozí pravidlo se prodlouží. Poslední pravidlo smazat nelze. |
@@ -201,6 +201,14 @@ Nový model (T06). Typy `Advance` | `Settlement` (kladné = doplatek, záporné 
 | DELETE | `/cost-components/{id}/entries/{entryId}?reason=` | Admin | Smaže záznam. |
 
 Záznam, jehož období začíná za mezizávěrkou, nelze přidat, změnit ani smazat.
+
+## Voda a ztráty — `WaterSettlementFunctions.cs`
+
+Nový model (T05). Potřebuje složku s rolí `Consumption` (Voda PVK, faktury s m³) a volitelně složku s rolí `Losses` (ztráty, metoda `Equal` nebo `Ratio` s `ratioSource`).
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/water-settlement?from=&to=` | Admin, Accountant | Pro každý interval mezi odečty hlavního vodoměru: spotřeba hlavního a domovních vodoměrů (chybějící hraniční odečet se interpoluje, označí se odhad), ztráta, cena za m³ z faktur PVK (Σ Kč ÷ Σ m³ podle dní), náklad vody a ztrát po domech, metoda ztrát po úsecích a rozdíl proti fakturám. Záporná ztráta se nerozpočítá (varování). Max. 5 let. |
 
 ## Systém — `SystemFunctions.cs`
 
