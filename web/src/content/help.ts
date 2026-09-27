@@ -8,12 +8,17 @@
  *   saldo, ztrata                 → HouseLedgerUseCase, WaterSettlementUseCase
  *   doporucenaZaloha              → CalculatePrescribedAdvancesUseCase
  *   interimClosing                → InterimClosingsUseCase
- *   openingBalances               → OpeningBalancesUseCase
+ *   openingBalances, pocatecniStav → OpeningBalancesUseCase, HouseTransferUseCase
+ *   slozka, ucast                 → CostComponentsUseCase, CostEntryAllocation
+ *   kreditSlozky                  → OpeningBalancesUseCase (kredit), LedgerCostCollector
+ *   pokladna                      → CashBookUseCase
  */
 
 export type TermId =
   | 'ztrata' | 'saldo' | 'doporucenaZaloha'
-  | 'rozpoustiPreplatek' | 'role' | 'chybiOdecet' | 'anomalie';
+  | 'rozpoustiPreplatek' | 'role' | 'chybiOdecet' | 'anomalie'
+  | 'slozka' | 'ucast' | 'kreditSlozky' | 'startUctovani' | 'stavVodomeru' | 'podilFondu'
+  | 'mezizaverka' | 'prevodDomu' | 'pokladna';
 
 export type SectionId =
   | 'paymentTypes' | 'importTwoStep' | 'documentVersions'
@@ -68,6 +73,50 @@ export const terms: Record<TermId, Term> = {
     label: 'Varování „chybí odečet"',
     short: 'Některý nakonfigurovaný vodoměr nemá v importovaném souboru hodnotu.',
     long: 'Varování import neblokuje, potvrdit ho můžete. Chybějící odečet se ale projeví ve výpočtu vody: spotřeba se počítá z nejbližších dostupných odečtů, a nemá-li vodoměr v úseku žádný odečet, vyjde jeho spotřeba nulová. Náklad za tuto domácnost pak nesou ostatní.',
+  },
+  slozka: {
+    label: 'Nákladová složka',
+    short: 'Druh nákladu, který se rozpočítává samostatně — např. voda PVK, ztráty vody, elektřina vodárny, osvětlení.',
+    long: 'Každá složka má datum, od kdy se účtuje, a pravidlo rozpočtu platné od data: **rovným dílem**, **poměrem** (např. podle spotřeby vody), **procenty** nebo **podle odečtů** (voda). Změna pravidla platí od zvoleného dne dál a musí mít důvod (např. hlasování schůze); starší období se nemění.',
+  },
+  ucast: {
+    label: 'Účast domu ve složce',
+    short: 'Od kdy do kdy se dům na složce podílí. Náklad se dělí jen mezi domy, které se v daném dni účastní.',
+    long: 'Když se dům připojí nebo odpojí uprostřed období, portál období rozdělí na úseky a náklad rozpočítá podle dní: např. vyúčtování za půl roku, kdy se dům E připojil 1. 10., zaplatí do 30. 9. jen původní čtyři domy a od 1. 10. pět domů. Haléře, které při dělení zbydou, dostanou domy s největším zbytkem, takže součet vždy sedí na korunu.',
+  },
+  kreditSlozky: {
+    label: 'Kredit u dodavatele (přeplatek vodárny)',
+    short: 'Přeplatek, který má spolek u dodavatele složky (např. u elektřiny vodárny). Patří domům, které se na složce podílely.',
+    long: 'Kredit se zadá jednou jako počáteční stav složky (záporně, např. −20 000 Kč) a rozdělí se mezi účastníky jako „kredit“ v saldu — každý dům má u spolku přeplatek. Zálohy, které se pak platí z tohoto kreditu, se domům účtují jako běžný náklad, takže kredit postupně ubývá. Domy, které se na složce nepodílejí, se kreditu ani záloh netýkají.',
+  },
+  startUctovani: {
+    label: 'Start účtování',
+    short: 'Datum, od kterého portál počítá. Starší historie se nepřepočítává.',
+    long: 'Portál nerekonstruuje minulost: staré faktury, odečty a platby by se už nedaly spolehlivě dohledat a výsledek by byl sporný. Místo toho se ke dni startu zadají známé hodnoty — stav vodoměrů, podíl každého domu ve fondu a kredity u dodavatelů — a od toho dne se všechno počítá z nových dat.',
+  },
+  stavVodomeru: {
+    label: 'Počáteční stav vodoměru',
+    short: 'Stav vodoměru ke dni startu účtování nebo předání domu. Nejlépe skutečný odečet, jinak dopočtený odhad.',
+    long: 'Chybí-li odečet přesně k tomu dni, tlačítko „Navrhnout z odečtů“ dopočítá stav mezi dvěma nejbližšími odečty podle dní a označí ho jako odhad (≈). U každé hodnoty uveďte, odkud je (např. „odečet 22. 5. 2023, foto“).',
+  },
+  podilFondu: {
+    label: 'Podíl ve fondu',
+    short: 'Zůstatek domu u spolku k datu startu — z poslední roční závěrky. Kladné = přeplatek, záporné = nedoplatek.',
+  },
+  mezizaverka: {
+    label: 'Mezizávěrka',
+    short: 'Zafixuje saldo k datu a zamkne vše, co do toho dne patří. Roční závěrka = mezizávěrka všech domů k 31. 12.',
+    long: 'Po mezizávěrce se uzavřené období nemění: pozdě došlé vyúčtování se rozdělí podle toho, kdo se kdy na složce podílel, ale do salda se zaúčtuje k prvnímu dni po mezizávěrce. Zrušit lze jen poslední mezizávěrku, s důvodem.',
+  },
+  prevodDomu: {
+    label: 'Převod domu',
+    short: 'Předání domu novému majiteli: den před předáním se uzavře saldo původního vlastníka, nový začíná od nuly.',
+    long: 'Nový vlastník nedědí historii ani saldo předchozího. Začíná stavem vodoměru ke dni předání (odečet nebo odhad) a podílem ve fondu, obvykle 0 Kč. Saldo původního vlastníka zůstane k nahlédnutí v Saldu domu (výběr období vlastnictví).',
+  },
+  pokladna: {
+    label: 'Pokladna',
+    short: 'Hotovost spolku: vklady a výdaje. Zůstatek nesmí být v žádném dni záporný.',
+    long: 'Záznam se nikdy nemaže ani nepřepisuje — omyl se opraví stornem (opravným záznamem), takže je vidět celá historie. Výdaj s vybranou nákladovou složkou se zároveň zaúčtuje jako náklad a rozpočítá na domy. Pokladnu vidí všichni členové, zapisují správce a účetní.',
   },
   anomalie: {
     label: 'Varování „anomálie"',
@@ -125,6 +174,30 @@ export const guides: Guide[] = [
     ],
   },
   {
+    id: 'pocatecni-stavy',
+    title: 'Počáteční stavy — proč se nepřepočítává historie',
+    body: [terms.startUctovani.long!, sections.openingBalances.disclosure!],
+  },
+  {
+    id: 'slozky',
+    title: 'Nákladové složky a účast domů',
+    body: [terms.slozka.short, terms.slozka.long!, terms.ucast.short, terms.ucast.long!],
+  },
+  {
+    id: 'voda-ztraty',
+    title: 'Voda a ztráty',
+    body: [
+      'Voda od PVK se platí podle faktur: cena za m³ = součet částek faktur ÷ součet fakturovaných m³. Každý dům platí svou spotřebu podle domovního vodoměru za úsek mezi odečty hlavního vodoměru.',
+      terms.ztrata.long!,
+      '**Metoda rozpočtu ztrát** se může měnit hlasováním a platí vždy od data změny. U každé ztráty v Saldu domu je v rozpadu výpočtu uvedeno, jakou metodou se dělila; správce a účetní vidí aktuální metodu i níže a na stránce Voda a ztráty.',
+    ],
+  },
+  {
+    id: 'kredit-vodarny',
+    title: 'Přeplatek vodárny (kredit u dodavatele)',
+    body: [terms.kreditSlozky.short, terms.kreditSlozky.long!],
+  },
+  {
     id: 'zalohy-a-saldo',
     title: 'Platby, zálohy a saldo',
     body: [
@@ -137,8 +210,13 @@ export const guides: Guide[] = [
   },
   {
     id: 'mezizaverky',
-    title: 'Počáteční stavy a mezizávěrky',
-    body: [sections.openingBalances.disclosure!, sections.interimClosing.disclosure!],
+    title: 'Mezizávěrky a převod domu',
+    body: [sections.interimClosing.disclosure!, `**Převod domu.** ${terms.prevodDomu.short} ${terms.prevodDomu.long!}`],
+  },
+  {
+    id: 'pokladna',
+    title: 'Pokladna',
+    body: [terms.pokladna.short, terms.pokladna.long!],
   },
   {
     id: 'odecty',

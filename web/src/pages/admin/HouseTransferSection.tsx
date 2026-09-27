@@ -6,6 +6,7 @@ import type { HouseTransferPreview } from '../../api/houseTransfer';
 import type { House } from '../../types';
 import { formatIsoDay, todayIso } from '../../utils/date';
 import { parseCzechNumber } from '../../utils/number';
+import { HelpTerm } from '../../components/help/HelpTerm';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
@@ -78,7 +79,7 @@ export function HouseTransferSection({ houses, onDone }: { houses: House[]; onDo
   return (
     <section className="space-y-3 rounded-2xl border border-border bg-surface-raised p-4 shadow-card" aria-label="Převod domu">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">Převod domu na nového majitele</h2>
+        <h2 className="text-lg font-semibold text-text-primary">Převod domu na nového majitele<HelpTerm id="prevodDomu" /></h2>
         <p className="text-xs text-text-muted">
           Den před předáním se uzavře saldo původního vlastníka (mezizávěrka domu). Nový vlastník nedědí historii — začíná
           se stavem vodoměru při předání a s nulovým podílem ve fondu (nebo se svým vkladem).

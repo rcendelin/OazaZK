@@ -111,6 +111,10 @@ se sekce přejmenuje na verzi s datem.
   nezdvojí ani nepřepíše.
 - **Import počátečních dat (T13), část B — stránka.** Správa → Import počátečních dat: nahrání CSV (UTF-8 i Windows-1250
   z Excelu), zkouška nanečisto s reportem, stažení reportu a zápis po potvrzení.
+- **Jak to funguje pro nový model (T12, část A).** Nové kapitoly: počáteční stavy a proč se nepřepočítává historie,
+  nákladové složky a účast domů, voda a ztráty (správce a účetní vidí aktuální metodu ztrát), přeplatek vodárny,
+  mezizávěrky a převod domu, pokladna; slovník rozšířen o tyto pojmy. V průvodci počátečními stavy, u převodu domu
+  a u nové mezizávěrky je u každého kroku ikona „?“ s vysvětlením.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich

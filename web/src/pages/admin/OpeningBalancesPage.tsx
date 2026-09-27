@@ -23,6 +23,8 @@ import type { House, WaterMeter } from '../../types';
 import { formatIsoDay } from '../../utils/date';
 import { parseCzechNumber } from '../../utils/number';
 import { HelpDisclosure } from '../../components/help/HelpDisclosure';
+import { HelpTerm } from '../../components/help/HelpTerm';
+import type { TermId } from '../../content/help';
 import { HouseTransferSection } from './HouseTransferSection';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
@@ -116,6 +118,7 @@ export function OpeningBalancesPage() {
           </button>
           <p className="text-xs text-text-muted">
             Každý dům bez období vlastnictví dostane období od tohoto data (vlastník = kontaktní osoba domu).
+            <HelpTerm id="startUctovani" />
           </p>
         </div>
         {startInfo && <p role="status" className="text-sm text-success">{startInfo}</p>}
@@ -127,7 +130,7 @@ export function OpeningBalancesPage() {
         )}
       </section>
 
-      <Section title="Stavy vodoměrů" hint="m³, na tři desetinná místa. Stav se zapíše i jako odečet k datu.">
+      <Section title="Stavy vodoměrů" term="stavVodomeru" hint="m³, na tři desetinná místa. Stav se zapíše i jako odečet k datu.">
         {meters.map((m) => {
           const existing = find('MeterReading', (b) => b.meterId === m.id);
           return (
@@ -146,7 +149,7 @@ export function OpeningBalancesPage() {
         })}
       </Section>
 
-      <Section title="Podíl ve fondu spolku" hint="Kč ke dni poslední roční závěrky. Kladná hodnota = dům má u spolku přeplatek, záporná = nedoplatek.">
+      <Section title="Podíl ve fondu spolku" term="podilFondu" hint="Kč ke dni poslední roční závěrky. Kladná hodnota = dům má u spolku přeplatek, záporná = nedoplatek.">
         {activeHouses.map((h) => {
           const existing = find('FundShare', (b) => b.houseId === h.id);
           return (
@@ -163,7 +166,7 @@ export function OpeningBalancesPage() {
         })}
       </Section>
 
-      <Section title="Kredit složky u dodavatele" hint="Kč, přeplatek zadejte záporně (např. −20 000). Rozdělí se mezi domy podle metody a účasti složky k datu.">
+      <Section title="Kredit složky u dodavatele" term="kreditSlozky" hint="Kč, přeplatek zadejte záporně (např. −20 000). Rozdělí se mezi domy podle metody a účasti složky k datu.">
         {data.components.filter((c) => c.allocationBasis === 'CostEntries').map((c) => {
           const existing = find('ComponentCredit', (b) => b.componentId === c.id);
           return (
@@ -187,11 +190,11 @@ export function OpeningBalancesPage() {
   );
 }
 
-function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+function Section({ title, hint, term, children }: { title: string; hint: string; term: TermId; children: ReactNode }) {
   return (
     <section className="space-y-2" aria-label={title}>
       <div>
-        <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{title}<HelpTerm id={term} /></h2>
         <p className="text-xs text-text-muted">{hint}</p>
       </div>
       <div className="divide-y divide-border rounded-2xl border border-border bg-surface-raised shadow-card">{children}</div>
