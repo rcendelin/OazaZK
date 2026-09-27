@@ -38,6 +38,8 @@ DOTNET_ROLL_FORWARD=Major dotnet run --project <repo>/api/tools/Oaza.StorageBack
 unset OAZA_STORAGE_CONNECTION
 ```
 
+- ☐ Storage aplikace je zároveň úložištěm Functions App (klíče, balíčky nasazení). Tato systémová data nástroj
+  **vynechává** při záloze i obnově — obnova tak nevrátí starší verzi kódu ani neznehodnotí klíče.
 - ☐ Záloha doběhla a vypsala počty řádků všech tabulek (Users, Houses, … CostEntries, InterimClosings, CashBook,
   AuditLog) a počty souborů v kontejnerech (`documents`, `finance`).
 - ☐ Záloha je uložená **mimo počítač**, na šifrovaném disku nebo v soukromém úložišti. Obsahuje osobní údaje

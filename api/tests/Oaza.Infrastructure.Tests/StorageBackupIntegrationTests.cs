@@ -69,6 +69,19 @@ public class StorageBackupIntegrationTests
         Directory.Delete(folder, recursive: true);
     }
 
+    [Theory]
+    [InlineData("azure-webjobs-secrets", true)]
+    [InlineData("azure-webjobs-hosts", true)]
+    [InlineData("function-releases", true)]
+    [InlineData("scm-releases", true)]
+    [InlineData("AzureFunctionsDiagnosticEvents202609", true)]
+    [InlineData("AzureWebJobsHostLogs202609", true)]
+    [InlineData("documents", false)]
+    [InlineData("finance", false)]
+    [InlineData("Houses", false)]
+    public void HostData_IsNeverBackedUp(string name, bool hostManaged) =>
+        StorageBackup.IsHostManaged(name).Should().Be(hostManaged);
+
     [Fact]
     public void UnknownType_IsRejected()
     {

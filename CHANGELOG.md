@@ -131,6 +131,8 @@ se sekce přejmenuje na verzi s datem.
 - **Oddělení prostředí (T01, dokončení).** Skript `infra/provision.sh` založí prostředí dev/test/prod (s režimem
   nanečisto a potvrzením pro produkci). API odmítne nastartovat nad úložištěm jiného prostředí (např. produkce nad
   testovacím storage). Test v CI ověřuje, že zápis v jednom prostředí není vidět v druhém.
+- **Záloha storage vynechává systémová data Functions App.** Úložiště aplikace slouží i samotné Functions App
+  (klíče, balíčky nasazení); obnova ze zálohy je dřív mohla vrátit a rozbít běžící aplikaci.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich
