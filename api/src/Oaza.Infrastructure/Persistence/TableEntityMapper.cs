@@ -742,4 +742,52 @@ public static class TableEntityMapper
             SnapshotJson = entity.GetString("SnapshotJson") ?? "[]",
         };
     }
+
+    // ───────────────────── CashBookEntry (T09) ─────────────────────
+    // PK = CASH, RK = entry id
+
+    public static TableEntity ToTableEntity(CashBookEntry entry)
+    {
+        return new TableEntity(PartitionKeys.CashBook, entry.Id)
+        {
+            { "Date", ToIsoDay(entry.Date) },
+            { "Type", entry.Type.ToString() },
+            { "Amount", entry.Amount.ToString("G29", CultureInfo.InvariantCulture) },
+            { "Category", entry.Category },
+            { "Description", entry.Description },
+            { "Counterparty", entry.Counterparty },
+            { "HasReceipt", entry.HasReceipt },
+            { "DocumentId", entry.DocumentId },
+            { "BankTransactionRef", entry.BankTransactionRef },
+            { "CorrectionOf", entry.CorrectionOf },
+            { "ComponentId", entry.ComponentId },
+            { "CostEntryId", entry.CostEntryId },
+            { "CreatedBy", entry.CreatedBy },
+            { "CreatedByName", entry.CreatedByName },
+            { "CreatedAt", DateTime.SpecifyKind(entry.CreatedAt, DateTimeKind.Utc) },
+        };
+    }
+
+    public static CashBookEntry ToCashBookEntry(TableEntity entity)
+    {
+        return new CashBookEntry
+        {
+            Id = entity.RowKey,
+            Date = GetIsoDay(entity, "Date") ?? DateOnly.MinValue,
+            Type = Enum.TryParse<CashBookEntryType>(entity.GetString("Type"), out var type) ? type : CashBookEntryType.Expense,
+            Amount = GetDecimal(entity, "Amount") ?? 0m,
+            Category = entity.GetString("Category") ?? string.Empty,
+            Description = entity.GetString("Description") ?? string.Empty,
+            Counterparty = entity.GetString("Counterparty"),
+            HasReceipt = entity.GetBoolean("HasReceipt") ?? false,
+            DocumentId = entity.GetString("DocumentId"),
+            BankTransactionRef = entity.GetString("BankTransactionRef"),
+            CorrectionOf = entity.GetString("CorrectionOf"),
+            ComponentId = entity.GetString("ComponentId"),
+            CostEntryId = entity.GetString("CostEntryId"),
+            CreatedBy = entity.GetString("CreatedBy") ?? string.Empty,
+            CreatedByName = entity.GetString("CreatedByName"),
+            CreatedAt = entity.GetDateTimeOffset("CreatedAt")?.UtcDateTime ?? DateTime.MinValue,
+        };
+    }
 }

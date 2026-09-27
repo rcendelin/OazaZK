@@ -244,6 +244,17 @@ Nový model (T03, R7). Nový vlastník nedědí historii.
 | GET | `/houses/{id}/transfer-preview?date=` | Admin | Náhled: původní vlastník, datum mezizávěrky (den před předáním), jeho závěrečné saldo (platby, náklady), vodoměr a návrh jeho stavu z odečtů, `problems` (co brání převodu). |
 | POST | `/houses/{id}/transfer` | Admin | `{ transferDate, newOwnerName, newOwnerContact?, meterValue?, meterIsEstimate, meterSource?, fundShare (výchozí 0), updateHouseContact, reason? }` → mezizávěrka domu k `transferDate − 1`, ukončení období vlastnictví, nové období od `transferDate`, počáteční stavy nového vlastníka (fond, stav vodoměru jako odečet), volitelně nový kontakt domu. Vše v auditu. |
 
+## Pokladna — `CashBookFunctions.cs`
+
+Nový model (T09, R10). Záznamy se nemažou ani neupravují — oprava je storno.
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/cash-book?from=&to=` | přihlášený | Pokladní kniha: záznamy s průběžným zůstatkem (`effect` = vliv na zůstatek), počáteční a konečný zůstatek, příjmy a výdaje za období, `correctedBy` u stornovaných. |
+| GET | `/cash-book/export?format=xlsx\|pdf&from=&to=` | Admin, Accountant | Export pokladní knihy pro účetní včetně příznaku „bez dokladu“. |
+| POST | `/cash-book` | Admin, Accountant | `{ date, type: Deposit\|Expense, amount, category, description, counterparty?, hasReceipt, documentId?, bankTransactionRef?, componentId? }` → 201. Výdaj bez dokladu vyžaduje `counterparty`. Zůstatek nesmí být v žádný den záporný (ani zpětně). Ne do dne uzavřeného mezizávěrkou ani do budoucnosti. `componentId` u výdaje vytvoří jednorázový náklad složky hrazený hotově. |
+| POST | `/cash-book/{id}/storno` | Admin, Accountant | `{ reason }` → 201 storno k dnešku; navázaný náklad se opraví záporným nákladem. Storno nesmí shodit zůstatek do mínusu, stornovat lze jednou. |
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |

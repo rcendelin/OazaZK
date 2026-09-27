@@ -100,3 +100,8 @@ public sealed class MemoryInterimClosings() : MemoryRepo<InterimClosing>(_ => Pa
 {
     public Task<IReadOnlyList<InterimClosing>> GetAllClosingsAsync() => GetByPartitionKeyAsync(PartitionKeys.InterimClosing);
 }
+
+public sealed class MemoryCashBook() : MemoryRepo<CashBookEntry>(_ => PartitionKeys.CashBook, e => e.Id), ICashBookRepository
+{
+    public Task<IReadOnlyList<CashBookEntry>> GetAllEntriesAsync() => GetByPartitionKeyAsync(PartitionKeys.CashBook);
+}

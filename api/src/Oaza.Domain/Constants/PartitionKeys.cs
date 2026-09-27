@@ -11,4 +11,5 @@ public static class PartitionKeys
     public const string CostComponent = "COMPONENT";
     public const string OpeningBalance = "OPENING";
     public const string InterimClosing = "CLOSING";
+    public const string CashBook = "CASH";
 }
