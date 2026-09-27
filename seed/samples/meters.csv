@@ -1,0 +1,6 @@
+meter_number;name;type;house;installation_date;radio_address
+H-900;Hlavní vodoměr;hlavni;;2020-01-01;
+V-901;Vodoměr RD A;domovni;RD A;2020-01-01;
+V-902;Vodoměr RD B;domovni;RD B;2020-01-01;
+V-903;Vodoměr RD C;domovni;RD C;2020-01-01;
+V-904;Vodoměr RD D;domovni;RD D;2020-01-01;

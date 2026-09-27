@@ -40,6 +40,9 @@ public class CostEntry
     /// <summary>The entry this one corrects, if any.</summary>
     public string? CorrectionOf { get; set; }
 
+    /// <summary>Natural key from the seed import (T13) — the <c>ref</c> column; unique among all entries. Optional.</summary>
+    public string? ExternalRef { get; set; }
+
     /// <summary>The day that decides whether the entry is closed: the posting day, else the period start.</summary>
     public DateOnly LockDate => PostingDate ?? PeriodFrom;
 }

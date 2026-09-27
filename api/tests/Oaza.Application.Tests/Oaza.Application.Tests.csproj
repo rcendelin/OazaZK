@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <None Include="BankImport\Fixtures\*.csv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\seed\samples\*.csv" LinkBase="SeedSamples" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\seed\templates\*.csv" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

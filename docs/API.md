@@ -253,11 +253,21 @@ Nový model (T10, O4). **Za přepínačem `OFF_BOOK_FUND_ENABLED` (app setting, 
 |--------|-------|---------|-------|
 | GET | `/environment` | veřejné | `{ environment }` = `dev` \| `test` \| `prod` \| `unknown` podle app settingu `Environment` (T01). |
 
+## Import počátečních dat — `SeedImportFunctions.cs`
+
+T13. Na všech prostředích (není za `ENABLE_SEED`), jen Admin. Tělo všech tří volání: `{ files: { "houses.csv": "…obsah CSV…", … } }` — názvy a sloupce souborů viz [seed/README.md](../seed/README.md).
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| POST | `/seed-import/dry-run` | Admin | Import nanečisto nad kopií dat, nic nezapíše. Vrací `{ applied, canApply, from, today, files: [{ file, uploaded, rows, created, unchanged, conflicts, errors }], issues: [{ file, line, severity: chyba\|konflikt, message }], houses: [{ houseName, opening, payments, costs, saldo }], components: [{ componentName, allocated, houses, matches, warnings }] }` (saldo X1: kladné = přeplatek). |
+| POST | `/seed-import/report?format=md\|xlsx` | Admin | Report zkoušky jako soubor (Markdown / XLSX se 4 listy). |
+| POST | `/seed-import/apply` | Admin | Zkouška, a když nemá chybu ani konflikt a je co založit, stejný import naostro (`applied = true`). Opakované volání nic nezmění. Audit: každý záznam + souhrn `SeedImport`. |
+
 ## Seed — `SeedFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
-| POST | `/seed` | veřejné | Založí výchozí domy, vodoměry a admina. Funguje jen s `ENABLE_SEED=true`, jinak 404. Idempotentní. **V PROD musí být vypnuto.** |
+| POST | `/seed` | veřejné | Fiktivní data pro vývoj (ostrá data importuje `/seed-import`). Založí výchozí domy, vodoměry a admina. Funguje jen s `ENABLE_SEED=true`, jinak 404. Idempotentní. **V PROD musí být vypnuto.** |
 
 ---
 

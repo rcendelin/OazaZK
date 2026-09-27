@@ -54,6 +54,7 @@ var host = new HostBuilder()
         services.AddSingleton<Oaza.Application.UseCases.WaterSettlementUseCase>();
         services.AddSingleton<Oaza.Application.Ledger.LedgerCostCollector>();
         services.AddSingleton<Oaza.Application.Readings.ReadingsExportUseCase>();
+        services.AddSingleton<Oaza.Application.Seed.SeedImportUseCase>();
         services.AddSingleton<Oaza.Application.Ledger.HouseLedgerUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.InterimClosingsUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.HouseTransferUseCase>();

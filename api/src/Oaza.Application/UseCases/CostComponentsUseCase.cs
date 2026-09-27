@@ -157,6 +157,7 @@ public partial class CostComponentsUseCase
             ComponentId = component.Id,
             ValidFrom = component.StartDate,
             Method = request.Method ?? (component.AllocationBasis == AllocationBasis.Metered ? AllocationMethod.Metered : AllocationMethod.Equal),
+            RatioSource = Clean(request.RatioSource),
             Reason = "Založení složky",
         };
 
@@ -270,28 +271,44 @@ public partial class CostComponentsUseCase
     public async Task<ParticipationResponse> AddParticipationAsync(string componentId, AddParticipationRequest request, AuditActor actor)
     {
         ArgumentNullException.ThrowIfNull(request);
+        return (await AddParticipationsAsync(componentId, [request], actor)).Single();
+    }
+
+    /// <summary>
+    /// Adds several participations at once and validates them together — PERCENT weights must give 100 % only
+    /// after the whole set is in (the seed import, T13).
+    /// </summary>
+    public async Task<IReadOnlyList<ParticipationResponse>> AddParticipationsAsync(string componentId, IReadOnlyList<AddParticipationRequest> requests, AuditActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
         var component = await GetComponentAsync(componentId);
         var houseNames = await GetHouseNamesAsync();
-        if (!houseNames.ContainsKey(request.HouseId ?? string.Empty))
-            throw new AppException("Dům neexistuje.", 404);
-        await EnsureValidFromAsync(component, request.ValidFrom);
-
-        var participation = new Participation
+        var added = new List<Participation>();
+        foreach (var request in requests)
         {
-            Id = Guid.NewGuid().ToString(),
-            ComponentId = componentId,
-            HouseId = request.HouseId!,
-            ValidFrom = request.ValidFrom,
-            ValidTo = request.ValidTo,
-            Weight = request.Weight,
-        };
-        var participations = (await _participations.GetByComponentAsync(componentId)).Append(participation).ToList();
+            if (!houseNames.ContainsKey(request.HouseId ?? string.Empty))
+                throw new AppException("Dům neexistuje.", 404);
+            await EnsureValidFromAsync(component, request.ValidFrom);
+            added.Add(new Participation
+            {
+                Id = Guid.NewGuid().ToString(),
+                ComponentId = componentId,
+                HouseId = request.HouseId!,
+                ValidFrom = request.ValidFrom,
+                ValidTo = request.ValidTo,
+                Weight = request.Weight,
+            });
+        }
+        var participations = (await _participations.GetByComponentAsync(componentId)).Concat(added).ToList();
         var rules = await _rules.GetByComponentAsync(componentId);
         ThrowIfAny([.. ComponentValidation.CheckParticipations(participations), .. ComponentValidation.CheckPercentSums(rules, participations)]);
 
-        await _participations.UpsertAsync(participation);
-        await _audit.LogAsync(ParticipationEntity, participation.Id, AuditActions.Create, null, participation, actor, Clean(request.Reason));
-        return ToResponse(participation, houseNames);
+        for (var i = 0; i < added.Count; i++)
+        {
+            await _participations.UpsertAsync(added[i]);
+            await _audit.LogAsync(ParticipationEntity, added[i].Id, AuditActions.Create, null, added[i], actor, Clean(requests[i].Reason));
+        }
+        return added.Select(p => ToResponse(p, houseNames)).ToList();
     }
 
     /// <summary>Ends (or moves the end of) a participation; the change applies from the first day that differs.</summary>

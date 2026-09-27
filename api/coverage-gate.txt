@@ -16,3 +16,4 @@ src/Oaza.Application/Documents/*.cs
 src/Oaza.Application/UseCases/Calculate*.cs
 src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs
 src/Oaza.Application/Readings/*.cs
+src/Oaza.Application/Seed/*.cs

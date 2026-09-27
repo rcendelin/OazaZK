@@ -66,7 +66,12 @@ public class CostEntriesUseCase
     {
         ArgumentNullException.ThrowIfNull(request);
         var component = await GetComponentAsync(componentId);
-        var entry = new CostEntry { Id = Guid.NewGuid().ToString(), ComponentId = componentId, CorrectionOf = Clean(request.CorrectionOf) };
+        var entry = new CostEntry
+        {
+            Id = Guid.NewGuid().ToString(), ComponentId = componentId, CorrectionOf = Clean(request.CorrectionOf), ExternalRef = Clean(request.ExternalRef),
+        };
+        if (entry.ExternalRef is { } externalRef && (await _entries.GetAllAsync()).Any(e => e.ExternalRef == externalRef))
+            throw new AppException($"Náklad s označením {externalRef} už existuje.", 409);
         Apply(entry, request);
 
         // An entry reaching into a closed period is a correction: split by the original segments, booked on the first open day (T08).
@@ -268,7 +273,7 @@ public class CostEntriesUseCase
     {
         Id = e.Id, ComponentId = e.ComponentId, Type = e.Type, PeriodFrom = e.PeriodFrom, PeriodTo = e.PeriodTo, Amount = e.Amount,
         QuantityM3 = e.QuantityM3, Supplier = e.Supplier, DocumentId = e.DocumentId, PaidFrom = e.PaidFrom, Note = e.Note,
-        PostingDate = e.PostingDate, CorrectionOf = e.CorrectionOf,
+        PostingDate = e.PostingDate, CorrectionOf = e.CorrectionOf, ExternalRef = e.ExternalRef,
     };
 
     private static CostEntryResponse ToResponse(CostEntry e, CostComponent component, DateOnly? lastClosed) => new()
