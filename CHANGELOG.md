@@ -27,6 +27,8 @@ se sekce přejmenuje na verzi s datem.
 - **Odhad odečtu (T04, část).** Odečet může být označený jako odhad s popisem, jak vznikl (v přehledech „≈“ s nápovědou);
   `GET /api/readings/estimate` dopočítá stav vodoměru k datu interpolací po dnech mezi odečty, případně vezme
   nejbližší odečet, když existuje jen z jedné strany.
+- **Zadání v repozitáři.** `docs/ZADANI.md` (setkání 27. 9. 2026) včetně scénářů S1–S8; `docs/open-questions.md`
+  doplněno o znění O1–O5 a rozhodnutí X5 (varianta B: `DateOnly` v novém modelu, „dnes“ v `Europe/Prague`).
 
 ### Opraveno
 - **Potvrzení importu odečtů (X7 §8.6/§8.7)** už nezávisí na paměti serveru (dřív mohlo skončit „relace vypršela“,
