@@ -18,6 +18,7 @@ import { MetersPage } from './pages/admin/MetersPage';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { CostComponentsPage } from './pages/admin/CostComponentsPage';
 import { OpeningBalancesPage } from './pages/admin/OpeningBalancesPage';
+import { SeedImportPage } from './pages/admin/SeedImportPage';
 import { CostsPage } from './pages/CostsPage';
 import { WaterPage } from './pages/WaterPage';
 import { LedgerPage } from './pages/LedgerPage';
@@ -133,6 +134,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Admin">
                     <OpeningBalancesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/seed-import"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <SeedImportPage />
                   </ProtectedRoute>
                 }
               />

@@ -109,6 +109,8 @@ se sekce přejmenuje na verzi s datem.
   s návodem `seed/README.md`. Import vždy nejdřív proběhne nanečisto a ukáže report (co vznikne, konflikty, chyby,
   salda domů k dnešku) — ke stažení v Markdownu a XLSX; zapíše se jen bez chyb a konfliktů a opakovaný import nic
   nezdvojí ani nepřepíše.
+- **Import počátečních dat (T13), část B — stránka.** Správa → Import počátečních dat: nahrání CSV (UTF-8 i Windows-1250
+  z Excelu), zkouška nanečisto s reportem, stažení reportu a zápis po potvrzení.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich

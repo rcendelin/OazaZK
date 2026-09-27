@@ -16,6 +16,7 @@ import {
   History,
   Layers,
   Flag,
+  FileUp,
   Coins,
   Droplet,
   BookOpen,
@@ -84,6 +85,7 @@ const adminNavItems: NavItem[] = [
   { label: 'Vodoměry', path: '/admin/meters', icon: <Gauge size={iconSize} />, adminOnly: true },
   { label: 'Nákladové složky', path: '/admin/cost-components', icon: <Layers size={iconSize} />, adminOnly: true },
   { label: 'Počáteční stavy', path: '/admin/opening-balances', icon: <Flag size={iconSize} />, adminOnly: true },
+  { label: 'Import počátečních dat', path: '/admin/seed-import', icon: <FileUp size={iconSize} />, adminOnly: true },
   { label: 'Audit změn', path: '/admin/audit', icon: <History size={iconSize} />, adminOnly: true },
 ];
 

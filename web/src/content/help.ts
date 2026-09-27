@@ -17,7 +17,7 @@ export type TermId =
 
 export type SectionId =
   | 'paymentTypes' | 'importTwoStep' | 'documentVersions'
-  | 'interimClosing' | 'openingBalances';
+  | 'interimClosing' | 'openingBalances' | 'seedImport';
 
 export interface Term {
   label: string;
@@ -86,6 +86,11 @@ export const sections: Record<SectionId, Section> = {
     note: 'Portál nepřepočítává celou historii. Začíná od známých hodnot k datu startu účtování — u každé hodnoty uveďte, odkud je, a dopočtenou označte jako odhad.',
     disclosureTitle: 'Jak zadat počáteční stavy',
     disclosure: '**1. Start účtování.** Zvolte datum (voda a elektřina vodárny se účtují od 1. 11. 2023) a klikněte na „Start účtování k datu“. Každý dům dostane období vlastnictví se současným vlastníkem.\n\n**2. Stavy vodoměrů.** Nejlépe skutečný odečet k tomu dni. Když chybí, tlačítko „Navrhnout z odečtů“ dopočítá stav mezi dvěma nejbližšími odečty (podle dní) a označí ho jako odhad. Hodnotu můžete přijmout nebo přepsat.\n\n**3. Podíl ve fondu.** Stav z poslední roční závěrky. Kladné číslo znamená, že dům má u spolku přeplatek.\n\n**4. Kredit u dodavatele.** Přeplatek složky u dodavatele (např. elektřina vodárny) zadejte záporně. „Náhled rozdělení“ ukáže, kolik připadne na každý dům.\n\n**Po mezizávěrce** jde hodnotu už jen opravit s uvedeným důvodem.',
+  },
+  seedImport: {
+    note: 'Počáteční data (domy, vlastníci, vodoměry, složky, účasti, počáteční stavy, kredity a náklady) se nahrají ze šablon CSV. Nejdřív proběhne zkouška nanečisto — zapíše se až po kontrole reportu.',
+    disclosureTitle: 'Jak import funguje',
+    disclosure: '**Šablony.** Jsou v repozitáři v `seed/templates/` s návodem `seed/README.md` (sloupce, formát, přirozené klíče). Nahrát můžete jen některé soubory; odkazovat se lze na data, která už v aplikaci jsou.\n\n**Zkouška nanečisto.** Import proběhne nad kopií dat se všemi kontrolami aplikace. Report ukáže, co vznikne, co už existuje beze změny, chyby a konflikty (se jménem souboru a řádkem) a salda domů k dnešku. Report stáhnete jako XLSX nebo Markdown ke kontrole.\n\n**Zápis.** Tlačítko Zapsat je aktivní jen bez chyb a konfliktů. Každý záznam se zapíše do auditu.\n\n**Opakování.** Stejné soubory lze nahrát znovu — nic se nezdvojí. Když se hodnota existujícího záznamu liší, je to konflikt: import ho nepřepíše, opravte CSV nebo záznam v aplikaci.',
   },
   importTwoStep: {
     note: 'Import má dva kroky. Nejdřív se soubor načte a zkontroluje — v této fázi se neuloží nic. Uloží se až po vašem potvrzení náhledu. Když náhled zavřete bez potvrzení, nestane se nic.',
