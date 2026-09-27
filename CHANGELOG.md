@@ -90,6 +90,9 @@ se sekce přejmenuje na verzi s datem.
 - **Pokladna – API (T09, část A).** Pokladní kniha spolku: vklady (výběr z účtu s odkazem na pohyb), výdaje i bez dokladu
   (pak je povinné komu), průběžný zůstatek, který nikdy nesmí být záporný (ani při zpětném zápisu), storno místo mazání,
   volitelné navázání výdaje na nákladovou složku (vznikne náklad hrazený hotově). Export pokladní knihy do XLSX a PDF.
+- **Pokladna – stránka (T09, část B).** Hospodaření → Pokladna: vidí ji všichni členové; zůstatek, příjmy a výdaje za
+  období, záznamy s průběžným zůstatkem a štítkem „bez dokladu“, stornované přeškrtnuté. Správce a účetní zapisují vklad
+  nebo výdaj (i jako společný náklad složky), stornují s důvodem a exportují do XLSX a PDF.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
