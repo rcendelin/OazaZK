@@ -26,6 +26,8 @@ se sekce přejmenuje na verzi s datem.
   `IAuditLogger` pro use casy nového modelu, endpoint `GET /api/audit-log` a stránka Administrace → Audit změn.
 - **E2E smoke testy (X6).** Playwright v CI ověřuje v prohlížeči pruh s prostředím a průchod importem z banky
   (s podvrženým API, bez backendu).
+- **Property-based testy (X6).** FsCheck ověřuje invarianty alokační knihovny na náhodných částkách a vahách
+  (součet = celek, díly na haléře, nulová váha nic nedostane, záporná částka zrcadlově).
 - **Odhad odečtu (T04, část).** Odečet může být označený jako odhad s popisem, jak vznikl (v přehledech „≈“ s nápovědou);
   `GET /api/readings/estimate` dopočítá stav vodoměru k datu interpolací po dnech mezi odečty, případně vezme
   nejbližší odečet, když existuje jen z jedné strany.

@@ -128,6 +128,7 @@ npm run build               # tsc -b && vite build
   npm run build && npx playwright test
   ```
   Nový test: `mockApi(page, { '/cesta': () => odpověď })`, přihlášení `signInAsAdmin`, přechod `navigate` (reload by zahodil JWT v paměti).
+- **Property-based testy:** FsCheck (`FsCheck.Xunit`, atribut `[Property]`) v `Oaza.Domain.Tests` — invarianty výpočtů na náhodných vstupech (vzor: `AllocatorPropertyTests`). Použít pro ledger T07 (Σ rozpočtu = celkem).
 - **Warningy = chyby.** `api/Directory.Build.props` zapíná `TreatWarningsAsErrors` (výjimka: NuGet advisories NU1901–NU1904).
 - **CI na pull requestech** (`.github/workflows/ci.yml`): build API bez warningů, testy, kontrola pokrytí souborů
   z `api/coverage-gate.txt` (výpočetní logika, kombinovaně ≥ 90 %; nové výpočty tam přidávat) a lint + build webu.
