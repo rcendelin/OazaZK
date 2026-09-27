@@ -19,6 +19,7 @@ import { MetersPage } from './pages/admin/MetersPage';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { CostComponentsPage } from './pages/admin/CostComponentsPage';
 import { OpeningBalancesPage } from './pages/admin/OpeningBalancesPage';
+import { CostsPage } from './pages/CostsPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
@@ -71,6 +72,14 @@ function App() {
               />
               <Route path="/saldo" element={<SaldoPage />} />
               <Route path="/billing" element={<BillingPage />} />
+              <Route
+                path="/naklady"
+                element={
+                  <ProtectedRoute requiredRole="Accountant">
+                    <CostsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/prehled-faktur"
                 element={

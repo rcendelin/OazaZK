@@ -55,6 +55,9 @@ se sekce přejmenuje na verzi s datem.
   do úseků podle dní a mezi domy účastné v každém úseku (součet vždy přesně sedí), rozpad záznamu po domech, opakovaná
   záloha (měsíční až roční série). Úhrada z přeplatku u dodavatele je pro domy stále náklad (R6). Faktury za vodu PVK
   nesou fakturované m³ pro výpočet ceny.
+- **Náklady – stránka (T06, část B).** Hospodaření → Náklady: záznamy po složkách s filtrem období, součtem a u vody
+  s průměrnou cenou za m³, rozpad každého nákladu na domy s výpočtem po úsecích, odkaz na PDF doklad, přidání nákladu
+  nebo faktury a formulář „Opakovaná záloha“.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
