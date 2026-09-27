@@ -217,6 +217,8 @@ Nový model (T07). **Znaménko salda (X1): kladné = přeplatek (spolek dluží 
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
 | GET | `/ledger/houses/{houseId}?ownershipPeriodId=&from=&to=` | přihlášený; Member jen svůj dům (403) | Saldo domu: počáteční podíl ve fondu, platby (zálohy k 1. dni měsíce, doplatky a výplaty ke dni platby; starý „počáteční zůstatek“ se nezapočítává), rozpočtené náklady po složkách a úsecích (kredit složky, voda, ztráty) s rozpadem výpočtu, průběžné saldo. Výchozí období vlastnictví = aktuální vlastník, výchozí rozsah = start účtování … dnes. |
+| GET | `/ledger/houses/{houseId}/export?format=xlsx\|csv&…` | jako detail | Export salda domu (XLSX, nebo CSV pro český Excel: UTF-8 s BOM, „;“, desetinná čárka). |
+| GET | `/ledger/overview/export?format=xlsx\|csv&from=&to=` | přihlášený | Export přehledu včetně řádků „Σ domů“ a „Rozpočteno složkou“. |
 | GET | `/ledger/overview?from=&to=` | přihlášený | Všechny domy × složky (bez osobních údajů): počáteční podíl, platby, náklady po složkách, saldo; kontrolní řádek za každou složku (rozpočteno vs. Σ domů) s varováními. |
 
 ## Systém — `SystemFunctions.cs`

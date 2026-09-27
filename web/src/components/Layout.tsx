@@ -20,6 +20,7 @@ import {
   Flag,
   Coins,
   Droplet,
+  BookOpen,
   Scale,
   CircleHelp,
   LogOut,
@@ -50,6 +51,7 @@ const navItems: NavItem[] = [
     icon: <Wallet size={iconSize} />,
     children: [
       { label: 'Zálohy', path: '/advances', icon: <Banknote size={iconSize} /> },
+      { label: 'Saldo domu', path: '/saldo-domu', icon: <BookOpen size={iconSize} /> },
       { label: 'Saldo a platby', path: '/saldo', icon: <Scale size={iconSize} /> },
       { label: 'Import z banky', path: '/advances/import', icon: <Landmark size={iconSize} />, adminOnly: true },
       { label: 'Vyúčtování', path: '/billing', icon: <Receipt size={iconSize} /> },

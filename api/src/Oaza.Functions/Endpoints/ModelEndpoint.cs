@@ -56,6 +56,34 @@ internal static class ModelEndpoint
         }
     }
 
+    /// <summary>Like <see cref="HandleAsync{T}"/>, but answers with a downloadable file.</summary>
+    public static async Task<HttpResponseData> HandleFileAsync(
+        HttpRequestData req, ILogger logger, Func<Task<(byte[] Content, string ContentType, string FileName)>> action)
+    {
+        try
+        {
+            var (content, contentType, fileName) = await action();
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", contentType);
+            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+            await response.WriteBytesAsync(content);
+            return response;
+        }
+        catch (ArgumentException ex)
+        {
+            return await WriteJsonAsync(req, HttpStatusCode.BadRequest, new { error = ex.Message.Split(" (Parameter")[0] });
+        }
+        catch (AppException ex)
+        {
+            return await WriteJsonAsync(req, (HttpStatusCode)ex.StatusCode, new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Unexpected error in export {Url}.", req.Url);
+            return await WriteJsonAsync(req, HttpStatusCode.InternalServerError, new { error = "Nastala neočekávaná chyba." });
+        }
+    }
+
     public static async Task<T> ReadAsync<T>(HttpRequestData req) where T : class =>
         await JsonSerializer.DeserializeAsync<T>(req.Body, JsonOptions) ?? throw new AppException("Chybí tělo požadavku.");
 

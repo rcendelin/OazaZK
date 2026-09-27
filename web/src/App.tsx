@@ -21,6 +21,7 @@ import { CostComponentsPage } from './pages/admin/CostComponentsPage';
 import { OpeningBalancesPage } from './pages/admin/OpeningBalancesPage';
 import { CostsPage } from './pages/CostsPage';
 import { WaterPage } from './pages/WaterPage';
+import { LedgerPage } from './pages/LedgerPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
@@ -72,6 +73,7 @@ function App() {
                 }
               />
               <Route path="/saldo" element={<SaldoPage />} />
+              <Route path="/saldo-domu" element={<LedgerPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route
                 path="/voda"

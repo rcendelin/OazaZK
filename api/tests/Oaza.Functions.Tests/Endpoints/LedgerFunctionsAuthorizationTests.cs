@@ -11,6 +11,8 @@ public class LedgerFunctionsAuthorizationTests
     [Theory]
     [InlineData(nameof(LedgerFunctions.GetHouseLedgerAsync))]
     [InlineData(nameof(LedgerFunctions.GetOverviewAsync))]
+    [InlineData(nameof(LedgerFunctions.ExportHouseLedgerAsync))]
+    [InlineData(nameof(LedgerFunctions.ExportOverviewAsync))]
     public void RequiresSignIn_NoRoleRestriction(string method)
     {
         var info = typeof(LedgerFunctions).GetMethod(method)!;
