@@ -30,4 +30,16 @@ public class CostEntry
 
     public PaidFrom PaidFrom { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>
+    /// Set when the entry reaches into a period already fixed by an interim closing (T08): its shares are split by the
+    /// original segments (who took part when), but booked into the saldo on this first open day — a correction.
+    /// </summary>
+    public DateOnly? PostingDate { get; set; }
+
+    /// <summary>The entry this one corrects, if any.</summary>
+    public string? CorrectionOf { get; set; }
+
+    /// <summary>The day that decides whether the entry is closed: the posting day, else the period start.</summary>
+    public DateOnly LockDate => PostingDate ?? PeriodFrom;
 }

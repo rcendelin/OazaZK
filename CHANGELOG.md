@@ -72,6 +72,11 @@ se sekce přejmenuje na verzi s datem.
 - **Saldo domu – stránka a export (T07, část B).** Hospodaření → Saldo domu: přehled všech domů po složkách s kontrolním
   řádkem (nesoulad červeně) a varováními, detail domu s průběžným saldem, volbou období vlastnictví a u každého nákladu
   „Jak vznikl“; saldo slovy (přeplatek / nedoplatek). Export přehledu i salda domu do XLSX a CSV.
+- **Mezizávěrky (T08, část A).** Řez k datu pro všechny domy (roční závěrka) nebo pro jeden dům (prodej) se snapshotem
+  salda; data do řezu se už nemění (pravidla, účast, náklady, počáteční stavy). Vyúčtování, které přijde po mezizávěrce
+  a zasahuje do uzavřeného období, se rozdělí podle toho, kdo se kdy účastnil, a zaúčtuje jako opravný záznam k prvnímu
+  dni po řezu — uzavřené saldo zůstane. Detail mezizávěrky ukáže rozdíl snapshotu proti dnešnímu přepočtu. Zrušit lze jen
+  poslední mezizávěrku s důvodem.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

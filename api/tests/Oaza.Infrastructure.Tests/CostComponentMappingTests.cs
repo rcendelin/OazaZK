@@ -110,3 +110,27 @@ public class CostEntryMappingTests
         TableEntityMapper.ToCostEntry(entity).Should().BeEquivalentTo(entry);
     }
 }
+
+public class InterimClosingMappingTests
+{
+    [Fact]
+    public void InterimClosingRoundTrips_AndCostEntryKeepsPosting()
+    {
+        var closing = new InterimClosing
+        {
+            Id = "2026-12-31|All|-", Date = new DateOnly(2026, 12, 31), Scope = ClosingScope.All, Reason = "roční závěrka",
+            CreatedBy = "u", CreatedByName = "Rosťa", CreatedAt = new DateTime(2027, 1, 5, 8, 0, 0, DateTimeKind.Utc), SnapshotJson = "[{\"saldo\":1}]",
+        };
+        TableEntityMapper.ToInterimClosing(TableEntityMapper.ToTableEntity(closing)).Should().BeEquivalentTo(closing);
+
+        var entry = new CostEntry
+        {
+            Id = "e", ComponentId = "c", PeriodFrom = new DateOnly(2026, 7, 1), PeriodTo = new DateOnly(2026, 12, 31), Amount = 1m,
+            PostingDate = new DateOnly(2026, 10, 1), CorrectionOf = "e0",
+        };
+        var back = TableEntityMapper.ToCostEntry(TableEntityMapper.ToTableEntity(entry));
+        back.PostingDate.Should().Be(new DateOnly(2026, 10, 1));
+        back.CorrectionOf.Should().Be("e0");
+        back.LockDate.Should().Be(new DateOnly(2026, 10, 1));
+    }
+}

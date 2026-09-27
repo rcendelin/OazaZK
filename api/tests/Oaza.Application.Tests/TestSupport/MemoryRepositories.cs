@@ -75,7 +75,7 @@ public sealed class MemoryOpeningBalances() : MemoryRepo<OpeningBalance>(_ => Pa
 public sealed class ClosedUntil(DateOnly? day) : IClosingBoundary
 {
     public DateOnly? Day { get; set; } = day;
-    public Task<DateOnly?> GetLastClosedDayAsync() => Task.FromResult(Day);
+    public Task<DateOnly?> GetLastClosedDayAsync(string? houseId = null) => Task.FromResult(Day);
 }
 
 public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
@@ -94,4 +94,9 @@ public sealed class MemoryPayments() : MemoryRepo<AdvancePayment>(p => p.HouseId
 
     public Task<IReadOnlyList<AdvancePayment>> GetByHouseAndPeriodAsync(string houseId, DateTime dateFrom, DateTime dateTo) =>
         Task.FromResult<IReadOnlyList<AdvancePayment>>(Items.Values.Where(p => p.HouseId == houseId && p.EffectiveDate() >= dateFrom && p.EffectiveDate() <= dateTo).ToList());
+}
+
+public sealed class MemoryInterimClosings() : MemoryRepo<InterimClosing>(_ => PartitionKeys.InterimClosing, c => c.Id), IInterimClosingRepository
+{
+    public Task<IReadOnlyList<InterimClosing>> GetAllClosingsAsync() => GetByPartitionKeyAsync(PartitionKeys.InterimClosing);
 }

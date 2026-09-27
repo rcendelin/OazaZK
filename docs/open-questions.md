@@ -12,6 +12,8 @@ Stav k 27. 9. 2026.
 | **T09** | Pokladnu čtou členové, zapisují **Admin a Accountant**; nová role se nezavádí. | `[RequireRole(Admin, Accountant)]` na zápisových endpointech. |
 | **Cena vody (T05/T06)** | Cena PVK za m³ se bere z faktur: Σ částek faktur PVK ÷ Σ fakturovaných m³ za období. Faktury PVK jsou nákladové záznamy složky Voda PVK s povinným množstvím v m³. | Náklad domů pak sedí na faktury; rozdíl proti odečtům jde do ztrát. |
 | **Období ztrát (T05)** | Ztráty se počítají za každý interval mezi dvěma odečty hlavního vodoměru a rozpočítávají se v úsecích pro-rata podle dní. | Záporná ztráta v intervalu se nerozpočítá a zobrazí se varování. |
+| **T08 vyúčtování přes řez** | Náklad, jehož období zasahuje do uzavřeného období, se rozdělí podle původních úseků (kdo se kdy účastnil), ale do salda se zaúčtuje k prvnímu dni po mezizávěrce jako opravný záznam s povinným důvodem (`CostEntry.PostingDate`). Uzavřené saldo se nemění. | Rozhodnuto 27. 9. 2026. |
+| **T08 zámek plateb** | Mezizávěrka zamyká i platby domů s datem do řezu (úprava, smazání); pozdně zapsaná platba se zaúčtuje k datu po řezu. | Rozhodnuto 27. 9. 2026; implementace v T08 části B. |
 | **X5** | Varianta B z `docs/superpowers/specs/2026-09-27-x5-kalendarni-data-design.md`: nový model (T02–T10) používá `DateOnly` + `DateRange` (uzavřený interval po dnech), „dnes“ vždy z `IClock` v `Europe/Prague` — i pro uživatele mimo ČR; starý model se jen opraví (D1–D3). | Implementace kroků 1–3 návrhu před T02. |
 
 ## Výklad zadání (bez dopadu na to, co uživatel vidí)
@@ -29,8 +31,8 @@ Stav k 27. 9. 2026.
 | T03 znaménko `FundShare` | Podle X1: kladné = dům má u spolku přeplatek. Starý počáteční zůstatek na stránce Saldo (`PaymentType.OpeningBalance`) má opačné znaménko a zůstává do náhrady ledgerem (T07). |
 | T03 „opravný záznam“ | Po mezizávěrce se počáteční stav opravuje úpravou s povinným důvodem, v auditu jako `Correction`. Jedinečnost (jeden stav na kombinaci) tím zůstává zachovaná. |
 | T06 náklady před startem | Náklad, jehož období začíná před začátkem účtování složky, se odmítne (R3). Vyúčtování přes datum startu se zadá jen za část od startu. |
-| T06 náklad do uzavřeného období | Zatím se odmítne jako každá změna za mezizávěrkou. Vyúčtování přes řez (rozpočet do úseků a zaúčtování do otevřeného období) doplní T08. |
-| T08 mezizávěrka domu | `IClosingBoundary` dnes vrací jeden poslední uzavřený den pro všechno; mezizávěrka jen pro dům (převod domu) bude potřebovat parametr domu. |
+| T06 náklad do uzavřeného období | Od T08 se zaúčtuje jako opravný záznam do otevřeného období (viz rozhodnutí T08). |
+| T08 rozsah zámku | `IClosingBoundary.GetLastClosedDayAsync(houseId)`: bez domu (změny, které ovlivní všechny domy — pravidla, účast, náklady, odečty) platí jakákoli mezizávěrka; s domem (jeho platby, počáteční stavy) mezizávěrky všech domů a toho domu. Zrušit lze jen poslední mezizávěrku, s důvodem. |
 
 ## Rizika
 

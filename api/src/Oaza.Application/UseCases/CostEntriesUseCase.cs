@@ -66,8 +66,17 @@ public class CostEntriesUseCase
     {
         ArgumentNullException.ThrowIfNull(request);
         var component = await GetComponentAsync(componentId);
-        var entry = new CostEntry { Id = Guid.NewGuid().ToString(), ComponentId = componentId };
+        var entry = new CostEntry { Id = Guid.NewGuid().ToString(), ComponentId = componentId, CorrectionOf = Clean(request.CorrectionOf) };
         Apply(entry, request);
+
+        // An entry reaching into a closed period is a correction: split by the original segments, booked on the first open day (T08).
+        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
+        if (lastClosed is { } closed && entry.PeriodFrom <= closed)
+        {
+            if (Clean(request.Reason) is null)
+                throw new BusinessRuleException([$"Období nákladu zasahuje do uzavřeného období (mezizávěrka k {Day(closed)}). Zaúčtuje se jako opravný záznam k {Day(closed.AddDays(1))} — uveďte důvod."]);
+            entry.PostingDate = closed.AddDays(1);
+        }
         await ValidateAsync(component, entry);
 
         await _entries.UpsertAsync(entry);
@@ -123,10 +132,12 @@ public class CostEntriesUseCase
         ArgumentNullException.ThrowIfNull(request);
         var component = await GetComponentAsync(componentId);
         var entry = await _entries.GetAsync(componentId, entryId) ?? throw new NotFoundException(CostEntryEntity, entryId);
-        await EnsureOpenAsync(entry.PeriodFrom);
+        await EnsureOpenAsync(entry.LockDate);
 
         var before = Copy(entry);
         Apply(entry, request);
+        if (entry.PostingDate is null && entry.PeriodFrom != before.PeriodFrom && await _closingBoundary.GetLastClosedDayAsync() is { } closed && entry.PeriodFrom <= closed)
+            throw new BusinessRuleException([$"Nové období zasahuje do uzavřeného období (mezizávěrka k {Day(closed)}) — zadejte místo úpravy opravný záznam."]);
         await ValidateAsync(component, entry);
 
         await _entries.UpsertAsync(entry);
@@ -138,7 +149,7 @@ public class CostEntriesUseCase
     {
         await GetComponentAsync(componentId);
         var entry = await _entries.GetAsync(componentId, entryId) ?? throw new NotFoundException(CostEntryEntity, entryId);
-        await EnsureOpenAsync(entry.PeriodFrom);
+        await EnsureOpenAsync(entry.LockDate);
 
         await _entries.DeleteAsync(componentId, entryId);
         await _audit.LogAsync(CostEntryEntity, entry.Id, AuditActions.Delete, entry, null, actor, Clean(reason));
@@ -229,7 +240,7 @@ public class CostEntriesUseCase
         }
         ThrowIfAny(errors);
 
-        await EnsureOpenAsync(entry.PeriodFrom);
+        await EnsureOpenAsync(entry.LockDate);
         if (component.AllocationBasis == AllocationBasis.CostEntries)
             await AllocateAsync(entry); // an entry that cannot be allocated (nobody participates) is rejected
     }
@@ -257,6 +268,7 @@ public class CostEntriesUseCase
     {
         Id = e.Id, ComponentId = e.ComponentId, Type = e.Type, PeriodFrom = e.PeriodFrom, PeriodTo = e.PeriodTo, Amount = e.Amount,
         QuantityM3 = e.QuantityM3, Supplier = e.Supplier, DocumentId = e.DocumentId, PaidFrom = e.PaidFrom, Note = e.Note,
+        PostingDate = e.PostingDate, CorrectionOf = e.CorrectionOf,
     };
 
     private static CostEntryResponse ToResponse(CostEntry e, CostComponent component, DateOnly? lastClosed) => new()
@@ -274,7 +286,9 @@ public class CostEntriesUseCase
         DocumentId = e.DocumentId,
         PaidFrom = e.PaidFrom,
         Note = e.Note,
-        Locked = lastClosed is { } closed && e.PeriodFrom <= closed,
+        PostingDate = e.PostingDate,
+        CorrectionOf = e.CorrectionOf,
+        Locked = lastClosed is { } closed && e.LockDate <= closed,
     };
 
     private static void ThrowIfAny(IReadOnlyList<string> errors)
