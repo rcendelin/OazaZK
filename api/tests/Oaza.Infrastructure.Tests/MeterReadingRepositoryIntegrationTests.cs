@@ -46,4 +46,28 @@ public class MeterReadingRepositoryIntegrationTests
         latest2.Select(r => r.ReadingDate).Should().Equal(jun, mar);
         latest2.Select(r => r.Value).Should().Equal(160m, 130m);
     }
+
+    [SkippableFact]
+    public async Task EstimateFlag_RoundTrips_AndDefaultsToFalse()
+    {
+        Skip.IfNot(_fx.Available, "Azurite emulator not available on the Table endpoint.");
+        var repo = new MeterReadingRepository(_fx.ServiceClient);
+        var meterId = "meter-" + Guid.NewGuid().ToString("N");
+
+        var estimate = Reading(meterId, new DateTime(2025, 1, 16, 0, 0, 0, DateTimeKind.Utc), 260.855m);
+        estimate.IsEstimate = true;
+        estimate.EstimateNote = "Odhad lineární interpolací";
+        await repo.UpsertAsync(estimate);
+        await repo.UpsertAsync(Reading(meterId, new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), 270m));
+
+        var stored = await repo.GetByMeterIdAsync(meterId);
+
+        var feb = stored.Single(r => r.ReadingDate.Month == 2);
+        feb.IsEstimate.Should().BeFalse();
+        feb.EstimateNote.Should().BeNull();
+        var jan = stored.Single(r => r.ReadingDate.Month == 1);
+        jan.IsEstimate.Should().BeTrue();
+        jan.EstimateNote.Should().Be("Odhad lineární interpolací");
+        jan.Value.Should().Be(260.855m);
+    }
 }

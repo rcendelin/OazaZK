@@ -126,7 +126,9 @@ public static class TableEntityMapper
             { "Value", reading.Value.ToString("G29", CultureInfo.InvariantCulture) },
             { "Source", reading.Source.ToString() },
             { "ImportedAt", DateTime.SpecifyKind(reading.ImportedAt, DateTimeKind.Utc) },
-            { "ImportedBy", reading.ImportedBy }
+            { "ImportedBy", reading.ImportedBy },
+            { "IsEstimate", reading.IsEstimate },
+            { "EstimateNote", reading.EstimateNote }
         };
     }
 
@@ -139,7 +141,9 @@ public static class TableEntityMapper
             Value = decimal.TryParse(entity.GetString("Value"), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0m,
             Source = Enum.TryParse<ReadingSource>(entity.GetString("Source"), out var source) ? source : ReadingSource.Manual,
             ImportedAt = entity.GetDateTimeOffset("ImportedAt")?.UtcDateTime ?? DateTime.MinValue,
-            ImportedBy = entity.GetString("ImportedBy") ?? string.Empty
+            ImportedBy = entity.GetString("ImportedBy") ?? string.Empty,
+            IsEstimate = entity.GetBoolean("IsEstimate") ?? false,
+            EstimateNote = entity.GetString("EstimateNote")
         };
     }
 

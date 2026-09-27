@@ -63,3 +63,19 @@ export const getChartData = (
   );
   return apiClient.get<ChartResponse>(`/readings/chart?${params.toString()}`);
 };
+
+export interface ReadingEstimate {
+  meterId: string;
+  targetDate: string;
+  /** Null when the meter has no readings. */
+  value: number | null;
+  isEstimate: boolean;
+  method: 'Exact' | 'Interpolated' | 'NearestBefore' | 'NearestAfter' | 'None';
+  note: string;
+}
+
+/** Estimated meter state at a date (yyyy-MM-dd) — interpolation between readings (T04). Admin only. */
+export const estimateReading = (meterId: string, date: string): Promise<ReadingEstimate> =>
+  apiClient.get<ReadingEstimate>(
+    `/readings/estimate?meterId=${encodeURIComponent(meterId)}&date=${encodeURIComponent(date)}`,
+  );

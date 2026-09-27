@@ -183,6 +183,9 @@ export interface ReadingResponse {
   source: string;
   importedAt: string;
   importedBy: string;
+  /** Estimated value, not a physical reading (T04). */
+  isEstimate: boolean;
+  estimateNote: string | null;
 }
 
 export interface MonthlyReadingsResponse {
