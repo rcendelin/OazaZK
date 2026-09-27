@@ -65,6 +65,10 @@ se sekce přejmenuje na verzi s datem.
 - **Voda a ztráty – stránka (T05, část B).** Hospodaření → Voda a ztráty: pro každý úsek spotřeba hlavního vodoměru
   a domů, ztráta, cena za m³, použitá metoda ztrát a výpočet po úsecích, náklad každého domu (≈ u odhadu), varování
   a rozdíl proti fakturám PVK; na konci součty za období.
+- **Saldo domu – výpočet (T07, část A).** Nové saldo v konvenci kladné = přeplatek: počáteční podíl ve fondu, platby
+  domu a jeho podíly na nákladech všech složek (včetně kreditu vodárny, vody a ztrát) s průběžným zůstatkem a rozpadem
+  výpočtu u každé položky; saldo se vede za období vlastnictví (nový majitel začíná znovu). Přehled všech domů po
+  složkách s kontrolním řádkem „Σ domů = rozpočteno“. Člen vidí detail jen svého domu.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

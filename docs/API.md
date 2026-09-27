@@ -210,6 +210,15 @@ Nový model (T05). Potřebuje složku s rolí `Consumption` (Voda PVK, faktury s
 |--------|-------|---------|-------|
 | GET | `/water-settlement?from=&to=` | Admin, Accountant | Pro každý interval mezi odečty hlavního vodoměru: spotřeba hlavního a domovních vodoměrů (chybějící hraniční odečet se interpoluje, označí se odhad), ztráta, cena za m³ z faktur PVK (Σ Kč ÷ Σ m³ podle dní), náklad vody a ztrát po domech, metoda ztrát po úsecích a rozdíl proti fakturám. Záporná ztráta se nerozpočítá (varování). Max. 5 let. |
 
+## Saldo domu — `LedgerFunctions.cs`
+
+Nový model (T07). **Znaménko salda (X1): kladné = přeplatek (spolek dluží domu), záporné = nedoplatek.** Částky položek jsou jejich vliv na saldo (platby a kredity kladně, náklady záporně).
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/ledger/houses/{houseId}?ownershipPeriodId=&from=&to=` | přihlášený; Member jen svůj dům (403) | Saldo domu: počáteční podíl ve fondu, platby (zálohy k 1. dni měsíce, doplatky a výplaty ke dni platby; starý „počáteční zůstatek“ se nezapočítává), rozpočtené náklady po složkách a úsecích (kredit složky, voda, ztráty) s rozpadem výpočtu, průběžné saldo. Výchozí období vlastnictví = aktuální vlastník, výchozí rozsah = start účtování … dnes. |
+| GET | `/ledger/overview?from=&to=` | přihlášený | Všechny domy × složky (bez osobních údajů): počáteční podíl, platby, náklady po složkách, saldo; kontrolní řádek za každou složku (rozpočteno vs. Σ domů) s varováními. |
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |
