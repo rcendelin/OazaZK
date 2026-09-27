@@ -207,7 +207,6 @@ export interface ImportPreviewRow {
 
 // Matches backend ImportPreviewResponse DTO
 export interface ImportPreviewResponse {
-  importSessionId: string;
   rows: ImportPreviewRow[];
   errors: ImportValidationMessage[];
   warnings: ImportValidationMessage[];
