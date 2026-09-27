@@ -16,7 +16,7 @@ Stav k 27. 9. 2026.
 | Riziko | Proč | Zmírnění |
 |---|---|---|
 | **Neatomické zápisy do Table Storage** | Table Storage nemá transakce přes tabulky ani přes partition; víceřádkové operace (potvrzení importu, uzavření období) mohou skončit napůl. | Validovat vše před prvním zápisem, idempotentní klíče (deterministické RowKey), pořadí zápisů tak, aby opakování dokončilo zbytek (vzor: import bankovního výpisu). Nové entity navrhovat tak, aby jedna operace = jedna partition, kde to jde (batch transakce). |
-| **In-memory session importu odečtů** | `InMemoryImportSessionCache` na Consumption plánu nepřežije restart ani jinou instanci — potvrzení může selhat „relace vypršela“. | X7: bezstavové potvrzení (klient posílá výsledek náhledu, server znovu validuje), jako u importu z banky. |
+| ~~**In-memory session importu odečtů**~~ (vyřešeno X7) | `InMemoryImportSessionCache` na Consumption plánu nepřežije restart ani jinou instanci — potvrzení může selhat „relace vypršela“. | X7: bezstavové potvrzení (klient posílá výsledek náhledu, server znovu validuje), jako u importu z banky. |
 | **PROD nikdy neběžel** | Deploy z `master` zatím selhává (chybí hand-off: RBAC service principalu, secrety); nikdo neověřil konfiguraci ani výkon. | T01 hand-off, T14 release checklist a smoke test, app setting `Environment=prod`. |
 | **Build lokálně jen přes jiné SDK** | `global.json` pinuje .NET 8 SDK; vývojová stanice s jiným SDK buildí mimo pin. | CI na .NET 8 je směrodatné; X6 build bez warningů. |
 

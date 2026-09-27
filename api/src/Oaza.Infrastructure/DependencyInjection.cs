@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Oaza.Application.Interfaces;
 using Oaza.Domain.Interfaces;
-using Oaza.Infrastructure.Caching;
 using Oaza.Infrastructure.Email;
 using Oaza.Infrastructure.Persistence;
 using Oaza.Infrastructure.Storage;
@@ -45,9 +44,6 @@ public static class DependencyInjection
         services.AddSingleton<IBankAccountMappingRepository, BankAccountMappingRepository>();
         services.AddSingleton<IBankTransactionRepository, BankTransactionRepository>();
         services.AddSingleton<IAuditLogRepository, AuditLogRepository>();
-
-        // Import session cache
-        services.AddSingleton<IImportSessionCache, InMemoryImportSessionCache>();
 
         // Blob Storage service
         services.AddSingleton<IBlobStorageService, BlobStorageService>();

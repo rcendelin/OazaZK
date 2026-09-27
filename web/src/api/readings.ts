@@ -28,11 +28,21 @@ export const importReadingsFromClipboard = (
     readingDate,
   });
 
+/**
+ * Confirms a previewed import. Stateless: the readings from the preview are sent
+ * back and re-validated by the server; nothing is saved if any of them fails.
+ */
 export const confirmImport = (
-  sessionId: string,
+  preview: ImportPreviewResponse,
 ): Promise<{ count: number }> =>
   apiClient.post<{ count: number }>('/readings/import/confirm', {
-    importSessionId: sessionId,
+    readings: preview.rows.flatMap((row) =>
+      Object.entries(row.meterValues).map(([meterId, value]) => ({
+        meterId,
+        readingDate: row.readingDate,
+        value,
+      })),
+    ),
   });
 
 export const createReading = (data: {

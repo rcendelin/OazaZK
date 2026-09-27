@@ -330,7 +330,7 @@ export function ReadingsImportPage() {
     setState('confirming');
     setError(null);
     try {
-      const result = await confirmImport(preview.importSessionId);
+      const result = await confirmImport(preview);
       setSuccessCount(result.count);
       setState('success');
     } catch (err: unknown) {
