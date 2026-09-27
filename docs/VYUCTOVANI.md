@@ -230,6 +230,22 @@ neukládá, takže nezáleží na tom, která instance Functions potvrzení obsl
 | žádné odečty, neznámý vodoměr, duplicita v dávce, záporná spotřeba | 400 |
 | mezitím přibyl jiný odečet ve stejném měsíci | 409 |
 
+### 7.5 Odhad odečtu (T04)
+
+`GET /readings/estimate?meterId=&date=` spočítá stav vodoměru k libovolnému dni (např. počáteční stav pro nového majitele).
+Počítá se po celých dnech, výsledek na 3 desetinná místa (0,001 m³ = 1 litr), zaokrouhlení od nuly.
+
+| Situace | Výsledek | Odhad? |
+|---|---|---|
+| odečet přesně v ten den | hodnota odečtu | ne |
+| odečty před i po | `před + (po − před) × dnů_od_před / dnů_mezi` | ano |
+| jen dřívější odečty | nejbližší předchozí hodnota (bez extrapolace), v poznámce vzdálenost ve dnech | ano |
+| jen pozdější odečty | nejbližší následující hodnota, v poznámce vzdálenost ve dnech | ano |
+| žádný odečet | bez hodnoty | — |
+
+Uložený odečet nese `IsEstimate` a `EstimateNote` (popis metody a zdrojových odečtů); v přehledech odečtů je označen „≈“.
+Ruční zadání odhadu vyžaduje popis. Kód: `Oaza.Domain.Services.ReadingEstimator`.
+
 ---
 
 ## 8. Známá omezení a nekonzistence

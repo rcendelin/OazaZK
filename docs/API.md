@@ -57,7 +57,8 @@ Všechny funkce mají `AuthorizationLevel.Anonymous`; přístup vynucuje middlew
 | GET | `/readings?year=&month=` | přihlášený | Odečty za měsíc (oba parametry povinné). Admin vše, ostatní jen vodoměry vlastního domu. |
 | GET | `/readings/all` | Admin | Všechny odečty všech vodoměrů. |
 | GET | `/readings/chart?houseId=&from=&to=` | přihlášený | Měsíční spotřeba pro graf (výchozí 12 měsíců). Člen jen vlastní dům; Admin bez `houseId` = součet domů. |
-| POST | `/readings` | Admin | `{ meterId, readingDate, value }` — ruční odečet. |
+| GET | `/readings/estimate?meterId=&date=` | Admin | Odhad stavu vodoměru k datu (T04): skutečný odečet, interpolace po dnech, nebo nejbližší odečet, když existuje jen jedna strana ([VYUCTOVANI §7.5](VYUCTOVANI.md#75-odhad-odečtu-t04)). Nic neukládá. |
+| POST | `/readings` | Admin | `{ meterId, readingDate, value, isEstimate?, estimateNote? }` — ruční odečet; odhad vyžaduje `estimateNote`. |
 | PUT | `/readings/{meterId}/{yyyy-MM-dd}` | Admin | `{ value, newDate? }` — oprava hodnoty/přesun data. 409 v uzavřeném období. |
 | POST | `/readings/import` | Admin | Excel (multipart nebo raw body, max 5 MB) → náhled. Nic neukládá. |
 | POST | `/readings/import/clipboard` | Admin | `{ text, readingDate }` — tabulátorový text s hlavičkou `Address`, `Value 1` → náhled. |
