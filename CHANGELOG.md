@@ -11,6 +11,13 @@ se sekce přejmenuje na verzi s datem.
   na celé haléře metodou největšího zbytku; součet dílů se vždy rovná celku, shodné zbytky se řeší deterministicky
   podle pořadí, záporná částka (kredit) se rozpočítá zrcadlově. Základ pro všechny nové výpočty (T02–T08).
 - **Changelog (X6).** Tento soubor.
+- **Pruh s prostředím (T01).** Mimo produkci se nahoře zobrazuje „TESTOVACÍ / VÝVOJOVÉ PROSTŘEDÍ“; API hlásí prostředí
+  přes `GET /api/environment` (app setting `Environment`), frontend dostává `VITE_ENVIRONMENT` z workflow a při
+  nesouladu varuje.
+
+### Opraveno
+- **Nápověda k importu odečtů na stránce Vodoměry (X7 §8.9)** popisovala Excel obráceně; nově odpovídá parseru
+  (vodoměry ve sloupci A, data v řádku 1).
 
 ## 2026-08-02 – Nápověda v UI
 

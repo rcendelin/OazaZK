@@ -85,6 +85,7 @@ jobs:
           VITE_ENTRA_CLIENT_ID: ${{ secrets.PROD_ENTRA_CLIENT_ID }}
           VITE_ENTRA_TENANT_ID: ${{ secrets.PROD_ENTRA_TENANT_ID }}
           VITE_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
+          VITE_ENVIRONMENT: prod
 
       - name: Upload web artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
