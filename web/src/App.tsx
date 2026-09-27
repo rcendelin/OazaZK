@@ -30,6 +30,7 @@ import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
 import { SaldoPage } from './pages/SaldoPage';
 import { JakToFungujePage } from './pages/JakToFungujePage';
+import { AdminGuidePage } from './pages/AdminGuidePage';
 
 function App() {
   return (
@@ -105,6 +106,14 @@ function App() {
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/jak-to-funguje" element={<JakToFungujePage />} />
+              <Route
+                path="/navod"
+                element={
+                  <ProtectedRoute requiredRole="Accountant">
+                    <AdminGuidePage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/admin/houses"
                 element={

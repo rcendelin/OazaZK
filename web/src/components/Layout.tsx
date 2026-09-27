@@ -25,6 +25,7 @@ import {
   Sparkles,
   Scale,
   CircleHelp,
+  ClipboardList,
   LogOut,
   Menu,
   X,
@@ -77,6 +78,7 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Jak to funguje', path: '/jak-to-funguje', icon: <CircleHelp size={iconSize} /> },
+  { label: 'Návod pro správce', path: '/navod', icon: <ClipboardList size={iconSize} />, financeManager: true },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -133,7 +135,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
         {navItems
-          .filter((item) => !item.adminOnly || isAdmin)
+          .filter((item) => (!item.adminOnly || isAdmin) && (!item.financeManager || isAdmin || isAccountant))
           .map((item) => {
             const active = isParentActive(item);
             return (
