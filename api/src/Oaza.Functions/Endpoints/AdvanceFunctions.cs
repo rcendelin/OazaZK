@@ -365,7 +365,7 @@ public class AdvanceFunctions
         }
     }
 
-    [Function("CreateOpeningBalance")]
+    [Function("CreateLegacyOpeningBalancePayment")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CreateOpeningBalanceAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/opening-balance")] HttpRequestData req)

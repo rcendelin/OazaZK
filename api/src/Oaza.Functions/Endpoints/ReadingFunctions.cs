@@ -611,8 +611,11 @@ public class ReadingFunctions
         }
     }
 
+    /// <summary>
+    /// GET /readings/all — every reading with consumption. Admin and Accountant see all meters; a Member only the main
+    /// meter and their own house's meters (the Přehled and Odečty pages of a member use it).
+    /// </summary>
     [Function("GetAllReadings")]
-    [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> GetAllReadingsAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/all")] HttpRequestData req,
         FunctionContext context)
@@ -621,7 +624,9 @@ public class ReadingFunctions
         {
             var user = GetAuthenticatedUser(context);
 
-            var allMeters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
+            var allMeters = (await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter))
+                .Where(m => user.Role != UserRole.Member || m.Type == MeterType.Main || (m.HouseId is not null && m.HouseId == user.HouseId))
+                .ToList();
             var allHouses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
             var houseLookup = allHouses.ToDictionary(h => h.Id, h => h.Name);
 

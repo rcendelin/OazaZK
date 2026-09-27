@@ -55,7 +55,7 @@ Všechny funkce mají `AuthorizationLevel.Anonymous`; přístup vynucuje middlew
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
 | GET | `/readings?year=&month=` | přihlášený | Odečty za měsíc (oba parametry povinné). Admin vše, ostatní jen vodoměry vlastního domu. |
-| GET | `/readings/all` | Admin | Všechny odečty všech vodoměrů. |
+| GET | `/readings/all` | přihlášený | Odečty se spotřebou. Admin a Účetní všechny vodoměry, člen jen hlavní vodoměr a vodoměry svého domu. |
 | GET | `/readings/chart?houseId=&from=&to=` | přihlášený | Měsíční spotřeba pro graf (výchozí 12 měsíců). Člen jen vlastní dům; Admin bez `houseId` = součet domů. |
 | GET | `/readings/export?format=xlsx\|csv&from=&to=` | Admin, Účetní | Export odečtů (T04): datum, vodoměr, dům, stav a spotřeba od předchozího odečtu (m³, 3 desetinná místa), sloupce „Odhad“ (ano/ne) a „Popis odhadu“, zdroj. `from`/`to` volitelné (`yyyy-MM-dd`). CSV pro český Excel (UTF-8 s BOM, „;“, desetinná čárka). |
 | GET | `/readings/estimate?meterId=&date=` | Admin | Odhad stavu vodoměru k datu (T04): skutečný odečet, interpolace po dnech, nebo nejbližší odečet, když existuje jen jedna strana ([VYUCTOVANI §7.5](VYUCTOVANI.md#75-odhad-odečtu-t04)). Nic neukládá. |
@@ -78,7 +78,7 @@ Saldo domu je v části [Saldo domu](#saldo-domu--ledgerfunctionscs) (starý `GE
 | PUT | `/advances/{houseId}/{yyyy-MM}` | Admin | `{ waterAmount, electricityAmount, commonAmount, paymentDate }`. 409 v období uzavřeném mezizávěrkou. |
 | POST | `/advances/doplatek` | Admin | `{ houseId, waterAmount, electricityAmount, commonAmount, paymentDate, note? }` |
 | POST | `/advances/payout` | Admin | Výplata přeplatku `{ houseId, amount, paymentDate, note? }` |
-| POST | `/advances/opening-balance` | Admin | Počáteční stav `{ houseId, amount, isOverpayment, paymentDate, note? }` — saldo domu ho ignoruje (náhradou je podíl na fondu, T03); UI ho už nenabízí. |
+| POST | `/advances/opening-balance` | Admin | (funkce `CreateLegacyOpeningBalancePayment`) Počáteční stav `{ houseId, amount, isOverpayment, paymentDate, note? }` — saldo domu ho ignoruje (náhradou je podíl na fondu, T03); UI ho už nenabízí. |
 | DELETE | `/advances/{houseId}/{rowKey}` | Admin | Smazání platby libovolného typu (platba v období uzavřeném mezizávěrkou → 409). |
 
 ## Nastavení záloh — `AdvanceSettingsFunctions.cs`
