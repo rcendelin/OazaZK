@@ -154,6 +154,25 @@ Kategorie: `voda`, `elektro`, `udrzba`, `pojisteni`, `jine`, systémová `fond-v
 |--------|-------|---------|-------|
 | GET | `/audit-log?from=&to=&entityType=&entityId=` | Admin | Záznamy auditu (X4), nejnovější první. Data `RRRR-MM-DD`, výchozí posledních 90 dní, `to` včetně celého dne, rozsah max. 2 roky. |
 
+## Nákladové složky — `CostComponentFunctions.cs`
+
+Nový model (T02). Data `RRRR-MM-DD`, metody `Metered` | `Equal` | `Ratio` | `Percent`, základ `Metered` | `CostEntries`. Porušení pravidel vrací 400 `{ error, errors: [{ field: "", message }] }` se všemi důvody. Každý zápis jde do auditu.
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/cost-components` | Admin, Accountant | Seznam složek s dnešní metodou a počtem účastníků. |
+| GET | `/cost-components/{id}` | Admin, Accountant | Detail: složka, pravidla, účasti (se jménem domu), `lastClosedDay`. |
+| GET | `/cost-components/{id}/segments?from=&to=` | Admin, Accountant | Úseky, ve kterých je rozpočet konstantní (metoda + účastníci), max. 10 let. |
+| POST | `/cost-components` | Admin | `{ name, code, startDate, allocationBasis, method?, note? }` → 201. Kód `A–Z0–9_` (převede se na velká), unikátní (409). Založí i první pravidlo od `startDate` (výchozí `Metered` u měřených, jinak `Equal`). |
+| PUT | `/cost-components/{id}` | Admin | `{ name, active, note? }` — kód, start a základ se nemění. |
+| POST | `/cost-components/{id}/rules` | Admin | `{ validFrom, method, ratioSource?, reason }` → 201. Důvod povinný. Otevřené pravidlo před `validFrom` se ukončí den předem. |
+| DELETE | `/cost-components/{id}/rules/{ruleId}?reason=` | Admin | Smaže pravidlo zadané omylem, předchozí pravidlo se prodlouží. Poslední pravidlo smazat nelze. |
+| POST | `/cost-components/{id}/participations` | Admin | `{ houseId, validFrom, validTo?, weight?, reason? }` → 201. Bez překryvu u stejného domu, `Percent` = 100 % v každém dni, ne před startem složky. |
+| POST | `/cost-components/{id}/participations/{pid}/end` | Admin | `{ validTo, reason? }` — poslední den účasti (lze i posunout). |
+| DELETE | `/cost-components/{id}/participations/{pid}?reason=` | Admin | Smaže účast zadanou omylem. |
+
+Změna, která zasahuje do uzavřeného období (mezizávěrka, T08), se odmítne.
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |

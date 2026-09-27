@@ -20,6 +20,7 @@ Stav k 27. 9. 2026.
 | T02 `METERED` | Metoda i základ `METERED` se v T02 jen evidují; rozpočet podle odečtů je součástí T05/T06. |
 | T02 zákaz změn za mezizávěrkou | Kontrola `ComponentValidation.CheckNotClosed` je hotová; poslední uzavřený den dodá T08 (`InterimClosing`). Do té doby se předává „nic není uzavřeno“. |
 | T02 `PERCENT` = 100 % v každém dni | Účastníci se uvnitř úseku nemění, kontrola proto běží po úsecích a hlásí první den úseku a skutečný součet. Úsek bez účastníků pod pravidlem `PERCENT` je chyba (součet 0 %). |
+| T02 změna vah u `PERCENT` | API mění účast po jednom záznamu a každý krok se validuje, takže přerozdělení procent k datu (např. přidání domu) jednotlivými kroky neprojde. Seed konfigurace `PERCENT` nepoužívá; pokud bude potřeba, doplní se hromadná operace „nové váhy od data“. |
 
 ## Rizika
 
