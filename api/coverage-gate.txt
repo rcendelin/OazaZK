@@ -3,6 +3,7 @@
 src/Oaza.Domain/Services/*.cs
 src/Oaza.Domain/Time/*.cs
 src/Oaza.Application/UseCases/CostComponentsUseCase.cs
+src/Oaza.Application/UseCases/OpeningBalancesUseCase.cs
 src/Oaza.Application/UseCases/Calculate*.cs
 src/Oaza.Application/UseCases/CloseBillingPeriodUseCase.cs
 src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs

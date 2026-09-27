@@ -600,4 +600,69 @@ public static class TableEntityMapper
             Weight = GetDecimal(entity, "Weight"),
         };
     }
+
+    // ───────────────────── OwnershipPeriod (T03) ─────────────────────
+    // PK = house id, RK = valid-from day
+
+    public static TableEntity ToTableEntity(OwnershipPeriod period)
+    {
+        return new TableEntity(period.HouseId, ToIsoDay(period.ValidFrom))
+        {
+            { "OwnerName", period.OwnerName },
+            { "Contact", period.Contact },
+            { "ValidTo", ToIsoDay(period.ValidTo) },
+        };
+    }
+
+    public static OwnershipPeriod ToOwnershipPeriod(TableEntity entity)
+    {
+        var validFrom = DateOnly.TryParseExact(entity.RowKey, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : DateOnly.MinValue;
+        return new OwnershipPeriod
+        {
+            Id = OwnershipPeriod.KeyFor(entity.PartitionKey, validFrom),
+            HouseId = entity.PartitionKey,
+            OwnerName = entity.GetString("OwnerName") ?? string.Empty,
+            Contact = entity.GetString("Contact"),
+            ValidFrom = validFrom,
+            ValidTo = GetIsoDay(entity, "ValidTo"),
+        };
+    }
+
+    // ───────────────────── OpeningBalance (T03) ─────────────────────
+    // PK = OPENING, RK = natural key
+
+    public static TableEntity ToTableEntity(OpeningBalance balance)
+    {
+        return new TableEntity(PartitionKeys.OpeningBalance, balance.Key)
+        {
+            { "Type", balance.Type.ToString() },
+            { "HouseId", balance.HouseId },
+            { "ComponentId", balance.ComponentId },
+            { "MeterId", balance.MeterId },
+            { "OwnershipPeriodId", balance.OwnershipPeriodId },
+            { "Date", ToIsoDay(balance.Date) },
+            { "Value", balance.Value.ToString("G29", CultureInfo.InvariantCulture) },
+            { "IsEstimate", balance.IsEstimate },
+            { "Source", balance.Source },
+            { "Note", balance.Note },
+        };
+    }
+
+    public static OpeningBalance ToOpeningBalance(TableEntity entity)
+    {
+        return new OpeningBalance
+        {
+            Key = entity.RowKey,
+            Type = Enum.TryParse<OpeningBalanceType>(entity.GetString("Type"), out var type) ? type : OpeningBalanceType.FundShare,
+            HouseId = entity.GetString("HouseId"),
+            ComponentId = entity.GetString("ComponentId"),
+            MeterId = entity.GetString("MeterId"),
+            OwnershipPeriodId = entity.GetString("OwnershipPeriodId"),
+            Date = GetIsoDay(entity, "Date") ?? DateOnly.MinValue,
+            Value = GetDecimal(entity, "Value") ?? 0m,
+            IsEstimate = entity.GetBoolean("IsEstimate") ?? false,
+            Source = entity.GetString("Source") ?? string.Empty,
+            Note = entity.GetString("Note"),
+        };
+    }
 }

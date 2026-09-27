@@ -44,6 +44,10 @@ se sekce přejmenuje na verzi s datem.
 - **Nákladové složky – stránka (T02, část C).** Administrace → Nákladové složky: seznam složek s dnešní metodou
   a počtem domů, založení složky, časová osa metody a účasti domů, změna metody od data s důvodem, přidání, ukončení
   a smazání účasti a výpis úseků rozpočtu. Chyby z pravidel se zobrazí všechny najednou.
+- **Počáteční stavy – API (T03, část A).** Období vlastnictví domů (start účtování k datu založí první období) a počáteční
+  stavy: stav vodoměru (zapíše se i jako odečet, případně odhad), podíl domu ve fondu spolku a kredit složky u dodavatele
+  s náhledem rozdělení mezi domy (např. −20 000 Kč vodárny → 4 × −5 000 Kč). Každá kombinace nejvýš jednou, za
+  mezizávěrkou jen oprava s důvodem, vše v auditu.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

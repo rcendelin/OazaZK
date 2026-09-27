@@ -19,4 +19,6 @@ public static class TableNames
     public const string CostComponents = "CostComponents";
     public const string ComponentAllocationRules = "ComponentAllocationRules";
     public const string Participations = "Participations";
+    public const string OwnershipPeriods = "OwnershipPeriods";
+    public const string OpeningBalances = "OpeningBalances";
 }
