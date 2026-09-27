@@ -77,6 +77,9 @@ se sekce přejmenuje na verzi s datem.
   a zasahuje do uzavřeného období, se rozdělí podle toho, kdo se kdy účastnil, a zaúčtuje jako opravný záznam k prvnímu
   dni po řezu — uzavřené saldo zůstane. Detail mezizávěrky ukáže rozdíl snapshotu proti dnešnímu přepočtu. Zrušit lze jen
   poslední mezizávěrku s důvodem.
+- **Mezizávěrky zamykají i odečty a platby (T08, část B).** Odečet ke dni v uzavřeném období nejde zadat, opravit, přesunout
+  ani naimportovat. Platby domů s datem do řezu nejde upravit ani smazat; pozdě zapsaná platba (i z bankovního importu)
+  se zaúčtuje k prvnímu dni po mezizávěrce — záloha za uzavřený měsíc jako doplatek — s původním datem v poznámce.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

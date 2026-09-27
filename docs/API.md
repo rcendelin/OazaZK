@@ -232,7 +232,7 @@ Nový model (T08). Id mezizávěrky `{datum}|{All|House}|{dům nebo -}` se v URL
 | POST | `/interim-closings` | Admin | `{ date, scope: All\|House, houseId?, reason }` → 201. Datum nejpozději včera a později než dosavadní mezizávěrka (pro dům: všech domů i toho domu). Uloží snapshot salda. |
 | DELETE | `/interim-closings/{id}?reason=` | Admin | Zruší jen poslední mezizávěrku, s důvodem. |
 
-Po mezizávěrce se pravidla, účast, náklady a počáteční stavy do data řezu nemění. Náklad, jehož období do řezu zasahuje, se zaúčtuje jako opravný záznam k prvnímu dni po řezu (`reason` povinný, odpověď nese `postingDate`).
+Po mezizávěrce se pravidla, účast, náklady, počáteční stavy, **odečty** (ruční zadání, oprava, přesun i import — 409 / chyba importu) a **platby** do data řezu nemění. Úprava nebo smazání platby s datem do řezu vrací 409; nová platba (záloha, doplatek, výplata, i z bankovního importu) s datem do řezu se zaúčtuje k prvnímu dni po řezu — záloha za uzavřený měsíc jako doplatek — a původní datum je v poznámce. Náklad, jehož období do řezu zasahuje, se zaúčtuje jako opravný záznam k prvnímu dni po řezu (`reason` povinný, odpověď nese `postingDate`).
 
 ## Systém — `SystemFunctions.cs`
 

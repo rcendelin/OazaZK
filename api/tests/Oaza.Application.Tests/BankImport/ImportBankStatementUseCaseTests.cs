@@ -250,6 +250,23 @@ public class ImportBankStatementUseCaseTests
     }
 
     [Fact]
+    public async Task Confirm_AdvanceForAMonthClosedByAnInterimClosing_IsBookedAfterTheCut()
+    {
+        var prescribed = new CalculatePrescribedAdvancesUseCase(_settingsRepo.Object, _houseRepo.Object, _meterRepo.Object, _readingRepo.Object);
+        var closed = new ImportBankStatementUseCase(
+            _houseRepo.Object, _advanceRepo.Object, _mappingRepo.Object, _txRepo.Object,
+            prescribed, NullLogger<ImportBankStatementUseCase>.Instance, new TestSupport.ClosedUntil(new DateOnly(2026, 8, 31)));
+
+        await closed.ConfirmAsync(Request(ImportRow("t1", "house-4")), "admin-1");
+
+        _advanceRepo.Verify(r => r.UpsertAsync(It.Is<AdvancePayment>(p =>
+            p.Type == PaymentType.Doplatek && p.RowKey.StartsWith("D-") &&
+            p.PaymentDate == new DateTime(2026, 9, 1) && p.Year == 2026 && p.Month == 9 && p.Amount == 1500m &&
+            p.Note == "Záloha za 8/2026 zapsaná po mezizávěrce k 31. 8. 2026 — RD4")), Times.Once);
+        _txRepo.Verify(r => r.UpsertAsync(It.Is<BankTransaction>(t => t.PaymentRowKey!.StartsWith("D-"))), Times.Once);
+    }
+
+    [Fact]
     public async Task Confirm_Doplatek_GetsUniqueRowKeyAndPaymentDate()
     {
         await _sut.ConfirmAsync(Request(ImportRow("t1", "house-4", type: "Doplatek", amount: 500m, water: 333m, electricity: 67m, common: 100m)), "admin-1");
