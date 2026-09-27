@@ -7,6 +7,10 @@ se sekce přejmenuje na verzi s datem.
 ## [Nevydáno]
 
 ### Přidáno
+- **Návod pro správce (T12).** Nová stránka Návod pro správce (v menu pod „Jak to funguje“, pro správce a účetní):
+  pět postupů krok za krokem s obrázky — zadat měsíční odečty, vložit fakturu a zálohu, zapsat výdaj z pokladny,
+  udělat mezizávěrku a převést dům na nového majitele. Automatické testy procházejí stejné kroky, takže návod
+  odpovídá tomu, co aplikace opravdu dělá.
 - **Import bankovního výpisu (Fio CSV).** Stránka Import z banky: nahraný výpis se převede na zálohy a doplatky
   domácností, dům se určí podle čísla účtu (účty domů ve Správě domácností, nové se učí při importu), opakovaný
   import nic nezdvojí; platby mají štítek „Z banky“ (PR #4).

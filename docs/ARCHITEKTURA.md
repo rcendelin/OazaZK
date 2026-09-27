@@ -162,6 +162,7 @@ Pozor: některá data jsou pro všechny přihlášené bez omezení — seznam d
   - `auth/` — `AuthContext`, `msalConfig`,
   - `components/` — sdílené komponenty (`Layout`, `ProtectedRoute`, `MetricCard`, `ConsumptionChart`, `components/help/*`),
   - `content/help.ts` — **jediný zdroj textů nápovědy v UI** (viz níže),
+  - `content/adminGuide.ts` — postupy „Návodu pro správce“ (`/navod`),
   - `hooks/useApi.ts` — `useApi(fetcher, deps)` → `{ data, loading, error, refetch }`,
   - `pages/` — stránky (routy), `pages/admin/` — administrace,
   - `types/index.ts` — TS typy zrcadlící DTO z API,
@@ -182,6 +183,7 @@ Pozor: některá data jsou pro všechny přihlášené bez omezení — seznam d
 | `/documents` | Dokumenty | přihlášení |
 | `/finance` | Hospodaření | přihlášení |
 | `/jak-to-funguje` | Nápověda a slovník pojmů | přihlášení |
+| `/navod` | Návod pro správce (T12): postupy krok za krokem se screenshoty (odečty, faktura a záloha, výdaj z pokladny, mezizávěrka, převod domu); obsah `content/adminGuide.ts`, obrázky `public/navod/` generuje `e2e/adminGuide.spec.ts` s `GUIDE_SCREENSHOTS=1` | Admin, Accountant |
 | `/admin/houses`, `/admin/users`, `/admin/meters` | Administrace | Admin |
 | `/admin/cost-components` | Nákladové složky (T02): metoda a účast domů v čase, úseky | Admin |
 | `/saldo-domu` | Saldo domu (T07): přehled domů × složky s kontrolním řádkem, detail domu s průběžným saldem a „Jak vznikl“, export XLSX/CSV; člen vidí detail jen svého domu | přihlášený |
