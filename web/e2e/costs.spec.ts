@@ -43,8 +43,8 @@ test('costs: advance paid from supplier credit shows its split, recurring advanc
 
   const form = page.getByRole('form', { name: 'Opakovaná záloha' });
   await form.getByLabel('Částka (Kč)').fill('500');
-  await form.getByLabel('Od').fill('2023-11-01');
-  await form.getByLabel('Do').fill('2024-10-31');
+  await form.getByLabel('Od', { exact: true }).fill('2023-11-01');
+  await form.getByLabel('Do', { exact: true }).fill('2024-10-31');
   await form.getByLabel('Úhrada').selectOption('SupplierCredit');
   await form.getByRole('button', { name: 'Vytvořit zálohy' }).click();
 
