@@ -21,7 +21,7 @@ public class InterimClosingFunctionsAuthorizationTests
 
         functions.Where(f => !f.Verbs.Contains("get")).Should().HaveCount(2)
             .And.OnlyContain(f => f.Role != null && f.Role.Roles.SequenceEqual(new[] { UserRole.Admin }));
-        functions.Where(f => f.Verbs.Contains("get")).Should().HaveCount(2)
+        functions.Where(f => f.Verbs.Contains("get")).Should().HaveCount(3)
             .And.OnlyContain(f => f.Role != null && f.Role.Roles.Contains(UserRole.Accountant) && !f.Role.Roles.Contains(UserRole.Member));
     }
 }

@@ -140,6 +140,25 @@ public class InterimClosingsUseCaseTests
     }
 
     [Fact]
+    public async Task AnnualClosingExportsTheYearForTheAccountant()
+    {
+        await Entries().CreateAsync("osvetleni", new SaveCostEntryRequest { Type = CostEntryType.Advance, PeriodFrom = D(2026, 12, 1), PeriodTo = D(2026, 12, 31), Amount = 400m }, _actor);
+        var annual = await CloseAllAsync(D(2026, 12, 31));
+        var house = await Sut().CreateAsync(new CreateInterimClosingRequest { Date = D(2027, 1, 10), Scope = ClosingScope.House, HouseId = "A", Reason = "prodej" }, _actor);
+
+        var xlsx = await Sut().ExportAsync(annual.Id, "xlsx");
+        var csv = await Sut().ExportAsync(annual.Id, "csv");
+        var houseCsv = await Sut().ExportAsync(house.Id, "csv");
+
+        xlsx.FileName.Should().Be("rocni-zaverka-2026.xlsx");
+        csv.FileName.Should().Be("rocni-zaverka-2026.csv");
+        System.Text.Encoding.UTF8.GetString(csv.Content).Should().Contain("RD A;0,00;80,00");
+        houseCsv.FileName.Should().StartWith("saldo-rd-a-");
+        var missing = () => Sut().ExportAsync("nope", "csv");
+        await missing.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
     public async Task OnlyTheLatestClosingCanBeRemoved_WithAReason()
     {
         var first = await CloseAllAsync(D(2026, 6, 30));

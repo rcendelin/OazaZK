@@ -129,6 +129,27 @@ public class InterimClosingsUseCase
         await _audit.LogAsync(InterimClosingEntity, id, AuditActions.Delete, closing, null, actor, reason.Trim());
     }
 
+    /// <summary>
+    /// Export for the accountant (T08): the overview of all houses for the closing's calendar year up to its date
+    /// (or the house's ledger for a house closing). The off-book fund (T10) is never part of the ledger, so it is not here.
+    /// </summary>
+    public async Task<ExportFile> ExportAsync(string id, string format)
+    {
+        var closing = await _closings.GetAsync(PartitionKeys.InterimClosing, id) ?? throw new NotFoundException(InterimClosingEntity, id);
+        if (closing.Scope == ClosingScope.House)
+        {
+            var ledger = await _ledger.GetHouseLedgerAsync(closing.HouseId!, null, null, closing.Date, new LedgerRequester(UserRole.Admin, null));
+            return LedgerExport.House(ledger, format);
+        }
+
+        var yearStart = new DateOnly(closing.Date.Year, 1, 1);
+        var overview = await _ledger.GetOverviewAsync(yearStart, closing.Date);
+        var file = LedgerExport.Overview(overview, format);
+        var annual = closing.Date.Month == 12 && closing.Date.Day == 31;
+        var name = annual ? $"rocni-zaverka-{closing.Date.Year}" : $"mezizaverka-{closing.Date:yyyyMMdd}";
+        return file with { FileName = name + Path.GetExtension(file.FileName) };
+    }
+
     /// <summary>The houses' saldo at <paramref name="date"/>: every house for All, the owner at that day for House.</summary>
     private async Task<List<ClosingSnapshotRow>> SnapshotAsync(DateOnly date, ClosingScope scope, string? houseId)
     {

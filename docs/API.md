@@ -229,6 +229,7 @@ Nový model (T08). Id mezizávěrky `{datum}|{All|House}|{dům nebo -}` se v URL
 |--------|-------|---------|-------|
 | GET | `/interim-closings` | Admin, Accountant | Seznam od nejnovější: datum, rozsah, dům, důvod, kdo, součet salda, `canDelete` (jen poslední). |
 | GET | `/interim-closings/{id}` | Admin, Accountant | Detail se snapshotem salda domů a saldem k datu přepočteným teď (`difference` ≠ 0 = něco se v uzavřeném období změnilo). |
+| GET | `/interim-closings/{id}/export?format=xlsx\|csv` | Admin, Accountant | Export pro účetní: u mezizávěrky všech domů přehled salda za kalendářní rok do data řezu (`rocni-zaverka-RRRR.xlsx` k 31. 12.), u domu jeho saldo. Oddělený fond (T10) v něm nikdy není. |
 | POST | `/interim-closings` | Admin | `{ date, scope: All\|House, houseId?, reason }` → 201. Datum nejpozději včera a později než dosavadní mezizávěrka (pro dům: všech domů i toho domu). Uloží snapshot salda. |
 | DELETE | `/interim-closings/{id}?reason=` | Admin | Zruší jen poslední mezizávěrku, s důvodem. |
 

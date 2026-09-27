@@ -193,6 +193,7 @@ Pozor: některá data jsou pro všechny přihlášené bez omezení — seznam d
 | `/admin/houses`, `/admin/users`, `/admin/meters` | Administrace | Admin |
 | `/admin/cost-components` | Nákladové složky (T02): metoda a účast domů v čase, úseky | Admin |
 | `/saldo-domu` | Saldo domu (T07): přehled domů × složky s kontrolním řádkem, detail domu s průběžným saldem a „Jak vznikl“, export XLSX/CSV; člen vidí detail jen svého domu | přihlášený |
+| `/mezizaverky` | Mezizávěrky (T08): seznam, nová mezizávěrka (všechny domy / dům) s nápovědou, detail snímek vs. dnes, export pro účetní, zrušení poslední | Admin, Accountant (zápis Admin) |
 | `/voda` | Voda a ztráty (T05): intervaly mezi odečty hlavního vodoměru, ztráta, cena z faktur, metoda ztrát, náklady domů, rozdíl proti fakturám | Admin, Accountant |
 | `/naklady` | Náklady (T06): záznamy po složkách, rozpad na domy, přidání nákladu a opakované zálohy (zápis jen Admin) | Admin, Accountant |
 | `/admin/opening-balances` | Počáteční stavy (T03): start účtování, stavy vodoměrů s návrhem z odečtů, podíly ve fondu, kredity složek s náhledem | Admin |
