@@ -92,3 +92,21 @@ public class OpeningBalanceMappingTests
         TableEntityMapper.ToOpeningBalance(entity).Should().BeEquivalentTo(balance);
     }
 }
+
+public class CostEntryMappingTests
+{
+    [Fact]
+    public void CostEntryRoundTrips()
+    {
+        var entry = new CostEntry
+        {
+            Id = "e1", ComponentId = "pvk", Type = CostEntryType.OneOff, PeriodFrom = new DateOnly(2024, 1, 1), PeriodTo = new DateOnly(2024, 1, 31),
+            Amount = -1_234.56m, QuantityM3 = 50.5m, Supplier = "PVK", DocumentId = "d1", PaidFrom = PaidFrom.SupplierCredit, Note = "n",
+        };
+
+        var entity = TableEntityMapper.ToTableEntity(entry);
+
+        entity.PartitionKey.Should().Be("pvk");
+        TableEntityMapper.ToCostEntry(entity).Should().BeEquivalentTo(entry);
+    }
+}

@@ -51,6 +51,10 @@ se sekce přejmenuje na verzi s datem.
 - **Počáteční stavy – průvodce (T03, část B).** Administrace → Počáteční stavy: start účtování k datu, stav každého
   vodoměru s tlačítkem „Navrhnout z odečtů“ (interpolace, zdroj a příznak odhadu se vyplní samy), podíl ve fondu
   spolku a kredit složky s náhledem rozdělení mezi domy. Uzavřené hodnoty lze jen opravit s důvodem.
+- **Nákladové záznamy – API (T06, část A).** Zálohy dodavatelům, vyúčtování a jednorázové náklady složek: rozpočet
+  do úseků podle dní a mezi domy účastné v každém úseku (součet vždy přesně sedí), rozpad záznamu po domech, opakovaná
+  záloha (měsíční až roční série). Úhrada z přeplatku u dodavatele je pro domy stále náklad (R6). Faktury za vodu PVK
+  nesou fakturované m³ pro výpočet ceny.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

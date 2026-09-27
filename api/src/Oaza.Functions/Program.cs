@@ -50,6 +50,7 @@ var host = new HostBuilder()
         services.AddSingleton<Oaza.Application.Interfaces.IClosingBoundary, Oaza.Application.Interfaces.NoClosingBoundary>();
         services.AddSingleton<Oaza.Application.UseCases.CostComponentsUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.OpeningBalancesUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.CostEntriesUseCase>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
         // Infrastructure: Table Storage, Blob Storage, all repositories, email
