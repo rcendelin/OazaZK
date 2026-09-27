@@ -42,7 +42,7 @@ test('ledger (admin): control row flags a mismatch, a house opens with its runni
 
   const table = page.getByRole('table', { name: 'Saldo domů' });
   await expect(table.getByRole('row', { name: /RD A/ })).toContainText('4 750,00 Kč přeplatek');
-  await expect(table.getByText(/✗ 2 999,99 Kč ≠ 3 000,00 Kč/)).toBeVisible();
+  await expect(table.getByText(/✗ 2\s999,99\sKč ≠ 3\s000,00\sKč/)).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('neúčastní žádný dům');
 
   await table.getByRole('row', { name: /RD A/ }).click();
