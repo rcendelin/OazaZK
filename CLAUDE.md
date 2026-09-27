@@ -383,7 +383,7 @@ Resource Group:     rg-oaza-prod
 Storage Account:    stoaza (Table Storage + Blob Storage)
   Table names:      Users, Houses, WaterMeters, MeterReadings, BillingPeriods,
                     SupplierInvoices, AdvancePayments, Settlements, Documents,
-                    DocumentVersions, FinancialRecords, AdvanceSettings
+                    DocumentVersions, FinancialRecords, AdvanceSettings, AuditLog
   Blob containers:  documents, invoices, settlements, finance
 Functions App:      func-oaza-prod
 Static Web App:     swa-oaza-prod
