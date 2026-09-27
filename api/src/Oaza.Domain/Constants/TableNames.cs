@@ -21,4 +21,5 @@ public static class TableNames
     public const string Participations = "Participations";
     public const string OwnershipPeriods = "OwnershipPeriods";
     public const string OpeningBalances = "OpeningBalances";
+    public const string CostEntries = "CostEntries";
 }

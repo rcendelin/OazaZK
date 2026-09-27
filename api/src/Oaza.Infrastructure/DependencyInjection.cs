@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddSingleton<IParticipationRepository, ParticipationRepository>();
         services.AddSingleton<IOwnershipPeriodRepository, OwnershipPeriodRepository>();
         services.AddSingleton<IOpeningBalanceRepository, OpeningBalanceRepository>();
+        services.AddSingleton<ICostEntryRepository, CostEntryRepository>();
 
         // Blob Storage service
         services.AddSingleton<IBlobStorageService, BlobStorageService>();

@@ -665,4 +665,41 @@ public static class TableEntityMapper
             Note = entity.GetString("Note"),
         };
     }
+
+    // ───────────────────── CostEntry (T06) ─────────────────────
+    // PK = component id, RK = entry id
+
+    public static TableEntity ToTableEntity(CostEntry entry)
+    {
+        return new TableEntity(entry.ComponentId, entry.Id)
+        {
+            { "Type", entry.Type.ToString() },
+            { "PeriodFrom", ToIsoDay(entry.PeriodFrom) },
+            { "PeriodTo", ToIsoDay(entry.PeriodTo) },
+            { "Amount", entry.Amount.ToString("G29", CultureInfo.InvariantCulture) },
+            { "QuantityM3", ToInvariant(entry.QuantityM3) },
+            { "Supplier", entry.Supplier },
+            { "DocumentId", entry.DocumentId },
+            { "PaidFrom", entry.PaidFrom.ToString() },
+            { "Note", entry.Note },
+        };
+    }
+
+    public static CostEntry ToCostEntry(TableEntity entity)
+    {
+        return new CostEntry
+        {
+            Id = entity.RowKey,
+            ComponentId = entity.PartitionKey,
+            Type = Enum.TryParse<CostEntryType>(entity.GetString("Type"), out var type) ? type : CostEntryType.OneOff,
+            PeriodFrom = GetIsoDay(entity, "PeriodFrom") ?? DateOnly.MinValue,
+            PeriodTo = GetIsoDay(entity, "PeriodTo") ?? DateOnly.MinValue,
+            Amount = GetDecimal(entity, "Amount") ?? 0m,
+            QuantityM3 = GetDecimal(entity, "QuantityM3"),
+            Supplier = entity.GetString("Supplier"),
+            DocumentId = entity.GetString("DocumentId"),
+            PaidFrom = Enum.TryParse<PaidFrom>(entity.GetString("PaidFrom"), out var paidFrom) ? paidFrom : PaidFrom.Bank,
+            Note = entity.GetString("Note"),
+        };
+    }
 }

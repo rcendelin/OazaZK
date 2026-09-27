@@ -187,6 +187,21 @@ Nový model (T03). Typy `MeterReading` (m³) | `FundShare` (Kč, **kladné = dů
 | PUT | `/opening-balances/{key}` | Admin | Stejné tělo + `reason?`. Za mezizávěrkou jen s důvodem (audit `Correction`). |
 | DELETE | `/opening-balances/{key}?reason=` | Admin | Smaže stav zadaný omylem (ne za mezizávěrkou); odečet zůstává. |
 
+## Nákladové záznamy — `CostEntryFunctions.cs`
+
+Nový model (T06). Typy `Advance` | `Settlement` (kladné = doplatek, záporné = přeplatek) | `OneOff`, úhrada `Bank` | `SupplierCredit` | `Cash` | `Other` (jen evidence, na rozpočet nemá vliv, R6).
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/cost-components/{id}/entries?from=&to=` | Admin, Accountant | Záznamy složky, jejichž období se překrývá s rozsahem. |
+| GET | `/cost-components/{id}/entries/{entryId}/allocation` | Admin, Accountant | Rozpad záznamu: úseky (stálá účast a metoda, řezy po měsících), částka úseku podle dní, podíl každého domu a součty za domy. U složky podle odečtů 400. |
+| POST | `/cost-components/{id}/entries` | Admin | `{ type, periodFrom, periodTo, amount, quantityM3?, supplier?, documentId?, paidFrom, note?, reason? }` → 201. Ne před startem složky, záloha > 0, u složky podle odečtů povinné `quantityM3`. Záznam, který nejde rozpočítat (nikdo se neúčastní), se odmítne. |
+| POST | `/cost-components/{id}/entries/recurring` | Admin | `{ amount, periodicity: Monthly\|Quarterly\|HalfYearly\|Yearly, from, to, supplier?, paidFrom, note? }` → 201 se sérií záloh. Celá série se ověří před zápisem, max. 120. |
+| PUT | `/cost-components/{id}/entries/{entryId}` | Admin | Stejné tělo jako POST. |
+| DELETE | `/cost-components/{id}/entries/{entryId}?reason=` | Admin | Smaže záznam. |
+
+Záznam, jehož období začíná za mezizávěrkou, nelze přidat, změnit ani smazat.
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |
