@@ -45,6 +45,31 @@ public class LedgerFunctions
             return await _useCase.GetOverviewAsync(from, to);
         });
 
+    /// <summary>GET /ledger/houses/{houseId}/export?format=xlsx|csv&amp;ownershipPeriodId=&amp;from=&amp;to=</summary>
+    [Function("ExportHouseLedger")]
+    public Task<HttpResponseData> ExportHouseLedgerAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "ledger/houses/{houseId}/export")] HttpRequestData req,
+        FunctionContext context,
+        string houseId) =>
+        ModelEndpoint.HandleFileAsync(req, _logger, async () =>
+        {
+            var (from, to) = Range(req);
+            var ledger = await _useCase.GetHouseLedgerAsync(houseId, ModelEndpoint.Query(req, "ownershipPeriodId"), from, to, Requester(context));
+            var file = LedgerExport.House(ledger, ModelEndpoint.Query(req, "format") ?? "xlsx");
+            return (file.Content, file.ContentType, file.FileName);
+        });
+
+    /// <summary>GET /ledger/overview/export?format=xlsx|csv&amp;from=&amp;to=</summary>
+    [Function("ExportLedgerOverview")]
+    public Task<HttpResponseData> ExportOverviewAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "ledger/overview/export")] HttpRequestData req) =>
+        ModelEndpoint.HandleFileAsync(req, _logger, async () =>
+        {
+            var (from, to) = Range(req);
+            var file = LedgerExport.Overview(await _useCase.GetOverviewAsync(from, to), ModelEndpoint.Query(req, "format") ?? "xlsx");
+            return (file.Content, file.ContentType, file.FileName);
+        });
+
     private static (DateOnly? From, DateOnly? To) Range(HttpRequestData req)
     {
         DateOnly? Parse(string name)

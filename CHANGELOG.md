@@ -69,6 +69,9 @@ se sekce přejmenuje na verzi s datem.
   domu a jeho podíly na nákladech všech složek (včetně kreditu vodárny, vody a ztrát) s průběžným zůstatkem a rozpadem
   výpočtu u každé položky; saldo se vede za období vlastnictví (nový majitel začíná znovu). Přehled všech domů po
   složkách s kontrolním řádkem „Σ domů = rozpočteno“. Člen vidí detail jen svého domu.
+- **Saldo domu – stránka a export (T07, část B).** Hospodaření → Saldo domu: přehled všech domů po složkách s kontrolním
+  řádkem (nesoulad červeně) a varováními, detail domu s průběžným saldem, volbou období vlastnictví a u každého nákladu
+  „Jak vznikl“; saldo slovy (přeplatek / nedoplatek). Export přehledu i salda domu do XLSX a CSV.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
