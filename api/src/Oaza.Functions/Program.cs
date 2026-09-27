@@ -135,6 +135,23 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IWaterMeterRepository>(),
                 sp.GetRequiredService<IImportSessionCache>(),
                 sp.GetRequiredService<ILogger<ImportReadingsUseCase>>()));
+
+        // Use cases: Prescribed advances + bank statement import
+        services.AddSingleton<CalculatePrescribedAdvancesUseCase>(sp =>
+            new CalculatePrescribedAdvancesUseCase(
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IWaterMeterRepository>(),
+                sp.GetRequiredService<IMeterReadingRepository>()));
+
+        services.AddSingleton<ImportBankStatementUseCase>(sp =>
+            new ImportBankStatementUseCase(
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IBankAccountMappingRepository>(),
+                sp.GetRequiredService<IBankTransactionRepository>(),
+                sp.GetRequiredService<CalculatePrescribedAdvancesUseCase>(),
+                sp.GetRequiredService<ILogger<ImportBankStatementUseCase>>()));
     })
     .Build();
 

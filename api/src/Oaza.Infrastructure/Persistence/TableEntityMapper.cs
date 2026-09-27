@@ -227,7 +227,9 @@ public static class TableEntityMapper
             { "PaymentDate", DateTime.SpecifyKind(payment.PaymentDate, DateTimeKind.Utc) },
             { "Type", payment.Type.ToString() },
             { "Note", payment.Note },
-            { "IsFundTransfer", payment.IsFundTransfer }
+            { "IsFundTransfer", payment.IsFundTransfer },
+            { "BankOwnAccountKey", payment.BankOwnAccountKey },
+            { "BankTransactionId", payment.BankTransactionId }
         };
     }
 
@@ -246,7 +248,74 @@ public static class TableEntityMapper
             PaymentDate = entity.GetDateTimeOffset("PaymentDate")?.UtcDateTime ?? DateTime.MinValue,
             Type = Enum.TryParse<PaymentType>(entity.GetString("Type"), out var type) ? type : PaymentType.Advance,
             Note = entity.GetString("Note"),
-            IsFundTransfer = entity.GetBoolean("IsFundTransfer") ?? false
+            IsFundTransfer = entity.GetBoolean("IsFundTransfer") ?? false,
+            BankOwnAccountKey = entity.GetString("BankOwnAccountKey"),
+            BankTransactionId = entity.GetString("BankTransactionId")
+        };
+    }
+
+    // ───────────────────── BankAccountMapping ─────────────────────
+    // PK = "MAP", RK = normalized account key.
+
+    public static TableEntity ToTableEntity(BankAccountMapping mapping)
+    {
+        return new TableEntity(PartitionKeys.BankAccountMapping, mapping.AccountKey)
+        {
+            { "HouseId", mapping.HouseId },
+            { "AccountName", mapping.AccountName },
+            { "UpdatedAt", DateTime.SpecifyKind(mapping.UpdatedAt, DateTimeKind.Utc) }
+        };
+    }
+
+    public static BankAccountMapping ToBankAccountMapping(TableEntity entity)
+    {
+        return new BankAccountMapping
+        {
+            AccountKey = entity.RowKey,
+            HouseId = entity.GetString("HouseId") ?? string.Empty,
+            AccountName = entity.GetString("AccountName"),
+            UpdatedAt = entity.GetDateTimeOffset("UpdatedAt")?.UtcDateTime ?? DateTime.MinValue
+        };
+    }
+
+    // ───────────────────── BankTransaction ─────────────────────
+    // PK = own account key, RK = bank operation id.
+
+    public static TableEntity ToTableEntity(BankTransaction tx)
+    {
+        return new TableEntity(tx.OwnAccountKey, tx.TransactionId)
+        {
+            { "Date", DateTime.SpecifyKind(tx.Date, DateTimeKind.Utc) },
+            { "Amount", tx.Amount.ToString("G29", CultureInfo.InvariantCulture) },
+            { "CounterAccount", tx.CounterAccount },
+            { "CounterName", tx.CounterName },
+            { "Message", tx.Message },
+            { "VariableSymbol", tx.VariableSymbol },
+            { "Status", tx.Status.ToString() },
+            { "HouseId", tx.HouseId },
+            { "PaymentRowKey", tx.PaymentRowKey },
+            { "ImportedAt", DateTime.SpecifyKind(tx.ImportedAt, DateTimeKind.Utc) },
+            { "ImportedBy", tx.ImportedBy }
+        };
+    }
+
+    public static BankTransaction ToBankTransaction(TableEntity entity)
+    {
+        return new BankTransaction
+        {
+            OwnAccountKey = entity.PartitionKey,
+            TransactionId = entity.RowKey,
+            Date = entity.GetDateTimeOffset("Date")?.UtcDateTime ?? DateTime.MinValue,
+            Amount = decimal.TryParse(entity.GetString("Amount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) ? amount : 0m,
+            CounterAccount = entity.GetString("CounterAccount"),
+            CounterName = entity.GetString("CounterName"),
+            Message = entity.GetString("Message"),
+            VariableSymbol = entity.GetString("VariableSymbol"),
+            Status = Enum.TryParse<BankTransactionStatus>(entity.GetString("Status"), out var status) ? status : BankTransactionStatus.Imported,
+            HouseId = entity.GetString("HouseId"),
+            PaymentRowKey = entity.GetString("PaymentRowKey"),
+            ImportedAt = entity.GetDateTimeOffset("ImportedAt")?.UtcDateTime ?? DateTime.MinValue,
+            ImportedBy = entity.GetString("ImportedBy") ?? string.Empty
         };
     }
 

@@ -107,6 +107,7 @@ export interface AdvancePayment {
   type: PaymentType;
   note: string | null;
   isFundTransfer: boolean;
+  isFromBank: boolean;
   rowKey: string;
 }
 

@@ -6,6 +6,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.Exceptions;
+using Oaza.Application.UseCases;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
@@ -17,9 +18,7 @@ namespace Oaza.Functions.Endpoints;
 public class AdvanceSettingsFunctions
 {
     private readonly TableServiceClient _tableServiceClient;
-    private readonly IHouseRepository _houseRepository;
-    private readonly IMeterReadingRepository _readingRepository;
-    private readonly IWaterMeterRepository _meterRepository;
+    private readonly CalculatePrescribedAdvancesUseCase _calculatePrescribedAdvancesUseCase;
     private readonly ILogger<AdvanceSettingsFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -30,15 +29,11 @@ public class AdvanceSettingsFunctions
 
     public AdvanceSettingsFunctions(
         TableServiceClient tableServiceClient,
-        IHouseRepository houseRepository,
-        IMeterReadingRepository readingRepository,
-        IWaterMeterRepository meterRepository,
+        CalculatePrescribedAdvancesUseCase calculatePrescribedAdvancesUseCase,
         ILogger<AdvanceSettingsFunctions> logger)
     {
+        _calculatePrescribedAdvancesUseCase = calculatePrescribedAdvancesUseCase;
         _tableServiceClient = tableServiceClient;
-        _houseRepository = houseRepository;
-        _readingRepository = readingRepository;
-        _meterRepository = meterRepository;
         _logger = logger;
     }
 
@@ -116,112 +111,27 @@ public class AdvanceSettingsFunctions
         try
         {
             var user = GetAuthenticatedUser(context);
-            var settings = await LoadSettingsAsync();
+            var prescribed = await _calculatePrescribedAdvancesUseCase.CalculateAsync();
+            var settings = prescribed.Settings;
 
-            var allMeters = await _meterRepository.GetByPartitionKeyAsync("METER");
-            var allHouses = await _houseRepository.GetByPartitionKeyAsync("HOUSE");
-            var activeHouses = allHouses.Where(h => h.IsActive).ToList();
-            var mainMeter = allMeters.FirstOrDefault(m => m.Type == MeterType.Main);
-
-            // Compute average monthly consumption per house (last 3 reading intervals)
-            var houseConsumptions = new Dictionary<string, decimal>();
-            decimal totalConsumption = 0;
-
-            foreach (var house in activeHouses)
-            {
-                var meter = allMeters.FirstOrDefault(m => m.HouseId == house.Id);
-                if (meter == null) { houseConsumptions[house.Id] = 0; continue; }
-
-                var readings = await _readingRepository.GetByMeterIdAsync(meter.Id);
-                var sorted = readings.OrderByDescending(r => r.ReadingDate).Take(4).OrderBy(r => r.ReadingDate).ToList();
-
-                decimal avgMonthly = 0;
-                if (sorted.Count >= 2)
-                {
-                    var totalDelta = sorted.Last().Value - sorted.First().Value;
-                    var months = Math.Max(1, (sorted.Last().ReadingDate - sorted.First().ReadingDate).TotalDays / 30.0);
-                    avgMonthly = totalDelta / (decimal)months;
-                }
-
-                houseConsumptions[house.Id] = Math.Max(0, avgMonthly);
-                totalConsumption += Math.Max(0, avgMonthly);
-            }
-
-            // Main meter average for loss calculation
-            decimal mainMonthly = 0;
-            if (mainMeter != null)
-            {
-                var mr = await _readingRepository.GetByMeterIdAsync(mainMeter.Id);
-                var sorted = mr.OrderByDescending(r => r.ReadingDate).Take(4).OrderBy(r => r.ReadingDate).ToList();
-                if (sorted.Count >= 2)
-                {
-                    var d = sorted.Last().Value - sorted.First().Value;
-                    var m = Math.Max(1, (sorted.Last().ReadingDate - sorted.First().ReadingDate).TotalDays / 30.0);
-                    mainMonthly = d / (decimal)m;
-                }
-            }
-
-            var monthlyLoss = Math.Max(0, mainMonthly - totalConsumption);
-
-            // Build per-house result. Members only see their own household;
-            // admins and accountants see every house.
+            // Members only see their own household; admins and accountants see every house.
             var canSeeAllHouses = user.Role is UserRole.Admin or UserRole.Accountant;
-            var houses = new List<object>();
-            foreach (var house in activeHouses)
-            {
-                if (!canSeeAllHouses && house.Id != user.HouseId) continue;
-
-                var consumption = houseConsumptions.GetValueOrDefault(house.Id, 0);
-                var share = totalConsumption > 0 ? consumption / totalConsumption : 1m / activeHouses.Count;
-
-                // Loss allocation honors the configured method (default: proportional
-                // to consumption), mirroring CalculateSettlementUseCase.AllocateLoss.
-                decimal lossShare;
-                if (monthlyLoss <= 0 || activeHouses.Count == 0)
+            var houses = prescribed.Houses
+                .Where(h => canSeeAllHouses || h.HouseId == user.HouseId)
+                .Select(h => new
                 {
-                    lossShare = 0m;
-                }
-                else if (string.Equals(settings.LossAllocationMethod, "Equal", StringComparison.OrdinalIgnoreCase))
-                {
-                    lossShare = monthlyLoss / activeHouses.Count;
-                }
-                else
-                {
-                    lossShare = totalConsumption > 0
-                        ? monthlyLoss * (consumption / totalConsumption)
-                        : monthlyLoss / activeHouses.Count;
-                }
-
-                var totalWaterM3 = consumption + lossShare;
-
-                // Recommended amounts
-                var recWater = Math.Round(totalWaterM3 * settings.WaterPricePerM3, 0);
-                var elecCoeff = settings.ElectricityCoefficients.GetValueOrDefault(house.Id, 0);
-                var recElectricity = Math.Round(settings.MonthlyElectricityCost * elecCoeff / 100m, 0);
-                var recCommon = settings.MonthlyCommonBaseFee;
-                var recTotal = recWater + recElectricity + recCommon;
-
-                // Actual (admin override or recommended)
-                var over = settings.HouseOverrides.GetValueOrDefault(house.Id);
-                var actWater = over?.WaterAdvance ?? recWater;
-                var actElec = over?.ElectricityAdvance ?? recElectricity;
-                var actCommon = over?.CommonAdvance ?? recCommon;
-                var actTotal = actWater + actElec + actCommon;
-
-                houses.Add(new
-                {
-                    houseId = house.Id,
-                    houseName = house.Name,
-                    avgMonthlyM3 = Math.Round(consumption, 1),
-                    lossShareM3 = Math.Round(lossShare, 1),
-                    totalWaterM3 = Math.Round(totalWaterM3, 1),
-                    sharePercent = Math.Round(share * 100, 1),
-                    electricityCoefficient = elecCoeff,
-                    recommended = new { water = recWater, electricity = recElectricity, common = recCommon, total = recTotal },
-                    actual = new { water = actWater, electricity = actElec, common = actCommon, total = actTotal },
-                    hasOverride = over != null,
-                });
-            }
+                    houseId = h.HouseId,
+                    houseName = h.HouseName,
+                    avgMonthlyM3 = Math.Round(h.AvgMonthlyM3, 1),
+                    lossShareM3 = Math.Round(h.LossShareM3, 1),
+                    totalWaterM3 = Math.Round(h.TotalWaterM3, 1),
+                    sharePercent = Math.Round(h.Share * 100, 1),
+                    electricityCoefficient = h.ElectricityCoefficient,
+                    recommended = new { water = h.Recommended.Water, electricity = h.Recommended.Electricity, common = h.Recommended.Common, total = h.Recommended.Total },
+                    actual = new { water = h.Actual.Water, electricity = h.Actual.Electricity, common = h.Actual.Common, total = h.Actual.Total },
+                    hasOverride = h.HasOverride,
+                })
+                .ToList();
 
             var result = new
             {
@@ -234,9 +144,9 @@ public class AdvanceSettingsFunctions
                     settings.MonthlyCommonBaseFee,
                     settings.LossAllocationMethod,
                 },
-                mainMeterMonthlyM3 = Math.Round(mainMonthly, 1),
-                totalIndividualMonthlyM3 = Math.Round(totalConsumption, 1),
-                monthlyLossM3 = Math.Round(monthlyLoss, 1),
+                mainMeterMonthlyM3 = Math.Round(prescribed.MainMeterMonthlyM3, 1),
+                totalIndividualMonthlyM3 = Math.Round(prescribed.TotalIndividualMonthlyM3, 1),
+                monthlyLossM3 = Math.Round(prescribed.MonthlyLossM3, 1),
                 houses,
             };
 

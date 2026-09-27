@@ -23,6 +23,7 @@ public class AdvanceFunctions
     private readonly IAdvancePaymentRepository _advanceRepository;
     private readonly IHouseRepository _houseRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
+    private readonly IBankTransactionRepository _bankTransactionRepository;
     private readonly CalculateHouseSaldoUseCase _calculateHouseSaldoUseCase;
     private readonly ILogger<AdvanceFunctions> _logger;
 
@@ -36,12 +37,14 @@ public class AdvanceFunctions
         IAdvancePaymentRepository advanceRepository,
         IHouseRepository houseRepository,
         IBillingPeriodRepository billingPeriodRepository,
+        IBankTransactionRepository bankTransactionRepository,
         CalculateHouseSaldoUseCase calculateHouseSaldoUseCase,
         ILogger<AdvanceFunctions> logger)
     {
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
+        _bankTransactionRepository = bankTransactionRepository ?? throw new ArgumentNullException(nameof(bankTransactionRepository));
         _calculateHouseSaldoUseCase = calculateHouseSaldoUseCase ?? throw new ArgumentNullException(nameof(calculateHouseSaldoUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -145,7 +148,7 @@ public class AdvanceFunctions
             }
 
             // Check for duplicate (same house, same year-month)
-            var rowKey = $"{request.Year:D4}-{request.Month:D2}";
+            var rowKey = PaymentRowKeys.Advance(request.Year, request.Month);
             var existing = await _advanceRepository.GetAsync(request.HouseId, rowKey);
             if (existing is not null)
             {
@@ -164,7 +167,7 @@ public class AdvanceFunctions
                 CommonAmount = request.CommonAmount,
                 PaymentDate = request.PaymentDate,
                 Type = PaymentType.Advance,
-                RowKey = $"{request.Year:D4}-{request.Month:D2}",
+                RowKey = rowKey,
             };
 
             await _advanceRepository.UpsertAsync(payment);
@@ -291,8 +294,7 @@ public class AdvanceFunctions
                 PaymentDate = paymentDate,
                 Type = PaymentType.Doplatek,
                 Note = request.Note,
-                // Unique, newest-first key so multiple doplatky per month don't collide.
-                RowKey = $"D-{InvertedTimestamp.FromDateTime(paymentDate)}-{Guid.NewGuid():N}"[..40],
+                RowKey = PaymentRowKeys.Doplatek(paymentDate),
             };
 
             await _advanceRepository.UpsertAsync(payment);
@@ -455,6 +457,12 @@ public class AdvanceFunctions
             }
 
             await _advanceRepository.DeleteAsync(houseId, rowKey);
+
+            // Release the source bank movement so the statement import offers it again.
+            if (existing.BankOwnAccountKey is not null && existing.BankTransactionId is not null)
+            {
+                await _bankTransactionRepository.DeleteAsync(existing.BankOwnAccountKey, existing.BankTransactionId);
+            }
 
             _logger.LogInformation("Payment deleted for house {HouseId} ({RowKey}).", houseId, rowKey);
 

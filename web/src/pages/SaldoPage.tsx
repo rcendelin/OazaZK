@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -87,7 +88,14 @@ export function SaldoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">Saldo a platby</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-text-primary">Saldo a platby</h1>
+          {isAdmin && (
+            <Link to="/advances/import" className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
+              Import z banky
+            </Link>
+          )}
+        </div>
         <p className="mt-1 text-sm text-text-secondary">
           Každý dům má jeden čistý zůstatek (přeplatek v jedné složce pokryje nedoplatek v jiné).
           Kladné = nedoplatek, záporné = přeplatek. Rozpad na vodu/elektřinu/společný je informativní.
@@ -568,6 +576,11 @@ function PaymentsList({ payments, onDelete }: { payments: AdvancePayment[]; onDe
                   {p.isFundTransfer && (
                     <span className="mr-1 rounded bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
                       Z fondu
+                    </span>
+                  )}
+                  {p.isFromBank && (
+                    <span className="mr-1 rounded bg-success-light px-1.5 py-0.5 text-xs font-medium text-success">
+                      Z banky
                     </span>
                   )}
                   {p.note}

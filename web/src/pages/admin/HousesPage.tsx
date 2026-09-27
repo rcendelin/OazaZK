@@ -2,6 +2,8 @@ import React, { useState, useCallback, useRef } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { getHouses, createHouse, updateHouse } from '../../api/houses';
 import { getUsers } from '../../api/users';
+import { getBankAccounts, createBankAccount, deleteBankAccount } from '../../api/bankImport';
+import type { BankAccount } from '../../api/bankImport';
 import { Spinner } from '../../components/Spinner';
 import { HelpTerm } from '../../components/help/HelpTerm';
 import type { House, User } from '../../types/index';
@@ -29,7 +31,15 @@ export function HousesPage() {
     useCallback(() => getUsers(), []),
   );
 
+  const { data: bankAccounts, refetch: refetchAccounts } = useApi<BankAccount[]>(
+    useCallback(() => getBankAccounts(), []),
+  );
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [accountsExpandedId, setAccountsExpandedId] = useState<string | null>(null);
+
+  const accountsForHouse = (houseId: string): BankAccount[] =>
+    bankAccounts?.filter((a) => a.houseId === houseId) ?? [];
 
   const usersForHouse = (houseId: string): User[] =>
     users?.filter((u) => u.houseId === houseId) ?? [];
@@ -182,6 +192,7 @@ export function HousesPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Kontaktní osoba</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Členové</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Bankovní účty</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Stav</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted">Akce</th>
               </tr>
@@ -195,6 +206,7 @@ export function HousesPage() {
                     <td className="px-4 py-2"><input type="text" value={editForm.contactPerson} onChange={(e) => setEditForm({ ...editForm, contactPerson: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
                     <td className="px-4 py-2"><input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="w-full border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised" /></td>
                     <td className="px-4 py-2 text-text-muted text-xs">{usersForHouse(house.id).length}</td>
+                    <td className="px-4 py-2 text-text-muted text-xs">{accountsForHouse(house.id).length}</td>
                     <td className="px-4 py-2">
                       <select value={editForm.isActive ? 'true' : 'false'} onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'true' })} className="border border-border rounded-xl px-2 py-1 text-sm bg-surface-raised">
                         <option value="true">Aktivní</option>
@@ -230,6 +242,15 @@ export function HousesPage() {
                       </button>
                     </td>
                     <td className="px-4 py-3">
+                      <button
+                        onClick={() => setAccountsExpandedId(accountsExpandedId === house.id ? null : house.id)}
+                        className="text-accent hover:text-accent-hover text-xs font-medium"
+                      >
+                        {accountCountLabel(accountsForHouse(house.id).length)}
+                        {accountsExpandedId === house.id ? ' ▲' : ' ▼'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${house.isActive ? 'bg-success-light text-success' : 'bg-surface-sunken text-text-muted'}`}>
                         {house.isActive ? 'Aktivní' : 'Neaktivní'}
                       </span>
@@ -245,7 +266,7 @@ export function HousesPage() {
                   </tr>
                   {expandedId === house.id && (
                     <tr key={`${house.id}-members`} className="bg-surface-sunken">
-                      <td colSpan={7} className="px-6 py-3">
+                      <td colSpan={8} className="px-6 py-3">
                         <p className="text-xs font-semibold text-text-muted mb-2">Členové domácnosti {house.name}</p>
                         {usersForHouse(house.id).length === 0 ? (
                           <p className="text-xs text-text-muted">Žádní přiřazení uživatelé</p>
@@ -270,17 +291,117 @@ export function HousesPage() {
                       </td>
                     </tr>
                   )}
+                  {accountsExpandedId === house.id && (
+                    <tr key={`${house.id}-accounts`} className="bg-surface-sunken">
+                      <td colSpan={8} className="px-6 py-3">
+                        <HouseBankAccounts
+                          house={house}
+                          accounts={accountsForHouse(house.id)}
+                          onChanged={refetchAccounts}
+                        />
+                      </td>
+                    </tr>
+                  )}
                   </React.Fragment>
                 ),
               )}
               {(!houses || houses.length === 0) && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-text-muted">Žádné domácnosti</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-text-muted">Žádné domácnosti</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
       <p className="text-xs text-text-muted mt-4">Celkem domácností: {houses?.length ?? 0}</p>
+    </div>
+  );
+}
+
+function accountCountLabel(count: number): string {
+  if (count === 1) return '1 účet';
+  if (count >= 2 && count <= 4) return `${count} účty`;
+  return `${count} účtů`;
+}
+
+/**
+ * Bank accounts a household pays from. Incoming bank payments from these
+ * accounts are assigned to the household automatically by the bank import.
+ */
+function HouseBankAccounts({ house, accounts, onChanged }: {
+  house: House;
+  accounts: BankAccount[];
+  onChanged: () => void;
+}) {
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAdd = async () => {
+    if (busy || !accountNumber.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await createBankAccount({ houseId: house.id, accountNumber: accountNumber.trim(), accountName: accountName.trim() || undefined });
+      setAccountNumber('');
+      setAccountName('');
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Účet se nepodařilo přidat.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (account: BankAccount) => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteBankAccount(account.accountKey);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Účet se nepodařilo odebrat.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-text-muted mb-1">Bankovní účty domácnosti {house.name}</p>
+      <p className="text-xs text-text-muted mb-2">
+        Příchozí platby z těchto účtů se při importu z banky přiřadí této domácnosti automaticky.
+        Účet, který při importu přiřadíte ručně, se sem přidá sám.
+      </p>
+      {accounts.length === 0 ? (
+        <p className="text-xs text-text-muted mb-2">Zatím žádné účty</p>
+      ) : (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {accounts.map((a) => (
+            <div key={a.accountKey} className="flex items-center gap-2 bg-surface-raised rounded-xl px-3 py-2 border border-border text-xs">
+              <span className="font-mono font-medium">{a.accountNumber}</span>
+              {a.accountName && <span className="text-text-muted">{a.accountName}</span>}
+              <button onClick={() => void handleRemove(a)} disabled={busy} className="text-text-muted hover:text-danger disabled:opacity-50">
+                Odebrat
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)}
+          placeholder="např. 123456789/0300"
+          className="w-48 border border-border rounded-xl px-3 py-1.5 text-sm bg-surface-raised" />
+        <input type="text" value={accountName} onChange={(e) => setAccountName(e.target.value)}
+          placeholder="majitel účtu (nepovinné)"
+          className="w-56 border border-border rounded-xl px-3 py-1.5 text-sm bg-surface-raised" />
+        <button onClick={() => void handleAdd()} disabled={busy || !accountNumber.trim()}
+          className="bg-accent text-white px-3 py-1.5 rounded-xl text-xs font-medium hover:bg-accent-hover disabled:opacity-50">
+          Přidat účet
+        </button>
+      </div>
+      {error && <p className="text-xs text-danger mt-2">{error}</p>}
     </div>
   );
 }

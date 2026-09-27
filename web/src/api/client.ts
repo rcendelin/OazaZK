@@ -81,7 +81,13 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new ApiError(response.status, 'Nahrání se nezdařilo');
+      const error = await response
+        .json()
+        .catch(() => ({ error: 'Nahrání se nezdařilo' }));
+      throw new ApiError(
+        response.status,
+        (error as Record<string, string>).error || 'Nahrání se nezdařilo',
+      );
     }
 
     return response.json() as Promise<T>;
