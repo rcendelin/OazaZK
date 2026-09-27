@@ -24,6 +24,8 @@ se sekce přejmenuje na verzi s datem.
   testy, pokrytí výpočetní logiky ≥ 90 % (`api/coverage-gate.txt`, souhrn v PR) a lint + build webu.
 - **Audit změn (X4).** Tabulka `AuditLog` (kdo, kdy, entita, stará a nová hodnota, důvod; jen přidávání), služba
   `IAuditLogger` pro use casy nového modelu, endpoint `GET /api/audit-log` a stránka Administrace → Audit změn.
+- **E2E smoke testy (X6).** Playwright v CI ověřuje v prohlížeči pruh s prostředím a průchod importem z banky
+  (s podvrženým API, bez backendu).
 
 ### Opraveno
 - **Nápověda k importu odečtů na stránce Vodoměry (X7 §8.9)** popisovala Excel obráceně; nově odpovídá parseru
