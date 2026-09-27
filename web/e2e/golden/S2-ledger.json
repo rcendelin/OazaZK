@@ -1,0 +1,185 @@
+{
+  "overview": {
+    "from": "2023-11-01",
+    "to": "2023-12-31",
+    "components": [
+      {
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "allocatedTotal": -19000.00,
+        "housesTotal": -19000.00,
+        "matches": true,
+        "warnings": []
+      }
+    ],
+    "houses": [
+      {
+        "houseId": "A",
+        "houseName": "RD A",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": -4750.00
+        },
+        "saldo": 4750.00
+      },
+      {
+        "houseId": "B",
+        "houseName": "RD B",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": -4750.00
+        },
+        "saldo": 4750.00
+      },
+      {
+        "houseId": "C",
+        "houseName": "RD C",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": -4750.00
+        },
+        "saldo": 4750.00
+      },
+      {
+        "houseId": "D",
+        "houseName": "RD D",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": -4750.00
+        },
+        "saldo": 4750.00
+      },
+      {
+        "houseId": "E",
+        "houseName": "RD E",
+        "opening": 0,
+        "payments": 0,
+        "costs": {},
+        "saldo": 0
+      },
+      {
+        "houseId": "F",
+        "houseName": "RD F",
+        "opening": 0,
+        "payments": 0,
+        "costs": {},
+        "saldo": 0
+      }
+    ]
+  },
+  "houseA": {
+    "houseId": "A",
+    "houseName": "RD A",
+    "from": "2023-11-01",
+    "to": "2023-12-31",
+    "ownershipPeriod": {
+      "id": "A|2023-11-01",
+      "ownerName": "Vlastník A",
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    "ownershipPeriods": [
+      {
+        "id": "A|2023-11-01",
+        "ownerName": "Vlastník A",
+        "validFrom": "2023-11-01",
+        "validTo": null
+      }
+    ],
+    "opening": 0,
+    "payments": 0,
+    "costs": -4750.00,
+    "saldo": 4750.00,
+    "items": [
+      {
+        "date": "2023-11-01",
+        "kind": "Credit",
+        "description": "Kredit u dodavatele (počáteční stav)",
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "amount": 5000.00,
+        "balance": 5000.00,
+        "detail": {
+          "total": -20000,
+          "segmentFrom": "2023-11-01",
+          "segmentTo": "2023-11-01",
+          "segmentDays": 1,
+          "segmentAmount": -20000,
+          "method": "Equal",
+          "weight": 1,
+          "totalWeight": 4,
+          "explanation": "Kredit -20\u00A0000,00 Kč k 1. 11. 2023 (vyúčtování dodavatele 2023), rovným dílem mezi 4 domů: podíl 1 z 4 = -5\u00A0000,00 Kč"
+        }
+      },
+      {
+        "date": "2023-11-01",
+        "kind": "Cost",
+        "description": "Záloha 1. 11. 2023 – 30. 11. 2023 (Dodavatel elektřiny)",
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "amount": -125.00,
+        "balance": 4875.00,
+        "detail": {
+          "total": 500,
+          "segmentFrom": "2023-11-01",
+          "segmentTo": "2023-11-30",
+          "segmentDays": 30,
+          "segmentAmount": 500.00,
+          "method": "Equal",
+          "weight": 1,
+          "totalWeight": 4,
+          "explanation": "Záloha 1. 11. 2023 – 30. 11. 2023 (Dodavatel elektřiny) 500,00 Kč za 30 dní; úsek 1. 11. 2023 – 30. 11. 2023 (30 dní) = 500,00 Kč, rovným dílem: podíl 1 z 4 = 125,00 Kč"
+        }
+      },
+      {
+        "date": "2023-12-01",
+        "kind": "Cost",
+        "description": "Záloha 1. 12. 2023 – 31. 12. 2023 (Dodavatel elektřiny)",
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "amount": -125.00,
+        "balance": 4750.00,
+        "detail": {
+          "total": 500,
+          "segmentFrom": "2023-12-01",
+          "segmentTo": "2023-12-31",
+          "segmentDays": 31,
+          "segmentAmount": 500.00,
+          "method": "Equal",
+          "weight": 1,
+          "totalWeight": 4,
+          "explanation": "Záloha 1. 12. 2023 – 31. 12. 2023 (Dodavatel elektřiny) 500,00 Kč za 31 dní; úsek 1. 12. 2023 – 31. 12. 2023 (31 dní) = 500,00 Kč, rovným dílem: podíl 1 z 4 = 125,00 Kč"
+        }
+      }
+    ]
+  },
+  "houseE": {
+    "houseId": "E",
+    "houseName": "RD E",
+    "from": "2023-11-01",
+    "to": "2023-12-31",
+    "ownershipPeriod": {
+      "id": "E|2023-11-01",
+      "ownerName": "Vlastník E",
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    "ownershipPeriods": [
+      {
+        "id": "E|2023-11-01",
+        "ownerName": "Vlastník E",
+        "validFrom": "2023-11-01",
+        "validTo": null
+      }
+    ],
+    "opening": 0,
+    "payments": 0,
+    "costs": 0,
+    "saldo": 0,
+    "items": []
+  }
+}

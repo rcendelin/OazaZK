@@ -56,7 +56,7 @@ export function SaldoPage() {
   );
   const { data: houses } = useApi<House[]>(useCallback(() => getHouses(), []));
   const { data: plan } = useApi<AdvanceCalculation | null>(
-    useCallback(() => (isAdmin ? calculateAdvances() : Promise.resolve(null)), [isAdmin]),
+    useCallback(() => (isAdmin ? calculateAdvances() : Promise.resolve(null)), [isAdmin]), [isAdmin],
   );
 
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);

@@ -1,0 +1,105 @@
+{
+  "components": [
+    {
+      "id": "zelen",
+      "name": "Údržba zeleně",
+      "code": "UDRZBA_ZELENE",
+      "startDate": "2023-11-01",
+      "allocationBasis": "CostEntries",
+      "waterRole": "None",
+      "active": true,
+      "note": null,
+      "currentMethod": "Equal",
+      "currentParticipants": 3
+    }
+  ],
+  "entries": [
+    {
+      "id": "id-1",
+      "componentId": "zelen",
+      "componentName": "Údržba zeleně",
+      "type": "OneOff",
+      "periodFrom": "2026-05-15",
+      "periodTo": "2026-05-15",
+      "days": 1,
+      "amount": 1000,
+      "quantityM3": null,
+      "supplier": "Zahradnictví Vzor",
+      "documentId": null,
+      "paidFrom": "Bank",
+      "note": null,
+      "postingDate": null,
+      "correctionOf": null,
+      "locked": false
+    }
+  ],
+  "allocation": {
+    "entry": {
+      "id": "id-1",
+      "componentId": "zelen",
+      "componentName": "Údržba zeleně",
+      "type": "OneOff",
+      "periodFrom": "2026-05-15",
+      "periodTo": "2026-05-15",
+      "days": 1,
+      "amount": 1000,
+      "quantityM3": null,
+      "supplier": "Zahradnictví Vzor",
+      "documentId": null,
+      "paidFrom": "Bank",
+      "note": null,
+      "postingDate": null,
+      "correctionOf": null,
+      "locked": false
+    },
+    "segments": [
+      {
+        "from": "2026-05-15",
+        "to": "2026-05-15",
+        "days": 1,
+        "method": "Equal",
+        "amount": 1000.00,
+        "shares": [
+          {
+            "houseId": "A",
+            "houseName": "RD A",
+            "weight": 1,
+            "amount": 333.34
+          },
+          {
+            "houseId": "B",
+            "houseName": "RD B",
+            "weight": 1,
+            "amount": 333.33
+          },
+          {
+            "houseId": "C",
+            "houseName": "RD C",
+            "weight": 1,
+            "amount": 333.33
+          }
+        ]
+      }
+    ],
+    "houseTotals": [
+      {
+        "houseId": "A",
+        "houseName": "RD A",
+        "weight": 0,
+        "amount": 333.34
+      },
+      {
+        "houseId": "B",
+        "houseName": "RD B",
+        "weight": 0,
+        "amount": 333.33
+      },
+      {
+        "houseId": "C",
+        "houseName": "RD C",
+        "weight": 0,
+        "amount": 333.33
+      }
+    ]
+  }
+}

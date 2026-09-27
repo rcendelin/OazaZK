@@ -155,7 +155,7 @@ function CreateForm({ onCreated }: { onCreated: (c: InterimClosing) => void }) {
 
 function ClosingDetail({ id, isAdmin, onDeleted }: { id: string; isAdmin: boolean; onDeleted: () => void }) {
   const { getAccessToken } = useAuth();
-  const { data: closing, loading, error } = useApi<InterimClosing>(useCallback(() => getInterimClosing(id), [id]));
+  const { data: closing, loading, error } = useApi<InterimClosing>(useCallback(() => getInterimClosing(id), [id]), [id]);
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 

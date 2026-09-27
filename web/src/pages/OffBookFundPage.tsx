@@ -105,7 +105,7 @@ function CreateFund({ onCreated }: { onCreated: (f: OffBookFund) => void }) {
 }
 
 function FundDetail({ fundId, isAdmin }: { fundId: string; isAdmin: boolean }) {
-  const { data, loading, error, refetch } = useApi<OffBookFundDetail>(useCallback(() => getOffBookFund(fundId), [fundId]));
+  const { data, loading, error, refetch } = useApi<OffBookFundDetail>(useCallback(() => getOffBookFund(fundId), [fundId]), [fundId]);
   const { data: houses } = useApi<House[]>(useCallback(() => getHouses(), []));
   if (loading && !data) return <Spinner />;
   if (error) return <div className="rounded-xl bg-danger-light p-4 text-sm text-danger">{error}</div>;

@@ -143,6 +143,20 @@ npm run build               # tsc -b && vite build
   npm run build && npx playwright test
   ```
   Nový test: `mockApi(page, { '/cesta': () => odpověď })`, přihlášení `signInAsAdmin`, přechod `navigate` (reload by zahodil JWT v paměti).
+- **Golden fixtures (T14).** Regresní scénáře S1–S8 ze `docs/ZADANI.md` §4 (`web/e2e/golden.spec.ts`) neběží na
+  ručně psaných odpovědích, ale na skutečném výstupu backendu. Test
+  `api/tests/Oaza.Functions.Tests/Golden/GoldenFixturesTests.cs` postaví každý scénář přes skutečné use casy
+  (in-memory repozitáře, pevné hodiny), ověří klíčová čísla ze zadání a výsledek serializuje stejně jako API
+  (`ModelEndpoint.JsonOptions`, jen odsazeně; vygenerovaná GUID nahrazena `id-1`, `id-2`, …) do
+  `web/e2e/golden/S<n>-….json`. Bez proměnné porovnává se zacommitovaným souborem — rozdíl nebo chybějící soubor
+  = test spadne. Po záměrné změně výpočtu nebo DTO fixtures přegenerujte a commitněte:
+  ```bash
+  cd api
+  UPDATE_GOLDEN=1 dotnet test Oaza.sln --filter FullyQualifiedName~Golden
+  git add ../web/e2e/golden/*.json
+  ```
+  Playwright pak ověří, že stránky tato čísla zobrazí (české formátování). Fixtures commitujte vždy spolu se změnou,
+  která je vyvolala.
 - **Property-based testy:** FsCheck (`FsCheck.Xunit`, atribut `[Property]`) v `Oaza.Domain.Tests` — invarianty výpočtů na náhodných vstupech (vzor: `AllocatorPropertyTests`). Použít pro ledger T07 (Σ rozpočtu = celkem).
 - **Warningy = chyby.** `api/Directory.Build.props` zapíná `TreatWarningsAsErrors` (výjimka: NuGet advisories NU1901–NU1904).
 - **CI na pull requestech** (`.github/workflows/ci.yml`): build API bez warningů, testy, kontrola pokrytí souborů

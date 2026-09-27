@@ -20,7 +20,7 @@ export function WaterPage() {
   const [range, setRange] = useState({ from: shiftIsoDate(today, { months: -6 }), to: today });
   const [draft, setDraft] = useState(range);
   const { data, loading, error } = useApi<WaterSettlement>(
-    useCallback(() => getWaterSettlement(range.from, range.to), [range]),
+    useCallback(() => getWaterSettlement(range.from, range.to), [range]), [range],
   );
 
   return (

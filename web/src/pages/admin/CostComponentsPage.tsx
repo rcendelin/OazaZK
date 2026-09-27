@@ -216,7 +216,7 @@ function CreateComponentForm({ onCreated }: { onCreated: (c: CostComponent) => v
 
 function ComponentDetail({ id, onChanged }: { id: string; onChanged: () => void }) {
   const { data: detail, loading, error, refetch } = useApi<CostComponentDetail>(
-    useCallback(() => getCostComponent(id), [id]),
+    useCallback(() => getCostComponent(id), [id]), [id],
   );
   const { data: houses } = useApi<House[]>(useCallback(() => getHouses(), []));
 
@@ -482,7 +482,7 @@ function SegmentsSection({ componentId, startDate }: { componentId: string; star
   const [range, setRange] = useState({ from: startDate > shiftIsoDate(today, { months: -12 }) ? startDate : shiftIsoDate(today, { months: -12 }), to: today });
   const [draft, setDraft] = useState(range);
   const { data: segments, loading, error } = useApi<AllocationSegment[]>(
-    useCallback(() => getSegments(componentId, range.from, range.to), [componentId, range]),
+    useCallback(() => getSegments(componentId, range.from, range.to), [componentId, range]), [componentId, range],
   );
 
   return (

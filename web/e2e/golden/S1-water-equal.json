@@ -1,0 +1,102 @@
+{
+  "from": "2026-01-01",
+  "to": "2026-06-30",
+  "consumptionComponentName": "Voda PVK",
+  "lossComponentName": "Ztráty vody",
+  "intervals": [
+    {
+      "from": "2026-01-01",
+      "to": "2026-06-30",
+      "days": 181,
+      "mainConsumptionM3": 100,
+      "housesConsumptionM3": 90,
+      "lossM3": 10,
+      "pricePerM3": 100,
+      "invoicedAmount": 10000,
+      "invoicedM3": 100,
+      "waterCost": 9000,
+      "lossCost": 1000,
+      "difference": 0,
+      "allocated": true,
+      "warnings": [],
+      "lossSegments": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-06-30",
+          "days": 181,
+          "method": "Equal",
+          "amount": 1000.00,
+          "participants": 4
+        }
+      ],
+      "houses": [
+        {
+          "houseId": "A",
+          "houseName": "RD A",
+          "consumptionM3": 40,
+          "isEstimate": false,
+          "waterCost": 4000.00,
+          "lossCost": 250.00
+        },
+        {
+          "houseId": "B",
+          "houseName": "RD B",
+          "consumptionM3": 30,
+          "isEstimate": false,
+          "waterCost": 3000.00,
+          "lossCost": 250.00
+        },
+        {
+          "houseId": "C",
+          "houseName": "RD C",
+          "consumptionM3": 15,
+          "isEstimate": false,
+          "waterCost": 1500.00,
+          "lossCost": 250.00
+        },
+        {
+          "houseId": "D",
+          "houseName": "RD D",
+          "consumptionM3": 5,
+          "isEstimate": false,
+          "waterCost": 500.00,
+          "lossCost": 250.00
+        }
+      ]
+    }
+  ],
+  "totals": [
+    {
+      "houseId": "A",
+      "houseName": "RD A",
+      "consumptionM3": 40,
+      "isEstimate": false,
+      "waterCost": 4000.00,
+      "lossCost": 250.00
+    },
+    {
+      "houseId": "B",
+      "houseName": "RD B",
+      "consumptionM3": 30,
+      "isEstimate": false,
+      "waterCost": 3000.00,
+      "lossCost": 250.00
+    },
+    {
+      "houseId": "C",
+      "houseName": "RD C",
+      "consumptionM3": 15,
+      "isEstimate": false,
+      "waterCost": 1500.00,
+      "lossCost": 250.00
+    },
+    {
+      "houseId": "D",
+      "houseName": "RD D",
+      "consumptionM3": 5,
+      "isEstimate": false,
+      "waterCost": 500.00,
+      "lossCost": 250.00
+    }
+  ]
+}

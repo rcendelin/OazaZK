@@ -44,7 +44,7 @@ export function CashBookPage() {
   const canWrite = user?.role === 'Admin' || user?.role === 'Accountant';
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const [draft, setDraft] = useState({ from: '', to: '' });
-  const { data: book, loading, error, refetch } = useApi<CashBook>(useCallback(() => getCashBook(range), [range]));
+  const { data: book, loading, error, refetch } = useApi<CashBook>(useCallback(() => getCashBook(range), [range]), [range]);
 
   return (
     <div className="space-y-6">

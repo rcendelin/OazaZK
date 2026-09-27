@@ -140,7 +140,7 @@ export function FinancePage() {
 
   // Fond společného základu (admin/accountant) — all-time, not year-scoped.
   const { data: fund } = useApi<FundBalanceResponse | null>(
-    useCallback(() => (canExport ? getFundBalance() : Promise.resolve(null)), [canExport]),
+    useCallback(() => (canExport ? getFundBalance() : Promise.resolve(null)), [canExport]), [canExport],
   );
 
   const error = summaryError ?? recordsError ?? exportError;
