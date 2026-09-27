@@ -12,6 +12,15 @@ Stav k 27. 9. 2026.
 | **T09** | Pokladnu čtou členové, zapisují **Admin a Accountant**; nová role se nezavádí. | `[RequireRole(Admin, Accountant)]` na zápisových endpointech. |
 | **X5** | Varianta B z `docs/superpowers/specs/2026-09-27-x5-kalendarni-data-design.md`: nový model (T02–T10) používá `DateOnly` + `DateRange` (uzavřený interval po dnech), „dnes“ vždy z `IClock` v `Europe/Prague` — i pro uživatele mimo ČR; starý model se jen opraví (D1–D3). | Implementace kroků 1–3 návrhu před T02. |
 
+## Výklad zadání (bez dopadu na to, co uživatel vidí)
+
+| Kde | Výklad |
+|---|---|
+| T02 `RATIO` | `ComponentAllocationRule.RatioSource` vyplněné = váhy se berou dynamicky (např. spotřeba podle odečtů), dopočítá je rozpočet v T05/T06. Nevyplněné = statická `Participation.Weight`. T02 hodnoty jen ukládá a vrací. |
+| T02 `METERED` | Metoda i základ `METERED` se v T02 jen evidují; rozpočet podle odečtů je součástí T05/T06. |
+| T02 zákaz změn za mezizávěrkou | Kontrola `ComponentValidation.CheckNotClosed` je hotová; poslední uzavřený den dodá T08 (`InterimClosing`). Do té doby se předává „nic není uzavřeno“. |
+| T02 `PERCENT` = 100 % v každém dni | Účastníci se uvnitř úseku nemění, kontrola proto běží po úsecích a hlásí první den úseku a skutečný součet. Úsek bez účastníků pod pravidlem `PERCENT` je chyba (součet 0 %). |
+
 ## Rizika
 
 | Riziko | Proč | Zmírnění |
