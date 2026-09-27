@@ -113,6 +113,9 @@ Push do větve spustí příslušný GitHub Actions workflow: build a testy → 
 | [docs/LOKALNI-VYVOJ.md](docs/LOKALNI-VYVOJ.md) | vývojář | lokální rozběhnutí, konfigurace, testy, časté problémy |
 | [docs/DEPLOYMENT-DEV.md](docs/DEPLOYMENT-DEV.md) | provoz | založení DEV prostředí v Azure krok za krokem |
 | [docs/DEPLOYMENT-TEST-PROD.md](docs/DEPLOYMENT-TEST-PROD.md) | provoz | TEST a PROD, sdílené prostředky |
+| [docs/architecture-notes.md](docs/architecture-notes.md) | vývojář | rozcestník podle osnovy zadání (stack, entity, výpočty, role, nasazení, testy) |
+| [docs/gap-analysis.md](docs/gap-analysis.md) | vývojář, zadavatel | co ze zadání T01–T14 existuje, co chybí, co nahradí starý kód |
+| [docs/open-questions.md](docs/open-questions.md) | zadavatel | rozhodnutí z 27. 9. 2026, rizika, otevřené otázky O1–O4 |
 | [docs/ANALYZA-ADRESARE.md](docs/ANALYZA-ADRESARE.md) | vývojář | audit kódu z června 2026 a stav nápravy |
 | [docs/superpowers/](docs/superpowers/) | vývojář | návrhy (specs) a implementační plány jednotlivých funkcí |
 | aplikace → **Jak to funguje** | uživatel | uživatelská nápověda a slovník pojmů (`web/src/content/help.ts`) |
