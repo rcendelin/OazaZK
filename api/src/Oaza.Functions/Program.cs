@@ -135,7 +135,6 @@ var host = new HostBuilder()
             new ImportReadingsUseCase(
                 sp.GetRequiredService<IMeterReadingRepository>(),
                 sp.GetRequiredService<IWaterMeterRepository>(),
-                sp.GetRequiredService<IImportSessionCache>(),
                 sp.GetRequiredService<ILogger<ImportReadingsUseCase>>()));
 
         // Use cases: Prescribed advances + bank statement import

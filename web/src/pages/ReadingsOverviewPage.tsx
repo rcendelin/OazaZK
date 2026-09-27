@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { EstimateMark } from '../components/EstimateMark';
 import { useAuth } from '../auth/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { getAllReadings } from '../api/readings';
@@ -303,6 +304,7 @@ export function ReadingsOverviewPage() {
                             return (
                               <td key={date} className="px-2 py-2 border-b border-border text-center">
                                 <span className="font-mono text-xs font-medium text-text-primary">{czNum(reading.value)}</span>
+                                {reading.isEstimate && <EstimateMark note={reading.estimateNote} />}
                                 {reading.consumption != null && reading.consumption > 0 && (
                                   <div className="text-xs text-text-muted">+{czNum(reading.consumption)}</div>
                                 )}

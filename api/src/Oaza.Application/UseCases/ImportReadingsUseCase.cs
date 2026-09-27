@@ -3,7 +3,6 @@ using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
-using Oaza.Application.Interfaces;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
@@ -15,7 +14,6 @@ public class ImportReadingsUseCase
 {
     private readonly IMeterReadingRepository _readingRepository;
     private readonly IWaterMeterRepository _meterRepository;
-    private readonly IImportSessionCache _sessionCache;
     private readonly ILogger<ImportReadingsUseCase> _logger;
 
     private static readonly CultureInfo CzechCulture = new("cs-CZ");
@@ -23,12 +21,10 @@ public class ImportReadingsUseCase
     public ImportReadingsUseCase(
         IMeterReadingRepository readingRepository,
         IWaterMeterRepository meterRepository,
-        IImportSessionCache sessionCache,
         ILogger<ImportReadingsUseCase> logger)
     {
         _readingRepository = readingRepository ?? throw new ArgumentNullException(nameof(readingRepository));
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
-        _sessionCache = sessionCache ?? throw new ArgumentNullException(nameof(sessionCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -56,8 +52,7 @@ public class ImportReadingsUseCase
             {
                 Rows = previewRows,
                 Errors = errors,
-                Warnings = warnings,
-                ImportSessionId = string.Empty
+                Warnings = warnings
             };
         }
 
@@ -101,7 +96,7 @@ public class ImportReadingsUseCase
         if (columnDateMap.Count == 0)
         {
             errors.Add(new ImportValidationMessage { Type = "error", Message = "V hlavičkovém řádku nebylo nalezeno žádné platné datum." });
-            return new ImportPreviewResponse { Rows = previewRows, Errors = errors, Warnings = warnings, ImportSessionId = string.Empty };
+            return new ImportPreviewResponse { Rows = previewRows, Errors = errors, Warnings = warnings };
         }
 
         // 2. Build meter lookup
@@ -242,83 +237,98 @@ public class ImportReadingsUseCase
             });
         }
 
-        // Store session
-        var sessionId = Guid.NewGuid().ToString();
-        _sessionCache.Store(sessionId, new ImportSessionData
-        {
-            Readings = readings,
-            Errors = errors,
-            Warnings = warnings,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = importedBy
-        });
-
         _logger.LogInformation(
-            "Import preview generated: {ReadingCount} readings, {ErrorCount} errors, {WarningCount} warnings. Session: {SessionId}.",
-            readings.Count, errors.Count, warnings.Count, sessionId);
+            "Import preview generated: {ReadingCount} readings, {ErrorCount} errors, {WarningCount} warnings.",
+            readings.Count, errors.Count, warnings.Count);
 
         return new ImportPreviewResponse
         {
             Rows = previewRows,
             Errors = errors,
-            Warnings = warnings,
-            ImportSessionId = sessionId
+            Warnings = warnings
         };
     }
 
     /// <summary>
-    /// Confirms a previously parsed import. Saves all readings to Table Storage.
+    /// Confirms a previewed import. Stateless: the client sends back the readings
+    /// from the preview and everything is re-validated against current data
+    /// (the preview may be stale, and an in-memory preview cache does not survive
+    /// Consumption-plan scale-out). The whole batch is validated before the first
+    /// write, so a conflict saves nothing. A reading already stored with the same
+    /// meter, date and value is skipped, which makes a retry after a partial
+    /// failure succeed instead of reporting its own earlier writes as conflicts.
     /// </summary>
-    public async Task<int> ConfirmImportAsync(string importSessionId, string importedBy)
+    /// <returns>Number of readings written by this call.</returns>
+    public async Task<int> ConfirmImportAsync(ConfirmImportRequest request, string importedBy)
     {
-        var session = _sessionCache.Retrieve(importSessionId);
-        if (session is null)
-        {
-            throw new AppException("Importní relace nebyla nalezena nebo vypršela. Nahrajte prosím soubor znovu.", 404);
-        }
-
-        // Verify the confirming user is the same as the one who created the session
-        if (!string.IsNullOrEmpty(session.CreatedBy) && session.CreatedBy != importedBy)
-        {
-            throw new AppException("Můžete potvrdit pouze vlastní importní relace.", 403);
-        }
-
-        if (session.Errors.Count > 0)
-        {
-            throw new AppException(
-                $"Nelze potvrdit import s {session.Errors.Count} chybami validace. Opravte prosím chyby a nahrajte soubor znovu.");
-        }
-
-        if (session.Readings.Count == 0)
+        if (request.Readings.Count == 0)
         {
             throw new AppException("Nejsou žádné odečty k importu.");
         }
 
-        foreach (var reading in session.Readings)
+        var meters = (await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter)).ToDictionary(m => m.Id);
+        var existingByMeter = new Dictionary<string, IReadOnlyList<MeterReading>>();
+        var errors = new List<ImportValidationMessage>();
+        var warnings = new List<ImportValidationMessage>();
+        var seenMeterDates = new HashSet<(string meterId, DateTime date)>();
+        var conflict = false;
+        var now = DateTime.UtcNow;
+        var toWrite = new List<MeterReading>();
+
+        foreach (var item in request.Readings.OrderBy(r => r.ReadingDate))
         {
-            // Re-validate: check if a reading already exists in the database for the same meter + month
-            var existing = await _readingRepository.GetByMeterIdAsync(reading.MeterId);
-            var duplicate = existing.Any(r =>
-                r.ReadingDate.Year == reading.ReadingDate.Year &&
-                r.ReadingDate.Month == reading.ReadingDate.Month);
-            if (duplicate)
+            if (!meters.TryGetValue(item.MeterId, out var meter))
             {
-                throw new AppException(
-                    $"Odečet pro vodoměr {reading.MeterId} za {reading.ReadingDate:yyyy-MM} již existuje. Data se od náhledu mohla změnit.", 409);
+                errors.Add(new ImportValidationMessage { Type = "error", Message = $"Vodoměr '{item.MeterId}' neexistuje.", MeterId = item.MeterId });
+                continue;
             }
 
+            if (!existingByMeter.TryGetValue(meter.Id, out var existing))
+            {
+                existing = await _readingRepository.GetByMeterIdAsync(meter.Id);
+                existingByMeter[meter.Id] = existing;
+            }
+
+            var readingDate = DateTime.SpecifyKind(item.ReadingDate.Date, DateTimeKind.Utc);
+            if (existing.Any(r => r.ReadingDate.Date == readingDate && r.Value == item.Value))
+            {
+                continue; // already saved by an earlier (interrupted) confirm
+            }
+
+            conflict |= existing.Any(r => r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
+
+            if (!TryValidateReading(meter, readingDate, item.Value, existing, seenMeterDates, null, errors, warnings))
+            {
+                continue;
+            }
+
+            toWrite.Add(new MeterReading
+            {
+                MeterId = meter.Id,
+                ReadingDate = readingDate,
+                Value = item.Value,
+                Source = ReadingSource.Import,
+                ImportedAt = now,
+                ImportedBy = importedBy
+            });
+        }
+
+        if (errors.Count > 0)
+        {
+            var message = "Import nelze potvrdit, nic nebylo uloženo: " + string.Join(" ", errors.Select(e => e.Message));
+            throw new AppException(conflict ? message + " Data se od náhledu mohla změnit — nahrajte soubor znovu." : message, conflict ? 409 : 400);
+        }
+
+        foreach (var reading in toWrite)
+        {
             await _readingRepository.UpsertAsync(reading);
         }
 
-        var count = session.Readings.Count;
-
-        _sessionCache.Remove(importSessionId);
-
         _logger.LogInformation(
-            "Import confirmed: {Count} readings saved by {ImportedBy}. Session: {SessionId}.",
-            count, importedBy, importSessionId);
+            "Import confirmed: {Count} readings saved, {Skipped} already present, by {ImportedBy}.",
+            toWrite.Count, request.Readings.Count - toWrite.Count, importedBy);
 
-        return count;
+        return toWrite.Count;
     }
 
     /// <summary>
@@ -339,8 +349,7 @@ public class ImportReadingsUseCase
         {
             Rows = previewRows,
             Errors = errors,
-            Warnings = warnings,
-            ImportSessionId = string.Empty
+            Warnings = warnings
         };
 
         if (string.IsNullOrWhiteSpace(pastedText))
@@ -480,26 +489,15 @@ public class ImportReadingsUseCase
             });
         }
 
-        var sessionId = Guid.NewGuid().ToString();
-        _sessionCache.Store(sessionId, new ImportSessionData
-        {
-            Readings = readings,
-            Errors = errors,
-            Warnings = warnings,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = importedBy
-        });
-
         _logger.LogInformation(
-            "Clipboard import preview: {ReadingCount} readings, {ErrorCount} errors, {WarningCount} warnings. Session: {SessionId}.",
-            readings.Count, errors.Count, warnings.Count, sessionId);
+            "Clipboard import preview: {ReadingCount} readings, {ErrorCount} errors, {WarningCount} warnings.",
+            readings.Count, errors.Count, warnings.Count);
 
         return new ImportPreviewResponse
         {
             Rows = previewRows,
             Errors = errors,
-            Warnings = warnings,
-            ImportSessionId = sessionId
+            Warnings = warnings
         };
     }
 

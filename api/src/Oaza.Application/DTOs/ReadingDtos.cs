@@ -6,7 +6,6 @@ public class ImportPreviewResponse
     public List<ImportPreviewRow> Rows { get; set; } = new();
     public List<ImportValidationMessage> Errors { get; set; } = new();
     public List<ImportValidationMessage> Warnings { get; set; } = new();
-    public string ImportSessionId { get; set; } = string.Empty;
 }
 
 public class ImportPreviewRow
@@ -23,10 +22,17 @@ public class ImportValidationMessage
     public string? MeterId { get; set; }
 }
 
-// Confirm import request
+// Confirm import request — the readings from the preview, re-validated on the server.
 public class ConfirmImportRequest
 {
-    public string ImportSessionId { get; set; } = string.Empty;
+    public List<ConfirmImportReading> Readings { get; set; } = new();
+}
+
+public class ConfirmImportReading
+{
+    public string MeterId { get; set; } = string.Empty;
+    public DateTime ReadingDate { get; set; }
+    public decimal Value { get; set; }
 }
 
 // Clipboard import request (paste from meter-reader export)
@@ -42,6 +48,23 @@ public class CreateReadingRequest
     public string MeterId { get; set; } = string.Empty;
     public DateTime ReadingDate { get; set; }
     public decimal Value { get; set; }
+
+    /// <summary>The value is an estimate, not a physical reading (T04). Requires <see cref="EstimateNote"/>.</summary>
+    public bool IsEstimate { get; set; }
+    public string? EstimateNote { get; set; }
+}
+
+// Estimate of a meter state at a date (T04)
+public class ReadingEstimateResponse
+{
+    public string MeterId { get; set; } = string.Empty;
+    public DateTime TargetDate { get; set; }
+    /// <summary>Null when the meter has no readings at all.</summary>
+    public decimal? Value { get; set; }
+    public bool IsEstimate { get; set; }
+    /// <summary>Exact | Interpolated | NearestBefore | NearestAfter | None.</summary>
+    public string Method { get; set; } = string.Empty;
+    public string Note { get; set; } = string.Empty;
 }
 
 // Update reading
@@ -63,6 +86,8 @@ public class ReadingResponse
     public string Source { get; set; } = string.Empty;
     public DateTime ImportedAt { get; set; }
     public string ImportedBy { get; set; } = string.Empty;
+    public bool IsEstimate { get; set; }
+    public string? EstimateNote { get; set; }
 }
 
 // Monthly readings overview

@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Oaza.Application.DTOs;
-using Oaza.Application.Interfaces;
 using Oaza.Application.UseCases;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
@@ -16,7 +15,6 @@ public class ImportReadingsUseCaseTests
 {
     private readonly Mock<IMeterReadingRepository> _readingRepoMock;
     private readonly Mock<IWaterMeterRepository> _meterRepoMock;
-    private readonly Mock<IImportSessionCache> _cacheMock;
     private readonly Mock<ILogger<ImportReadingsUseCase>> _loggerMock;
     private readonly ImportReadingsUseCase _useCase;
 
@@ -28,13 +26,11 @@ public class ImportReadingsUseCaseTests
     {
         _readingRepoMock = new Mock<IMeterReadingRepository>();
         _meterRepoMock = new Mock<IWaterMeterRepository>();
-        _cacheMock = new Mock<IImportSessionCache>();
         _loggerMock = new Mock<ILogger<ImportReadingsUseCase>>();
 
         _useCase = new ImportReadingsUseCase(
             _readingRepoMock.Object,
             _meterRepoMock.Object,
-            _cacheMock.Object,
             _loggerMock.Object);
 
         _mainMeter = new WaterMeter
@@ -92,9 +88,7 @@ public class ImportReadingsUseCaseTests
         result.Rows[0].MeterValues["meter-main"].Should().Be(100.5m);
         result.Rows[0].MeterValues["meter-house1"].Should().Be(30.2m);
         result.Rows[0].MeterValues["meter-house2"].Should().Be(25.1m);
-        result.ImportSessionId.Should().NotBeNullOrEmpty();
 
-        _cacheMock.Verify(c => c.Store(It.IsAny<string>(), It.IsAny<ImportSessionData>()), Times.Once);
     }
 
     [Fact]
@@ -128,8 +122,6 @@ public class ImportReadingsUseCaseTests
         result.Rows[0].MeterValues["meter-main"].Should().Be(426.576m);
         result.Rows[0].MeterValues["meter-house1"].Should().Be(306.552m);
         result.Rows[0].MeterValues["meter-house2"].Should().Be(723.061m);
-        result.ImportSessionId.Should().NotBeNullOrEmpty();
-        _cacheMock.Verify(c => c.Store(It.IsAny<string>(), It.IsAny<ImportSessionData>()), Times.Once);
     }
 
     [Fact]
@@ -422,111 +414,114 @@ public class ImportReadingsUseCaseTests
         result.Rows[0].MeterValues["meter-main"].Should().Be(1542.7m);
     }
 
-    [Fact]
-    public async Task ConfirmImportAsync_ValidSession_SavesReadings()
+    private static ConfirmImportRequest Confirm(params (string meterId, int month, decimal value)[] readings) => new()
     {
-        // Arrange
-        var sessionId = "test-session-123";
-        var readings = new List<MeterReading>
-        {
-            new()
+        Readings = readings
+            .Select(r => new ConfirmImportReading
             {
-                MeterId = "meter-main",
-                ReadingDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc),
-                Value = 100m,
-                Source = ReadingSource.Import,
-                ImportedAt = DateTime.UtcNow,
-                ImportedBy = "user-1"
-            },
-            new()
-            {
-                MeterId = "meter-house1",
-                ReadingDate = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc),
-                Value = 30m,
-                Source = ReadingSource.Import,
-                ImportedAt = DateTime.UtcNow,
-                ImportedBy = "user-1"
-            }
-        };
+                MeterId = r.meterId,
+                ReadingDate = new DateTime(2026, r.month, 15, 0, 0, 0, DateTimeKind.Utc),
+                Value = r.value,
+            })
+            .ToList(),
+    };
 
-        _cacheMock.Setup(c => c.Retrieve(sessionId))
-            .Returns(new ImportSessionData
-            {
-                Readings = readings,
-                Errors = new List<ImportValidationMessage>(),
-                Warnings = new List<ImportValidationMessage>(),
-                CreatedAt = DateTime.UtcNow
-            });
+    private static MeterReading Stored(string meterId, int month, decimal value) => new()
+    {
+        MeterId = meterId,
+        ReadingDate = new DateTime(2026, month, 15, 0, 0, 0, DateTimeKind.Utc),
+        Value = value,
+    };
 
-        // Setup GetByMeterIdAsync to return empty lists (no existing readings)
-        _readingRepoMock.Setup(r => r.GetByMeterIdAsync(It.IsAny<string>()))
-            .ReturnsAsync(new List<MeterReading>().AsReadOnly());
+    [Fact]
+    public async Task ConfirmImportAsync_ValidReadings_SavesAll()
+    {
+        var meters = new List<WaterMeter> { _mainMeter, _houseMeter1 };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
 
-        // Act
-        var count = await _useCase.ConfirmImportAsync(sessionId, "user-1");
+        var count = await _useCase.ConfirmImportAsync(Confirm(("meter-main", 1, 100m), ("meter-house1", 1, 30m)), "user-1");
 
-        // Assert
         count.Should().Be(2);
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.Is<MeterReading>(m =>
+            m.MeterId == "meter-main" && m.Value == 100m && m.Source == ReadingSource.Import && m.ImportedBy == "user-1" &&
+            m.ReadingDate == new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc))), Times.Once);
         _readingRepoMock.Verify(r => r.UpsertAsync(It.IsAny<MeterReading>()), Times.Exactly(2));
-        _cacheMock.Verify(c => c.Remove(sessionId), Times.Once);
     }
 
     [Fact]
-    public async Task ConfirmImportAsync_SessionNotFound_ThrowsAppException()
+    public async Task ConfirmImportAsync_Empty_Throws()
     {
-        // Arrange
-        _cacheMock.Setup(c => c.Retrieve("nonexistent")).Returns((ImportSessionData?)null);
+        var act = () => _useCase.ConfirmImportAsync(new ConfirmImportRequest(), "user-1");
 
-        // Act & Assert
-        var act = () => _useCase.ConfirmImportAsync("nonexistent", "user-1");
-        await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*nebyla nalezena nebo vypršela*");
+        await act.Should().ThrowAsync<Exceptions.AppException>().WithMessage("*Nejsou žádné odečty k importu*");
     }
 
     [Fact]
-    public async Task ConfirmImportAsync_SessionWithErrors_ThrowsAppException()
+    public async Task ConfirmImportAsync_ReadingAddedSincePreview_Returns409AndSavesNothing()
     {
-        // Arrange
-        var sessionId = "session-with-errors";
-        _cacheMock.Setup(c => c.Retrieve(sessionId))
-            .Returns(new ImportSessionData
-            {
-                Readings = new List<MeterReading>
-                {
-                    new() { MeterId = "m1", Value = 100m }
-                },
-                Errors = new List<ImportValidationMessage>
-                {
-                    new() { Type = "error", Message = "Some error" }
-                },
-                Warnings = new List<ImportValidationMessage>(),
-                CreatedAt = DateTime.UtcNow
-            });
+        var meters = new List<WaterMeter> { _mainMeter, _houseMeter1 };
+        SetupMeters(meters);
+        _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-main")).ReturnsAsync(new List<MeterReading>());
+        _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-house1"))
+            .ReturnsAsync(new List<MeterReading> { Stored("meter-house1", 1, 25m) });
 
-        // Act & Assert
-        var act = () => _useCase.ConfirmImportAsync(sessionId, "user-1");
-        await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*chybami validace*");
+        // The first reading is valid, but the batch must not be half-saved.
+        var act = () => _useCase.ConfirmImportAsync(Confirm(("meter-main", 1, 100m), ("meter-house1", 1, 30m)), "user-1");
+
+        var ex = await act.Should().ThrowAsync<Exceptions.AppException>();
+        ex.Which.StatusCode.Should().Be(409);
+        ex.Which.Message.Should().Contain("nic nebylo uloženo");
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.IsAny<MeterReading>()), Times.Never);
     }
 
     [Fact]
-    public async Task ConfirmImportAsync_EmptyReadings_ThrowsAppException()
+    public async Task ConfirmImportAsync_NegativeConsumption_Returns400AndSavesNothing()
     {
-        // Arrange
-        var sessionId = "session-empty";
-        _cacheMock.Setup(c => c.Retrieve(sessionId))
-            .Returns(new ImportSessionData
-            {
-                Readings = new List<MeterReading>(),
-                Errors = new List<ImportValidationMessage>(),
-                Warnings = new List<ImportValidationMessage>(),
-                CreatedAt = DateTime.UtcNow
-            });
+        var meters = new List<WaterMeter> { _mainMeter };
+        SetupMeters(meters);
+        _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-main"))
+            .ReturnsAsync(new List<MeterReading> { Stored("meter-main", 1, 500m) });
 
-        // Act & Assert
-        var act = () => _useCase.ConfirmImportAsync(sessionId, "user-1");
-        await act.Should().ThrowAsync<Exceptions.AppException>()
-            .WithMessage("*Nejsou žádné odečty k importu*");
+        var act = () => _useCase.ConfirmImportAsync(Confirm(("meter-main", 2, 400m)), "user-1");
+
+        var ex = await act.Should().ThrowAsync<Exceptions.AppException>();
+        ex.Which.StatusCode.Should().Be(400);
+        ex.Which.Message.Should().Contain("Záporná spotřeba");
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.IsAny<MeterReading>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ConfirmImportAsync_UnknownMeterOrDuplicateInBatch_Returns400()
+    {
+        var meters = new List<WaterMeter> { _mainMeter };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
+
+        var unknown = () => _useCase.ConfirmImportAsync(Confirm(("no-such-meter", 1, 1m)), "user-1");
+        (await unknown.Should().ThrowAsync<Exceptions.AppException>()).Which.StatusCode.Should().Be(400);
+
+        var duplicate = () => _useCase.ConfirmImportAsync(Confirm(("meter-main", 1, 100m), ("meter-main", 1, 101m)), "user-1");
+        (await duplicate.Should().ThrowAsync<Exceptions.AppException>()).Which.Message.Should().Contain("Duplicita");
+
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.IsAny<MeterReading>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ConfirmImportAsync_RetryAfterPartialWrite_SkipsAlreadySavedReadings()
+    {
+        var meters = new List<WaterMeter> { _mainMeter, _houseMeter1 };
+        SetupMeters(meters);
+        // meter-main was written by the interrupted first attempt (same date + value).
+        _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-main"))
+            .ReturnsAsync(new List<MeterReading> { Stored("meter-main", 1, 100m) });
+        _readingRepoMock.Setup(r => r.GetByMeterIdAsync("meter-house1")).ReturnsAsync(new List<MeterReading>());
+
+        var count = await _useCase.ConfirmImportAsync(Confirm(("meter-main", 1, 100m), ("meter-house1", 1, 30m)), "user-1");
+
+        count.Should().Be(1);
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.Is<MeterReading>(m => m.MeterId == "meter-house1")), Times.Once);
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.Is<MeterReading>(m => m.MeterId == "meter-main")), Times.Never);
     }
 
     [Fact]

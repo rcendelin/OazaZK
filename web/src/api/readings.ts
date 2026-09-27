@@ -28,11 +28,21 @@ export const importReadingsFromClipboard = (
     readingDate,
   });
 
+/**
+ * Confirms a previewed import. Stateless: the readings from the preview are sent
+ * back and re-validated by the server; nothing is saved if any of them fails.
+ */
 export const confirmImport = (
-  sessionId: string,
+  preview: ImportPreviewResponse,
 ): Promise<{ count: number }> =>
   apiClient.post<{ count: number }>('/readings/import/confirm', {
-    importSessionId: sessionId,
+    readings: preview.rows.flatMap((row) =>
+      Object.entries(row.meterValues).map(([meterId, value]) => ({
+        meterId,
+        readingDate: row.readingDate,
+        value,
+      })),
+    ),
   });
 
 export const createReading = (data: {
@@ -63,3 +73,19 @@ export const getChartData = (
   );
   return apiClient.get<ChartResponse>(`/readings/chart?${params.toString()}`);
 };
+
+export interface ReadingEstimate {
+  meterId: string;
+  targetDate: string;
+  /** Null when the meter has no readings. */
+  value: number | null;
+  isEstimate: boolean;
+  method: 'Exact' | 'Interpolated' | 'NearestBefore' | 'NearestAfter' | 'None';
+  note: string;
+}
+
+/** Estimated meter state at a date (yyyy-MM-dd) — interpolation between readings (T04). Admin only. */
+export const estimateReading = (meterId: string, date: string): Promise<ReadingEstimate> =>
+  apiClient.get<ReadingEstimate>(
+    `/readings/estimate?meterId=${encodeURIComponent(meterId)}&date=${encodeURIComponent(date)}`,
+  );

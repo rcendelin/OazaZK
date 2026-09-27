@@ -104,7 +104,7 @@ public class ReadingFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
-            var count = await _importUseCase.ConfirmImportAsync(request.ImportSessionId, user.Id);
+            var count = await _importUseCase.ConfirmImportAsync(request, user.Id);
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new { count, message = $"Successfully imported {count} readings." });
         }
@@ -240,7 +240,9 @@ public class ReadingFunctions
                         Consumption = consumption,
                         Source = reading.Source.ToString(),
                         ImportedAt = reading.ImportedAt,
-                        ImportedBy = reading.ImportedBy
+                        ImportedBy = reading.ImportedBy,
+                        IsEstimate = reading.IsEstimate,
+                        EstimateNote = reading.EstimateNote
                     });
                 }
             }
@@ -326,7 +328,9 @@ public class ReadingFunctions
                 Value = request.Value,
                 Source = ReadingSource.Manual,
                 ImportedAt = DateTime.UtcNow,
-                ImportedBy = user.Id
+                ImportedBy = user.Id,
+                IsEstimate = request.IsEstimate,
+                EstimateNote = request.IsEstimate ? request.EstimateNote?.Trim() : null
             };
 
             await _readingRepository.UpsertAsync(reading);
@@ -353,7 +357,9 @@ public class ReadingFunctions
                 Consumption = consumption,
                 Source = reading.Source.ToString(),
                 ImportedAt = reading.ImportedAt,
-                ImportedBy = reading.ImportedBy
+                ImportedBy = reading.ImportedBy,
+                IsEstimate = reading.IsEstimate,
+                EstimateNote = reading.EstimateNote
             };
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.Created, readingResponse);
@@ -469,6 +475,8 @@ public class ReadingFunctions
                         Source = existing.Source,
                         ImportedAt = DateTime.UtcNow,
                         ImportedBy = user.Id,
+                        IsEstimate = existing.IsEstimate,
+                        EstimateNote = existing.EstimateNote,
                     };
                     await _readingRepository.UpsertAsync(newReading);
                     effectiveDate = newDate;
@@ -519,7 +527,9 @@ public class ReadingFunctions
                 Consumption = consumption,
                 Source = updatedReading?.Source.ToString() ?? existing.Source.ToString(),
                 ImportedAt = DateTime.UtcNow,
-                ImportedBy = user.Id
+                ImportedBy = user.Id,
+                IsEstimate = updatedReading?.IsEstimate ?? existing.IsEstimate,
+                EstimateNote = updatedReading?.EstimateNote ?? existing.EstimateNote
             };
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, readingResponse);
@@ -544,6 +554,56 @@ public class ReadingFunctions
     /// <summary>
     /// Returns all readings for all meters (admin only). Used for the editable readings list.
     /// </summary>
+    /// <summary>
+    /// GET /readings/estimate?meterId=&amp;date=yyyy-MM-dd — estimated meter state at a
+    /// date (T04): the exact reading, linear interpolation by days, or the nearest
+    /// reading when only one side exists. Nothing is saved.
+    /// </summary>
+    [Function("EstimateReading")]
+    [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> EstimateReadingAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/estimate")] HttpRequestData req)
+    {
+        try
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var meterId = query["meterId"];
+            if (string.IsNullOrWhiteSpace(meterId) ||
+                !DateTime.TryParseExact(query["date"], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Zadejte meterId a date ve tvaru RRRR-MM-DD.");
+            }
+
+            var meter = await _meterRepository.GetAsync(PartitionKeys.Meter, meterId);
+            if (meter is null)
+            {
+                throw new NotFoundException("WaterMeter", meterId);
+            }
+
+            var estimate = Oaza.Domain.Services.ReadingEstimator.Estimate(
+                await _readingRepository.GetByMeterIdAsync(meterId), date);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new ReadingEstimateResponse
+            {
+                MeterId = meterId,
+                TargetDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+                Value = estimate.Value,
+                IsEstimate = estimate.IsEstimate,
+                Method = estimate.Method.ToString(),
+                Note = estimate.Note,
+            });
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error estimating a reading.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
     [Function("GetAllReadings")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> GetAllReadingsAsync(
@@ -590,6 +650,8 @@ public class ReadingFunctions
                         Source = reading.Source.ToString(),
                         ImportedAt = reading.ImportedAt,
                         ImportedBy = reading.ImportedBy,
+                        IsEstimate = reading.IsEstimate,
+                        EstimateNote = reading.EstimateNote,
                     });
 
                     previous = reading;
