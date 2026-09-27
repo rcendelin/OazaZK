@@ -123,7 +123,8 @@ public class LedgerCostCollector
             var allocated = 0m;
             var before = costs.Count;
 
-            foreach (var entry in (await _entries.GetByComponentAsync(component.Id)).Where(e => e.PeriodTo >= range.From && e.PeriodFrom <= range.To))
+            foreach (var entry in (await _entries.GetByComponentAsync(component.Id))
+                         .Where(e => e.PostingDate is { } posted ? range.Contains(posted) : e.PeriodTo >= range.From && e.PeriodFrom <= range.To))
             {
                 var period = new DateRange(entry.PeriodFrom, entry.PeriodTo);
                 var cuts = CostEntryAllocation.MonthStarts(period).Append(range.From).Append(range.To.AddDays(1));
@@ -138,10 +139,12 @@ public class LedgerCostCollector
                     continue;
                 }
 
-                var inRange = shares.Where(s => range.Contains(s.Segment.From)).ToList();
+                // A correction booked after an interim closing counts whole, on its posting day (T08).
+                var inRange = entry.PostingDate is null ? shares.Where(s => range.Contains(s.Segment.From)).ToList() : shares.ToList();
+                var label = entry.PostingDate is null ? EntryLabel(entry) : $"{EntryLabel(entry)} — opravný záznam po mezizávěrce";
                 allocated += inRange.GroupBy(s => s.Segment).Sum(g => g.First().SegmentAmount);
                 costs.AddRange(inRange.Select(s => new LedgerCost(
-                    s.HouseId, s.Segment.From, LedgerItemKind.Cost, component.Id, component.Name, EntryLabel(entry), s.Amount,
+                    s.HouseId, entry.PostingDate ?? s.Segment.From, LedgerItemKind.Cost, component.Id, component.Name, label, s.Amount,
                     Detail(entry.Amount, s, inRange.Where(x => x.Segment == s.Segment).Sum(x => x.Weight),
                         $"{EntryLabel(entry)} {Kc(entry.Amount)} za {entry.PeriodTo.DayNumber - entry.PeriodFrom.DayNumber + 1} dní"))));
             }

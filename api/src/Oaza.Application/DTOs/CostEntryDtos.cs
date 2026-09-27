@@ -21,7 +21,12 @@ public class CostEntryResponse
     public PaidFrom PaidFrom { get; set; }
     public string? Note { get; set; }
 
-    /// <summary>The period starts on or before the last closed day (interim closing, T08).</summary>
+    /// <summary>Booked on this day because the period reaches into a closed period (a correction, T08).</summary>
+    public DateOnly? PostingDate { get; set; }
+
+    public string? CorrectionOf { get; set; }
+
+    /// <summary>The entry is fixed by an interim closing (its posting day or period start is closed).</summary>
     public bool Locked { get; set; }
 }
 
@@ -39,7 +44,12 @@ public class SaveCostEntryRequest
     public string? DocumentId { get; set; }
     public PaidFrom PaidFrom { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>Required when the period reaches into a closed period (the entry becomes a correction).</summary>
     public string? Reason { get; set; }
+
+    /// <summary>The entry this one corrects (optional link).</summary>
+    public string? CorrectionOf { get; set; }
 }
 
 public class RecurringAdvanceRequest

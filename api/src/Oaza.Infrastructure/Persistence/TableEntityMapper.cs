@@ -684,6 +684,8 @@ public static class TableEntityMapper
             { "DocumentId", entry.DocumentId },
             { "PaidFrom", entry.PaidFrom.ToString() },
             { "Note", entry.Note },
+            { "PostingDate", ToIsoDay(entry.PostingDate) },
+            { "CorrectionOf", entry.CorrectionOf },
         };
     }
 
@@ -702,6 +704,42 @@ public static class TableEntityMapper
             DocumentId = entity.GetString("DocumentId"),
             PaidFrom = Enum.TryParse<PaidFrom>(entity.GetString("PaidFrom"), out var paidFrom) ? paidFrom : PaidFrom.Bank,
             Note = entity.GetString("Note"),
+            PostingDate = GetIsoDay(entity, "PostingDate"),
+            CorrectionOf = entity.GetString("CorrectionOf"),
+        };
+    }
+
+    // ───────────────────── InterimClosing (T08) ─────────────────────
+    // PK = CLOSING, RK = id
+
+    public static TableEntity ToTableEntity(InterimClosing closing)
+    {
+        return new TableEntity(PartitionKeys.InterimClosing, closing.Id)
+        {
+            { "Date", ToIsoDay(closing.Date) },
+            { "Scope", closing.Scope.ToString() },
+            { "HouseId", closing.HouseId },
+            { "Reason", closing.Reason },
+            { "CreatedBy", closing.CreatedBy },
+            { "CreatedByName", closing.CreatedByName },
+            { "CreatedAt", DateTime.SpecifyKind(closing.CreatedAt, DateTimeKind.Utc) },
+            { "SnapshotJson", closing.SnapshotJson },
+        };
+    }
+
+    public static InterimClosing ToInterimClosing(TableEntity entity)
+    {
+        return new InterimClosing
+        {
+            Id = entity.RowKey,
+            Date = GetIsoDay(entity, "Date") ?? DateOnly.MinValue,
+            Scope = Enum.TryParse<ClosingScope>(entity.GetString("Scope"), out var scope) ? scope : ClosingScope.All,
+            HouseId = entity.GetString("HouseId"),
+            Reason = entity.GetString("Reason") ?? string.Empty,
+            CreatedBy = entity.GetString("CreatedBy") ?? string.Empty,
+            CreatedByName = entity.GetString("CreatedByName"),
+            CreatedAt = entity.GetDateTimeOffset("CreatedAt")?.UtcDateTime ?? DateTime.MinValue,
+            SnapshotJson = entity.GetString("SnapshotJson") ?? "[]",
         };
     }
 }

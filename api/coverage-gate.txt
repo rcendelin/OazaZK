@@ -7,6 +7,8 @@ src/Oaza.Application/UseCases/OpeningBalancesUseCase.cs
 src/Oaza.Application/UseCases/CostEntriesUseCase.cs
 src/Oaza.Application/UseCases/WaterSettlementUseCase.cs
 src/Oaza.Application/Ledger/*.cs
+src/Oaza.Application/UseCases/InterimClosingsUseCase.cs
+src/Oaza.Application/Interfaces/IClosingBoundary.cs
 src/Oaza.Application/UseCases/Calculate*.cs
 src/Oaza.Application/UseCases/CloseBillingPeriodUseCase.cs
 src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs

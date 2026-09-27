@@ -195,7 +195,7 @@ Nový model (T06). Typy `Advance` | `Settlement` (kladné = doplatek, záporné 
 |--------|-------|---------|-------|
 | GET | `/cost-components/{id}/entries?from=&to=` | Admin, Accountant | Záznamy složky, jejichž období se překrývá s rozsahem. |
 | GET | `/cost-components/{id}/entries/{entryId}/allocation` | Admin, Accountant | Rozpad záznamu: úseky (stálá účast a metoda, řezy po měsících), částka úseku podle dní, podíl každého domu a součty za domy. U složky podle odečtů 400. |
-| POST | `/cost-components/{id}/entries` | Admin | `{ type, periodFrom, periodTo, amount, quantityM3?, supplier?, documentId?, paidFrom, note?, reason? }` → 201. Ne před startem složky, záloha > 0, u složky podle odečtů povinné `quantityM3`. Záznam, který nejde rozpočítat (nikdo se neúčastní), se odmítne. |
+| POST | `/cost-components/{id}/entries` | Admin | `{ type, periodFrom, periodTo, amount, quantityM3?, supplier?, documentId?, paidFrom, note?, reason?, correctionOf? }` (zasahuje-li období do mezizávěrky: opravný záznam s `postingDate`, `reason` povinný) → 201. Ne před startem složky, záloha > 0, u složky podle odečtů povinné `quantityM3`. Záznam, který nejde rozpočítat (nikdo se neúčastní), se odmítne. |
 | POST | `/cost-components/{id}/entries/recurring` | Admin | `{ amount, periodicity: Monthly\|Quarterly\|HalfYearly\|Yearly, from, to, supplier?, paidFrom, note? }` → 201 se sérií záloh. Celá série se ověří před zápisem, max. 120. |
 | PUT | `/cost-components/{id}/entries/{entryId}` | Admin | Stejné tělo jako POST. |
 | DELETE | `/cost-components/{id}/entries/{entryId}?reason=` | Admin | Smaže záznam. |
@@ -220,6 +220,19 @@ Nový model (T07). **Znaménko salda (X1): kladné = přeplatek (spolek dluží 
 | GET | `/ledger/houses/{houseId}/export?format=xlsx\|csv&…` | jako detail | Export salda domu (XLSX, nebo CSV pro český Excel: UTF-8 s BOM, „;“, desetinná čárka). |
 | GET | `/ledger/overview/export?format=xlsx\|csv&from=&to=` | přihlášený | Export přehledu včetně řádků „Σ domů“ a „Rozpočteno složkou“. |
 | GET | `/ledger/overview?from=&to=` | přihlášený | Všechny domy × složky (bez osobních údajů): počáteční podíl, platby, náklady po složkách, saldo; kontrolní řádek za každou složku (rozpočteno vs. Σ domů) s varováními. |
+
+## Mezizávěrky — `InterimClosingFunctions.cs`
+
+Nový model (T08). Id mezizávěrky `{datum}|{All|House}|{dům nebo -}` se v URL kóduje.
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/interim-closings` | Admin, Accountant | Seznam od nejnovější: datum, rozsah, dům, důvod, kdo, součet salda, `canDelete` (jen poslední). |
+| GET | `/interim-closings/{id}` | Admin, Accountant | Detail se snapshotem salda domů a saldem k datu přepočteným teď (`difference` ≠ 0 = něco se v uzavřeném období změnilo). |
+| POST | `/interim-closings` | Admin | `{ date, scope: All\|House, houseId?, reason }` → 201. Datum nejpozději včera a později než dosavadní mezizávěrka (pro dům: všech domů i toho domu). Uloží snapshot salda. |
+| DELETE | `/interim-closings/{id}?reason=` | Admin | Zruší jen poslední mezizávěrku, s důvodem. |
+
+Po mezizávěrce se pravidla, účast, náklady a počáteční stavy do data řezu nemění. Náklad, jehož období do řezu zasahuje, se zaúčtuje jako opravný záznam k prvnímu dni po řezu (`reason` povinný, odpověď nese `postingDate`).
 
 ## Systém — `SystemFunctions.cs`
 
