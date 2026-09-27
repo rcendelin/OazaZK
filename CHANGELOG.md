@@ -35,6 +35,9 @@ se sekce přejmenuje na verzi s datem.
   doplněno o znění O1–O5 a rozhodnutí X5 (varianta B: `DateOnly` v novém modelu, „dnes“ v `Europe/Prague`).
 - **Kalendářní dny v pražském čase (X5).** `IClock`/`PragueClock` („dnes“ = den v `Europe/Prague`) a `DateRange`
   (uzavřený interval po dnech: počet dnů, průnik, řez pro mezizávěrky) jako základ nového modelu T02–T10.
+- **Nákladové složky – doménový model (T02, část A).** Entity `CostComponent`, `ComponentAllocationRule` a `Participation`
+  s efektivním datováním, výpočet úseků, ve kterých je rozpočet konstantní (`AllocationSegments`), a validace:
+  nepřekrývání účasti a pravidel, `PERCENT` = 100 % v každém dni (hláška s datem a součtem), zákaz změny za mezizávěrkou.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
