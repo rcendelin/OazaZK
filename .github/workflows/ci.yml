@@ -26,6 +26,13 @@ jobs:
           - 10000:10000
           - 10001:10001
           - 10002:10002
+      # A second, separate storage emulator = "the other environment" for the T01 data-isolation test.
+      azurite2:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 20000:10000
+          - 20001:10001
+          - 20002:10002
     defaults:
       run:
         working-directory: api
@@ -44,6 +51,9 @@ jobs:
         run: dotnet build Oaza.sln --configuration Release --no-restore
 
       - name: Test with coverage
+        env:
+          # Azurite's publicly documented development account key (not a secret) — second emulator on ports 2000x.
+          AZURE_STORAGE_CONNECTION_2: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:20000/devstoreaccount1;TableEndpoint=http://127.0.0.1:20002/devstoreaccount1
         run: >
           dotnet test Oaza.sln --configuration Release --no-build
           --collect:"XPlat Code Coverage" --results-directory ./coverage

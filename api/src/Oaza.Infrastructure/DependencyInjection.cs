@@ -25,8 +25,18 @@ public static class DependencyInjection
             ?? configuration["AzureWebJobsStorage"]
             ?? throw new InvalidOperationException("Blob Storage connection string is not configured.");
 
-        services.AddSingleton(new TableServiceClient(storageConnectionString));
-        services.AddSingleton(new BlobServiceClient(blobConnectionString));
+        var tableClient = new TableServiceClient(storageConnectionString);
+        var blobClient = new BlobServiceClient(blobConnectionString);
+
+        // T01: test and prod never share data — refuse to start on another environment's storage account.
+        var environment = configuration[Oaza.Application.Deployment.DeploymentEnvironment.ConfigKey] ?? string.Empty;
+        var violation = Oaza.Application.Deployment.StorageIsolation.Violation(environment, tableClient.AccountName)
+            ?? Oaza.Application.Deployment.StorageIsolation.Violation(environment, blobClient.AccountName);
+        if (violation is not null)
+            throw new InvalidOperationException(violation);
+
+        services.AddSingleton(tableClient);
+        services.AddSingleton(blobClient);
 
         // Repository registrations
         services.AddSingleton<IUserRepository, UserRepository>();

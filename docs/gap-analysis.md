@@ -8,7 +8,7 @@ se vede v přehledu úkolů mimo repozitář (artefakt „Portál Oáza – pře
 
 | Task | Existuje | Chybí (hlavní) | Nahrazuje / migrace kódu |
 |---|---|---|---|
-| **T01** Prostředí test / prod | 3 workflow a oddělené RG; `Environment` + `GET /api/environment`, pruh v UI (PR #6) | `infra/` skript, test izolace dat, Required reviewers, hand-off PROD | — |
+| **T01** Prostředí test / prod | 3 workflow a oddělené RG; `Environment` + `GET /api/environment`, pruh v UI (PR #6); `infra/provision.sh`, pojistka `StorageIsolation`, test izolace dat se dvěma emulátory | hand-off PROD (RBAC, secrety, Required reviewers, DNS) — ruční kroky uživatele | — |
 | **T02** Nákladové složky a účast | `AdvanceSettings` (koeficienty elektřiny, globální metoda ztrát); alokační knihovna `Allocator` (PR #5) | `CostComponent`, `ComponentAllocationRule`, `Participation`, validace, úseky, API, UI | koeficienty a `LossAllocationMethod` v `AdvanceSettings` |
 | **T03** Počáteční stavy, nový majitel | `PaymentType.OpeningBalance` (jen čistý zůstatek) | `OwnershipPeriod`, `OpeningBalance` (3 typy), převod domu, průvodce | `PaymentType.OpeningBalance` |
 | **T04** Odečty: odhady | import Excel / schránka s náhledem | `IsEstimate`, `EstimateReading` (interpolace), UI odlišení, zámek mezizávěrky | — (aditivní) |

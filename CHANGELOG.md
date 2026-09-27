@@ -124,6 +124,9 @@ se sekce přejmenuje na verzi s datem.
   zazálohuje a obnoví všechny tabulky a soubory účtu; obnova vyžaduje potvrzení názvem účtu.
 - **Demo data pro školení (T14).** `seed/demo/` — fiktivní, ale realistický rok a půl provozu (8 domů, převod domu,
   kredit vodárny, vyúčtování, změna metody ztrát) k nahrání přes Import počátečních dat.
+- **Oddělení prostředí (T01, dokončení).** Skript `infra/provision.sh` založí prostředí dev/test/prod (s režimem
+  nanečisto a potvrzením pro produkci). API odmítne nastartovat nad úložištěm jiného prostředí (např. produkce nad
+  testovacím storage). Test v CI ověřuje, že zápis v jednom prostředí není vidět v druhém.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich
