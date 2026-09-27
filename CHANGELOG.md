@@ -104,6 +104,11 @@ se sekce přejmenuje na verzi s datem.
   k němu vznikne náklad.
 - **Export odečtů (T04).** Na stránce Seznam odečtů lze stáhnout odečty za zvolené období do XLSX nebo CSV; export
   ukazuje spotřebu od předchozího odečtu a u odhadnutých hodnot sloupec „Odhad“ s popisem, jak vznikly.
+- **Import počátečních dat (T13), část A — výpočet a API.** Šablony CSV v `seed/templates/` (domy, období
+  vlastnictví, vodoměry, složky a jejich pravidla, účasti, počáteční stavy vodoměrů, podíly na fondu, kredity, náklady)
+  s návodem `seed/README.md`. Import vždy nejdřív proběhne nanečisto a ukáže report (co vznikne, konflikty, chyby,
+  salda domů k dnešku) — ke stažení v Markdownu a XLSX; zapíše se jen bez chyb a konfliktů a opakovaný import nic
+  nezdvojí ani nepřepíše.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich

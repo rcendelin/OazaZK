@@ -1,0 +1,7 @@
+house;owner_name;contact;valid_from;valid_to
+RD A;Alena Ukázková;a@example.invalid;2023-11-01;
+RD B;Bohumil Vzorový;b@example.invalid;2023-11-01;
+RD C;Cyril Testovací;c@example.invalid;2023-11-01;
+RD D;Dana Fiktivní;d@example.invalid;2023-11-01;
+RD E;Emil Smyšlený;e@example.invalid;2023-11-01;
+RD F;Františka Příkladná;f@example.invalid;2023-11-01;

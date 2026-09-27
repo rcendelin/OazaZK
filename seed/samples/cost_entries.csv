@@ -1,0 +1,4 @@
+ref;component;type;period_from;period_to;amount;quantity_m3;supplier;paid_from;note
+S2-2023-11;ELEKTRINA_VODARNA;zaloha;2023-11-01;2023-11-30;500;;Dodavatel elektřiny;kredit;
+S2-2023-12;ELEKTRINA_VODARNA;zaloha;2023-12-01;2023-12-31;500;;Dodavatel elektřiny;kredit;
+S3-2026-H2;OSVETLENI;vyuctovani;2026-07-01;2026-12-31;1 840,00;;Dodavatel elektřiny;banka;doplatek

@@ -27,6 +27,10 @@ Stav k 27. 9. 2026.
 | T02 `PERCENT` = 100 % v každém dni | Účastníci se uvnitř úseku nemění, kontrola proto běží po úsecích a hlásí první den úseku a skutečný součet. Úsek bez účastníků pod pravidlem `PERCENT` je chyba (součet 0 %). |
 | T02 změna vah u `PERCENT` | API mění účast po jednom záznamu a každý krok se validuje, takže přerozdělení procent k datu (např. přidání domu) jednotlivými kroky neprojde. Seed konfigurace `PERCENT` nepoužívá; pokud bude potřeba, doplní se hromadná operace „nové váhy od data“. |
 
+| T13 podoba importu | Admin stránka v aplikaci (rozhodnuto 27. 9. 2026), ne CLI — přístup k produkčnímu storage nikdy neopouští Azure. `/seed-import` není za `ENABLE_SEED`. |
+| T13 existující záznamy | Řádek se stejným přirozeným klíčem a stejnými hodnotami se přeskočí; s jinými hodnotami je to konflikt, který zablokuje zápis celého importu (nic se nepřepisuje, oprava v CSV nebo v aplikaci). |
+| T13 soubory navíc | K šablonám ze zadání přibyl `allocation_rules.csv` (změny metody od data); první pravidlo složky je ve sloupcích `method`/`ratio_source` v `components.csv`. Náklady mají povinný sloupec `ref` (přirozený klíč, `CostEntry.ExternalRef`). |
+| T13 náklady v uzavřeném období | Import nezadává důvod, proto náklad zasahující do mezizávěrky skončí chybou — ostrá data se importují před první mezizávěrkou. |
 | T03 první období vlastnictví | Produkční data nejsou (X2), proto se období nemigrují: akce „Start účtování k datu“ založí každému aktivnímu domu bez období jedno období od data startu (vlastník = kontaktní osoba domu). Opakované spuštění nic nezmění. |
 | T03 stav vodoměru | Počáteční stav vodoměru je zároveň skutečný odečet k datu (s příznakem odhadu a poznámkou se zdrojem), aby ho všechny výpočty spotřeby viděly bez zvláštního případu. Existující odečet se stejnou hodnotou se jen použije, jiný se nepřepíše. |
 | T03 znaménko `FundShare` | Podle X1: kladné = dům má u spolku přeplatek. Starý počáteční zůstatek na stránce Saldo (`PaymentType.OpeningBalance`) má opačné znaménko a zůstává do náhrady ledgerem (T07). |

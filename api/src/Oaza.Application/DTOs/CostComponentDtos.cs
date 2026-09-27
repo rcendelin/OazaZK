@@ -74,6 +74,9 @@ public class CreateCostComponentRequest
     /// <summary>Method of the first rule from <see cref="StartDate"/>; default Metered for metered components, else Equal.</summary>
     public AllocationMethod? Method { get; set; }
 
+    /// <summary>RATIO of the first rule: code of the component whose consumption gives the weights (e.g. VODA_PVK).</summary>
+    public string? RatioSource { get; set; }
+
     public string? Note { get; set; }
 }
 

@@ -50,6 +50,9 @@ public class SaveCostEntryRequest
 
     /// <summary>The entry this one corrects (optional link).</summary>
     public string? CorrectionOf { get; set; }
+
+    /// <summary>Natural key from the seed import (T13); set only on create, unique among all entries.</summary>
+    public string? ExternalRef { get; set; }
 }
 
 public class RecurringAdvanceRequest

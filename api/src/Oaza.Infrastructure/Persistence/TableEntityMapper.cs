@@ -565,6 +565,7 @@ public static class TableEntityMapper
             { "Note", entry.Note },
             { "PostingDate", ToIsoDay(entry.PostingDate) },
             { "CorrectionOf", entry.CorrectionOf },
+            { "ExternalRef", entry.ExternalRef },
         };
     }
 
@@ -585,6 +586,7 @@ public static class TableEntityMapper
             Note = entity.GetString("Note"),
             PostingDate = GetIsoDay(entity, "PostingDate"),
             CorrectionOf = entity.GetString("CorrectionOf"),
+            ExternalRef = entity.GetString("ExternalRef"),
         };
     }
 
