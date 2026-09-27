@@ -442,6 +442,8 @@ ENABLE_SEED=true            # only on DEV/local — enables anonymous POST /api/
 - Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 8.0.x.
 - Integrační testy potřebují Azurite: `docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`. Používají `[SkippableFact]` (skip když chybí); CI běží Azurite jako service container.
 
+- **PR CI** (`.github/workflows/ci.yml`): warnings are errors (`api/Directory.Build.props`), coverage gate ≥ 90 % over files listed in `api/coverage-gate.txt` (add new calculation code there), web lint + build.
+
 ## Development workflow
 
 1. Run Azurite locally for Table Storage + Blob Storage emulation
