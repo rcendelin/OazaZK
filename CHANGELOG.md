@@ -62,6 +62,9 @@ se sekce přejmenuje na verzi s datem.
   cena za m³ z faktur PVK, náklad vody podle spotřeby a ztráty podle metody složky „Ztráty vody“ (rovným dílem, nebo
   poměrem spotřeby; změna metody platí od svého data). Záporná ztráta se nerozpočítá a ukáže varování, chybějící odečet
   se dopočítá a označí jako odhad. Složky mají roli ve vyúčtování vody (Voda PVK / Ztráty vody).
+- **Voda a ztráty – stránka (T05, část B).** Hospodaření → Voda a ztráty: pro každý úsek spotřeba hlavního vodoměru
+  a domů, ztráta, cena za m³, použitá metoda ztrát a výpočet po úsecích, náklad každého domu (≈ u odhadu), varování
+  a rozdíl proti fakturám PVK; na konci součty za období.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
