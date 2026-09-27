@@ -83,3 +83,44 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: Web — E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build (API is mocked by the tests)
+        run: npm run build
+        env:
+          # MSAL needs a syntactically valid client id to initialise; no real sign-in happens.
+          VITE_ENTRA_CLIENT_ID: 00000000-0000-0000-0000-000000000000
+
+      - name: Playwright
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 14
