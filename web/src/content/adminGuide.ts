@@ -100,7 +100,9 @@ export const adminProcedures: GuideProcedure[] = [
       },
       {
         text: 'Kontrola: u každého nákladu v tabulce ukáže „Rozpad na domy“, kolik z něj připadlo na který dům. '
-          + 'Chybný záznam smažete tlačítkem „Smazat“ (u uzavřeného období to nejde).',
+          + 'Chybný záznam opravíte tlačítkem „Upravit“, nebo ho smažete tlačítkem „Smazat“ a potvrzením (důvod se '
+          + 'zapíše do auditu). U uzavřeného období to nejde — zadejte nový náklad a vyplňte „Důvod (u opravy za '
+          + 'mezizávěrkou)“; uloží se jako oprava v prvním otevřeném dni.',
         screenshot: 'faktura-5.png',
       },
     ],

@@ -22,7 +22,11 @@ interface AuthContextType {
   verifyMagicLink: (token: string, email: string) => Promise<void>;
   logout: () => void;
   getAccessToken: () => Promise<string | null>;
+  /** Why the user was signed out (e.g. an expired session) — shown on the login page. */
+  sessionNotice: string | null;
 }
+
+export const SESSION_EXPIRED_MESSAGE = 'Přihlášení vypršelo, přihlaste se znovu.';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -37,10 +41,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [magicLinkJwt, setMagicLinkJwt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  /**
+   * The API rejected the session (401). MSAL may still hold an account (useIsAuthenticated stays true), so
+   * this flag signs the user out of the app until they log in again (a new login reloads the page / resets it).
+   */
+  const [sessionExpired, setSessionExpired] = useState(false);
 
-  const isAuthenticated = isMsalAuthenticated || magicLinkJwt !== null;
+  const isAuthenticated = !sessionExpired && (isMsalAuthenticated || magicLinkJwt !== null);
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
+    if (sessionExpired) {
+      return null;
+    }
     if (magicLinkJwt) {
       return magicLinkJwt;
     }
@@ -69,12 +81,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       return null;
     }
-  }, [instance, magicLinkJwt]);
+  }, [instance, magicLinkJwt, sessionExpired]);
 
   // Wire up the API client token provider
   useEffect(() => {
     apiClient.setTokenProvider(getAccessToken);
   }, [getAccessToken]);
+
+  // Expired session (X): a 401 on a request with a token clears the session; ProtectedRoute then redirects
+  // to /login, which shows SESSION_EXPIRED_MESSAGE. Without a token no request reports 401 → no loop.
+  useEffect(() => {
+    apiClient.setUnauthorizedHandler(() => {
+      setMagicLinkJwt(null);
+      setUser(null);
+      setSessionExpired(true);
+    });
+    return () => apiClient.setUnauthorizedHandler(null);
+  }, []);
 
   // Fetch user profile when authenticated
   const fetchUserProfile = useCallback(async () => {
@@ -118,6 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         { token, email },
       );
       setMagicLinkJwt(response.token);
+      setSessionExpired(false);
     },
     [],
   );
@@ -142,6 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       verifyMagicLink,
       logout,
       getAccessToken,
+      sessionNotice: sessionExpired ? SESSION_EXPIRED_MESSAGE : null,
     }),
     [
       user,
@@ -152,6 +177,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       verifyMagicLink,
       logout,
       getAccessToken,
+      sessionExpired,
     ],
   );
 

@@ -86,7 +86,9 @@ Saldo domu je v části [Saldo domu](#saldo-domu--ledgerfunctionscs) (starý `GE
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
 | GET | `/advance-settings` | přihlášený | `{ houseOverrides }` — ruční přepisy záloh. Členovi se vrací prázdné. |
-| PUT | `/advance-settings` | Admin | `{ houseOverrides: {houseId: {waterAdvance, electricityAdvance, commonAdvance}} }` — nahradí všechny přepisy; záporná částka → 400. |
+| PUT | `/advance-settings` | Admin | `{ houseOverrides: {houseId: {waterAdvance, electricityAdvance, commonAdvance}} }` — nahradí všechny přepisy; záporná částka → 400. Ponecháno kvůli kompatibilitě (dva správci by si přepisy přepsali) — UI používá přepisy po domech níže. Každý změněný dům se zapíše do auditu (`AdvanceOverride`). |
+| PUT | `/advance-settings/overrides/{houseId}` | Admin | `{ waterAdvance, electricityAdvance, commonAdvance }` — nastaví přepis jen tohoto domu (ostatní domy zůstanou), vrátí celé `{ houseOverrides }`. Částka < 0 nebo neplatné tělo → 400. Čtení-úprava-zápis s kontrolou ETag (souběžná změna jiného domu se zachová; při opakovaném konfliktu 409). Audit `AdvanceOverride`. |
+| DELETE | `/advance-settings/overrides/{houseId}` | Admin | Zruší přepis domu (záloha se vrátí na doporučenou) → 204. Audit `AdvanceOverride`. |
 | GET | `/advance-settings/calculate` | přihlášený | `{ from, to, months, houses: [{ houseId, houseName, costsInPeriod, recommended, actual, hasOverride }] }` — doporučené zálohy z nákladů domu za posledních 12 měsíců ÷ 12 ([VYUCTOVANI.md §3](VYUCTOVANI.md#3-doporučené-zálohy)); složky `{ water, electricity, common, total }`. Člen jen vlastní dům. |
 
 ## Dokumenty — `DocumentFunctions.cs`

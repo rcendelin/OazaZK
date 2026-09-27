@@ -1,6 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 
+/** Documents and invoice attachments: at most 20 MB (the API refuses bigger files too). */
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
 interface FileUploadZoneProps {
   onFileSelected: (file: File) => void;
   accept?: string;
@@ -13,7 +16,27 @@ export function FileUploadZone({
   disabled = false,
 }: FileUploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /** Hands the file over, or explains why it was refused (never ignore a file silently). */
+  const pick = useCallback(
+    (file: File) => {
+      if (file.size > MAX_FILE_SIZE) {
+        setError('Soubor je větší než 20 MB.');
+        return;
+      }
+      const extensions = accept.split(',').map((ext) => ext.trim().toLowerCase());
+      const fileExt = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '');
+      if (!extensions.some((ext) => fileExt === ext || file.type === ext)) {
+        setError(`Tento typ souboru nelze nahrát (povoleno: ${extensions.join(', ')}).`);
+        return;
+      }
+      setError(null);
+      onFileSelected(file);
+    },
+    [accept, onFileSelected],
+  );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
@@ -40,34 +63,21 @@ export function FileUploadZone({
 
       if (disabled) return;
 
-      const MAX_FILE_SIZE = 20 * 1024 * 1024;
       const file = e.dataTransfer.files[0];
-      if (file) {
-        if (file.size > MAX_FILE_SIZE) {
-          return;
-        }
-        const extensions = accept.split(',').map(ext => ext.trim().toLowerCase());
-        const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
-        if (extensions.some(ext => fileExt === ext || file.type === ext)) {
-          onFileSelected(file);
-        }
-      }
+      if (file) pick(file);
     },
-    [accept, disabled, onFileSelected],
+    [disabled, pick],
   );
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const MAX_FILE_SIZE = 20 * 1024 * 1024;
       const file = e.target.files?.[0];
-      if (file && file.size <= MAX_FILE_SIZE) {
-        onFileSelected(file);
-      }
+      if (file) pick(file);
       if (inputRef.current) {
         inputRef.current.value = '';
       }
     },
-    [onFileSelected],
+    [pick],
   );
 
   const handleClick = useCallback(() => {
@@ -77,6 +87,7 @@ export function FileUploadZone({
   }, [disabled]);
 
   return (
+    <div>
     <div
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -107,7 +118,10 @@ export function FileUploadZone({
         accept={accept}
         onChange={handleInputChange}
         className="hidden"
+        data-testid="file-upload-input"
       />
+    </div>
+    {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../auth/AuthContext';
-import { getAdvanceSettings, updateAdvanceSettings, calculateAdvances } from '../api/advanceSettings';
+import { calculateAdvances, deleteHouseAdvanceOverride, setHouseAdvanceOverride } from '../api/advanceSettings';
 import { Spinner } from '../components/Spinner';
-import type { AdvanceSettingsData, AdvanceCalculation, AdvanceAmounts, HouseAdvanceOverride } from '../api/advanceSettings';
-import { parseCzechNumber } from '../utils/number';
+import type { AdvanceCalculation, AdvanceAmounts } from '../api/advanceSettings';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 import { formatIsoDay } from '../utils/date';
 
 const fmt = (v: number | null | undefined) => {
@@ -16,15 +16,13 @@ const sum = (rows: AdvanceAmounts[], key: keyof AdvanceAmounts) => rows.reduce((
 
 /**
  * Monthly advances per house. The recommendation is the house's share of costs from the ledger over the
- * last 12 months ÷ 12; Admin can override it per house (the override map is saved as a whole).
+ * last 12 months ÷ 12; Admin can override it per house (each house is saved on its own, so two admins
+ * editing different houses don't overwrite each other).
  */
 export function AdvancesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
 
-  const { data: settings, loading: sLoading, refetch: refetchSettings } = useApi<AdvanceSettingsData>(
-    useCallback(() => getAdvanceSettings(), []),
-  );
   const { data: calc, loading: cLoading, error: cError, refetch: refetchCalc } = useApi<AdvanceCalculation>(
     useCallback(() => calculateAdvances(), []),
   );
@@ -35,15 +33,14 @@ export function AdvancesPage() {
   const [editingHouse, setEditingHouse] = useState<string | null>(null);
   const [houseForm, setHouseForm] = useState<{ water: string; elec: string; common: string }>({ water: '', elec: '', common: '' });
 
-  const saveOverrides = async (houseOverrides: Record<string, HouseAdvanceOverride>, okText: string) => {
+  const run = async (action: () => Promise<unknown>, okText: string) => {
     if (savingRef.current) return;
     savingRef.current = true;
     setMsg(null);
     try {
-      await updateAdvanceSettings({ houseOverrides });
+      await action();
       setMsg({ type: 'ok', text: okText });
       setEditingHouse(null);
-      refetchSettings();
       refetchCalc();
     } catch (err) {
       setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Uložení selhalo.' });
@@ -65,27 +62,35 @@ export function AdvancesPage() {
   };
 
   const saveHouseOverride = () => {
-    if (!settings || !editingHouse) return;
-    const override: HouseAdvanceOverride = {
-      waterAdvance: parseCzechNumber(houseForm.water),
-      electricityAdvance: parseCzechNumber(houseForm.elec),
-      commonAdvance: parseCzechNumber(houseForm.common),
-    };
-    if (override.waterAdvance < 0 || override.electricityAdvance < 0 || override.commonAdvance < 0) {
+    if (!editingHouse) return;
+    const houseId = editingHouse;
+    const waterAdvance = parseCzechNumber(houseForm.water);
+    const electricityAdvance = parseCzechNumber(houseForm.elec);
+    const commonAdvance = parseCzechNumber(houseForm.common);
+    if (waterAdvance === null || electricityAdvance === null || commonAdvance === null) {
+      setMsg({
+        type: 'err',
+        text: [
+          waterAdvance === null ? invalidNumberMessage('Voda') : null,
+          electricityAdvance === null ? invalidNumberMessage('Elektřina') : null,
+          commonAdvance === null ? invalidNumberMessage('Společné') : null,
+        ].filter((m) => m !== null).join(' '),
+      });
+      return;
+    }
+    if (waterAdvance < 0 || electricityAdvance < 0 || commonAdvance < 0) {
       setMsg({ type: 'err', text: 'Záloha nesmí být záporná.' });
       return;
     }
-    void saveOverrides({ ...settings.houseOverrides, [editingHouse]: override }, 'Záloha domu uložena.');
+    void run(() => setHouseAdvanceOverride(houseId, { waterAdvance, electricityAdvance, commonAdvance }), 'Záloha domu uložena.');
   };
 
   const resetHouseOverride = (houseId: string) => {
-    if (!settings) return;
-    const next = { ...settings.houseOverrides };
-    delete next[houseId];
-    void saveOverrides(next, 'Záloha domu vrácena na doporučenou.');
+    void run(() => deleteHouseAdvanceOverride(houseId), 'Záloha domu vrácena na doporučenou.');
   };
 
-  if (sLoading || cLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+  // Only the first load replaces the page; a refetch after saving keeps the table (and the message) in place.
+  if (cLoading && !calc) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
   const rows = calc?.houses ?? [];
   const editInput = (value: string, onChange: (v: string) => void, label: string) => (

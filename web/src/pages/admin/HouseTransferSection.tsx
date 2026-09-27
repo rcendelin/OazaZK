@@ -5,7 +5,7 @@ import { previewHouseTransfer, transferHouse } from '../../api/houseTransfer';
 import type { HouseTransferPreview } from '../../api/houseTransfer';
 import type { House } from '../../types';
 import { formatIsoDay, todayIso } from '../../utils/date';
-import { parseCzechNumber } from '../../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../../utils/number';
 import { HelpTerm } from '../../components/help/HelpTerm';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
@@ -53,17 +53,26 @@ export function HouseTransferSection({ houses, onDone }: { houses: House[]; onDo
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true);
     setErrors([]);
+    const meterValue = preview?.meterId ? parseCzechNumber(meter) : undefined;
+    const fundShare = fund.trim() === '' ? 0 : parseCzechNumber(fund);
+    if (meterValue === null || fundShare === null) {
+      setErrors([
+        ...(meterValue === null ? [invalidNumberMessage('Stav vodoměru')] : []),
+        ...(fundShare === null ? [invalidNumberMessage('Podíl ve fondu')] : []),
+      ]);
+      return;
+    }
+    setBusy(true);
     try {
       const result = await transferHouse(houseId, {
         transferDate: date,
         newOwnerName: owner,
         newOwnerContact: contact || undefined,
-        meterValue: preview?.meterId ? parseCzechNumber(meter) : undefined,
+        meterValue,
         meterIsEstimate: meterEstimate,
         meterSource: meterSource || undefined,
-        fundShare: parseCzechNumber(fund),
+        fundShare,
         updateHouseContact: updateContact,
       });
       setInfo(`Dům převeden. Závěrečné saldo původního vlastníka: ${kc(result.closingSaldo)} (${result.closingSaldo >= 0 ? 'přeplatek' : 'nedoplatek'}).`);

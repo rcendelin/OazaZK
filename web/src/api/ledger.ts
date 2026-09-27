@@ -90,6 +90,7 @@ export async function downloadLedgerExport(
   const response = await fetch(`${baseUrl}${path}${params(query)}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+  apiClient.reportStatus(response.status, '/ledger', Boolean(token));
   if (!response.ok) throw new ApiError(response.status, 'Export se nezdařil');
   const fileName = fileNameFromDisposition(response.headers.get('Content-Disposition'), 'saldo');
   const url = URL.createObjectURL(await response.blob());

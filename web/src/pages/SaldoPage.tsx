@@ -17,7 +17,7 @@ import { HelpNote } from '../components/help/HelpNote';
 import { HelpDisclosure } from '../components/help/HelpDisclosure';
 import type { AdvancePayment, House, PaymentType } from '../types';
 import type { AdvanceCalculation } from '../api/advanceSettings';
-import { parseCzechNumber } from '../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 import { todayIso } from '../utils/date';
 
 const fmt = (v: number | null | undefined) => {
@@ -62,7 +62,8 @@ export function SaldoPage() {
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AdvancePayment | null>(null);
 
-  if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+  // Only the first load replaces the page: a refetch after saving must keep the payment form mounted (and filled).
+  if (loading && !payments) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
   const activeHouses = houses?.filter((h) => h.isActive) ?? [];
 
@@ -163,8 +164,9 @@ function PaymentForm({
   const [note, setNote] = useState('');
   const savingRef = useRef(false);
 
-  const num = parseCzechNumber;
-  const componentTotal = num(water) + num(elec) + num(common);
+  /** An empty amount is 0 Kč; anything else must be a number (null = invalid). */
+  const num = (v: string) => (v.trim() === '' ? 0 : parseCzechNumber(v));
+  const componentTotal = (num(water) ?? 0) + (num(elec) ?? 0) + (num(common) ?? 0);
 
   const prefillFromPlan = () => {
     const h = plan?.houses.find((x) => x.houseId === houseId);
@@ -182,22 +184,33 @@ function PaymentForm({
     savingRef.current = true;
     try {
       if (kind === 'advance' || kind === 'doplatek') {
+        const waterAmount = num(water);
+        const electricityAmount = num(elec);
+        const commonAmount = num(common);
+        if (waterAmount === null || electricityAmount === null || commonAmount === null) {
+          onError([
+            waterAmount === null ? invalidNumberMessage('Voda') : null,
+            electricityAmount === null ? invalidNumberMessage('Elektřina vodárna') : null,
+            commonAmount === null ? invalidNumberMessage('Společný základ') : null,
+          ].filter((m) => m !== null).join(' '));
+          return;
+        }
         if (componentTotal <= 0) { onError('Zadejte alespoň jednu nenulovou částku.'); return; }
-        const body = {
-          houseId,
-          waterAmount: num(water), electricityAmount: num(elec), commonAmount: num(common),
-          paymentDate: new Date(date).toISOString(),
-        };
+        const body = { houseId, waterAmount, electricityAmount, commonAmount, paymentDate: new Date(date).toISOString() };
         if (kind === 'advance') {
           await createAdvance({ ...body, year, month });
           onSaved(`Záloha za ${year}-${String(month).padStart(2, '0')} uložena.`);
+          // Convenience: the next advance is usually the following month of the same house.
+          if (month === 12) { setMonth(1); setYear(year + 1); } else { setMonth(month + 1); }
         } else {
           await createDoplatek({ ...body, note: note || undefined });
           onSaved('Doplatek uložen.');
         }
       } else {
-        if (num(amount) <= 0) { onError('Zadejte částku výplaty.'); return; }
-        await createPayout({ houseId, amount: num(amount), paymentDate: new Date(date).toISOString(), note: note || undefined });
+        const payout = parseCzechNumber(amount);
+        if (payout === null && amount.trim() !== '') { onError(invalidNumberMessage('Vyplacená částka')); return; }
+        if (payout === null || payout <= 0) { onError('Zadejte částku výplaty.'); return; }
+        await createPayout({ houseId, amount: payout, paymentDate: new Date(date).toISOString(), note: note || undefined });
         onSaved('Výplata přeplatku uložena.');
       }
       reset();
@@ -241,8 +254,8 @@ function PaymentForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="lg:col-span-2">
-          <label className="block text-sm font-medium text-text-secondary mb-1">Domácnost</label>
-          <select value={houseId} onChange={(e) => setHouseId(e.target.value)} className={inputCls}>
+          <label htmlFor="payment-house" className="block text-sm font-medium text-text-secondary mb-1">Domácnost</label>
+          <select id="payment-house" value={houseId} onChange={(e) => setHouseId(e.target.value)} className={inputCls}>
             <option value="">— vyberte —</option>
             {houses.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
           </select>
@@ -251,44 +264,44 @@ function PaymentForm({
         {kind === 'advance' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Rok</label>
-              <input type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)} className={inputCls} />
+              <label htmlFor="payment-year" className="block text-sm font-medium text-text-secondary mb-1">Rok</label>
+              <input id="payment-year" type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value) || year)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Měsíc</label>
-              <input type="number" min={1} max={12} value={month} onChange={(e) => setMonth(parseInt(e.target.value) || month)} className={inputCls} />
+              <label htmlFor="payment-month" className="block text-sm font-medium text-text-secondary mb-1">Měsíc</label>
+              <input id="payment-month" type="number" min={1} max={12} value={month} onChange={(e) => setMonth(parseInt(e.target.value) || month)} className={inputCls} />
             </div>
           </>
         )}
 
         <div className={kind === 'advance' ? 'lg:col-span-4' : 'lg:col-span-2'}>
-          <label className="block text-sm font-medium text-text-secondary mb-1">Datum</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} max-w-xs`} />
+          <label htmlFor="payment-date" className="block text-sm font-medium text-text-secondary mb-1">Datum</label>
+          <input id="payment-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} max-w-xs`} />
         </div>
       </div>
 
       {componentKind ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-accent mb-1">Voda (Kč)</label>
-            <input type="text" inputMode="decimal" value={water} onChange={(e) => setWater(e.target.value)} placeholder="0" className={inputCls} />
+            <label htmlFor="payment-water" className="block text-sm font-medium text-accent mb-1">Voda (Kč)</label>
+            <input id="payment-water" type="text" inputMode="decimal" value={water} onChange={(e) => setWater(e.target.value)} placeholder="0" className={inputCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-warning mb-1">Elektřina vodárna (Kč)</label>
-            <input type="text" inputMode="decimal" value={elec} onChange={(e) => setElec(e.target.value)} placeholder="0" className={inputCls} />
+            <label htmlFor="payment-elec" className="block text-sm font-medium text-warning mb-1">Elektřina vodárna (Kč)</label>
+            <input id="payment-elec" type="text" inputMode="decimal" value={elec} onChange={(e) => setElec(e.target.value)} placeholder="0" className={inputCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">Společný základ (Kč)</label>
-            <input type="text" inputMode="decimal" value={common} onChange={(e) => setCommon(e.target.value)} placeholder="0" className={inputCls} />
+            <label htmlFor="payment-common" className="block text-sm font-medium text-text-secondary mb-1">Společný základ (Kč)</label>
+            <input id="payment-common" type="text" inputMode="decimal" value={common} onChange={(e) => setCommon(e.target.value)} placeholder="0" className={inputCls} />
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">
+            <label htmlFor="payment-amount" className="block text-sm font-medium text-text-secondary mb-1">
               Vyplacená částka (Kč)
             </label>
-            <input type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputCls} />
+            <input id="payment-amount" type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputCls} />
           </div>
         </div>
       )}

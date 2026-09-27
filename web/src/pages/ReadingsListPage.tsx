@@ -7,6 +7,7 @@ import { Spinner } from '../components/Spinner';
 import type { ReadingResponse, WaterMeter } from '../types';
 import { useAuth } from '../auth/AuthContext';
 import { downloadLedgerExport } from '../api/ledger';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 
 const czNum = (v: number, d = 1) =>
   new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
@@ -83,9 +84,9 @@ export function ReadingsListPage() {
     savingRef.current = true;
     setEditError(null);
 
-    const parsed = parseFloat(editValue.replace(/\s/g, '').replace(',', '.'));
-    if (isNaN(parsed) || parsed < 0) {
-      setEditError('Neplatná hodnota');
+    const parsed = parseCzechNumber(editValue);
+    if (parsed === null || parsed < 0) {
+      setEditError(parsed === null ? invalidNumberMessage('Stav') : 'Stav vodoměru nesmí být záporný.');
       savingRef.current = false;
       return;
     }

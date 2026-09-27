@@ -21,6 +21,10 @@ export interface CostEntry {
   documentId: string | null;
   paidFrom: PaidFrom;
   note: string | null;
+  /** Booked on this day because the period reaches into a closed period (a correction, T08). */
+  postingDate: string | null;
+  /** Id of the entry this one corrects. */
+  correctionOf: string | null;
   locked: boolean;
 }
 

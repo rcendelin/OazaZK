@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { Spinner } from '../../components/Spinner';
+import { ReasonConfirmDialog } from '../../components/ReasonConfirmDialog';
 import { ApiError } from '../../api/client';
 import { getHouses } from '../../api/houses';
 import {
@@ -10,16 +11,19 @@ import {
   basisLabels,
   createCostComponent,
   deleteParticipation,
+  deleteRule,
   endParticipation,
   getCostComponent,
   getCostComponents,
   getSegments,
   methodLabels,
+  updateCostComponent,
   waterRoleLabels,
 } from '../../api/costComponents';
 import type {
   AllocationBasis,
   AllocationMethod,
+  AllocationRule,
   AllocationSegment,
   CostComponent,
   WaterRole,
@@ -28,7 +32,7 @@ import type {
 } from '../../api/costComponents';
 import type { House } from '../../types';
 import { formatIsoDay, isoDayNumber, shiftIsoDate, todayIso } from '../../utils/date';
-import { parseCzechNumber } from '../../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../../utils/number';
 
 const inputCls = 'border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
@@ -219,6 +223,7 @@ function ComponentDetail({ id, onChanged }: { id: string; onChanged: () => void 
     useCallback(() => getCostComponent(id), [id]), [id],
   );
   const { data: houses } = useApi<House[]>(useCallback(() => getHouses(), []));
+  const [editing, setEditing] = useState(false);
 
   const changed = () => { refetch(); onChanged(); };
 
@@ -229,14 +234,26 @@ function ComponentDetail({ id, onChanged }: { id: string; onChanged: () => void 
   const { component } = detail;
   return (
     <section className="space-y-5 rounded-2xl border border-border bg-surface-raised p-5 shadow-card" aria-label={`Detail složky ${component.name}`}>
-      <div>
-        <h2 className="text-lg font-semibold text-text-primary">{component.name}</h2>
-        <p className="text-sm text-text-muted">
-          {basisLabels[component.allocationBasis]} · účtuje se od {formatIsoDay(component.startDate)}
-          {component.note ? ` · ${component.note}` : ''}
-          {detail.lastClosedDay ? ` · uzavřeno do ${formatIsoDay(detail.lastClosedDay)}` : ''}
-        </p>
-      </div>
+      {editing ? (
+        <EditComponentForm component={component} onSaved={() => { setEditing(false); changed(); }} onCancel={() => setEditing(false)} />
+      ) : (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">
+              {component.name}
+              {!component.active && <span className="ml-2 rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-normal text-text-muted">neaktivní</span>}
+            </h2>
+            <p className="text-sm text-text-muted">
+              {basisLabels[component.allocationBasis]} · účtuje se od {formatIsoDay(component.startDate)}
+              {component.note ? ` · ${component.note}` : ''}
+              {detail.lastClosedDay ? ` · uzavřeno do ${formatIsoDay(detail.lastClosedDay)}` : ''}
+            </p>
+          </div>
+          <button type="button" onClick={() => setEditing(true)} className="text-sm font-medium text-accent hover:text-accent-hover">
+            Upravit složku
+          </button>
+        </div>
+      )}
 
       <Timeline detail={detail} />
 
@@ -247,6 +264,52 @@ function ComponentDetail({ id, onChanged }: { id: string; onChanged: () => void 
 
       <SegmentsSection componentId={component.id} startDate={component.startDate} />
     </section>
+  );
+}
+
+/** Name, active flag and note (code, start and basis never change). */
+function EditComponentForm({ component, onSaved, onCancel }: { component: CostComponent; onSaved: () => void; onCancel: () => void }) {
+  const [name, setName] = useState(component.name);
+  const [active, setActive] = useState(component.active);
+  const [note, setNote] = useState(component.note ?? '');
+  const [errors, setErrors] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setErrors([]);
+    try {
+      await updateCostComponent(component.id, { name: name.trim(), active, note: note.trim() || undefined });
+      onSaved();
+    } catch (err) {
+      setErrors(reasons(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={(e) => void submit(e)} className="space-y-2" aria-label="Upravit složku">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs text-text-secondary">
+          <span className="mb-1 block">Název</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} required />
+        </label>
+        <label className="text-xs text-text-secondary">
+          <span className="mb-1 block">Poznámka</span>
+          <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} />
+        </label>
+        <label className="flex items-center gap-1 pb-2.5 text-sm text-text-secondary">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          aktivní
+        </label>
+        <button type="submit" disabled={busy || !name.trim()} className={primaryBtn}>Uložit složku</button>
+        <button type="button" onClick={onCancel} className="pb-2 text-sm text-text-muted hover:text-text-secondary">Zrušit</button>
+      </div>
+      <p className="text-xs text-text-muted">Kód, datum startu a základ rozpočtu se nemění.</p>
+      <Errors items={errors} />
+    </form>
   );
 }
 
@@ -310,6 +373,21 @@ function RulesSection({ detail, onChanged }: { detail: CostComponentDetail; onCh
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState<AllocationRule | null>(null);
+
+  const remove = async (rule: AllocationRule, deleteReason: string | undefined) => {
+    setDeleting(null);
+    setBusy(true);
+    setErrors([]);
+    try {
+      await deleteRule(detail.component.id, rule.id, deleteReason);
+      onChanged();
+    } catch (err) {
+      setErrors(reasons(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -331,11 +409,19 @@ function RulesSection({ detail, onChanged }: { detail: CostComponentDetail; onCh
       <h3 className="font-semibold text-text-primary">Metoda rozpočtu</h3>
       <ul className="divide-y divide-border rounded-xl border border-border text-sm">
         {detail.rules.map((r) => (
-          <li key={r.id} className="px-3 py-2">
-            <span className="font-medium">{methodLabels[r.method]}</span>
-            <span className="text-text-secondary"> · {formatIsoDay(r.validFrom)} – {r.validTo ? formatIsoDay(r.validTo) : 'dosud'}</span>
-            {r.ratioSource && <span className="text-text-secondary"> · váhy z {r.ratioSource}</span>}
-            {r.reason && <p className="text-xs text-text-muted">{r.reason}</p>}
+          <li key={r.id} className="flex items-start gap-2 px-3 py-2">
+            <div className="flex-1">
+              <span className="font-medium">{methodLabels[r.method]}</span>
+              <span className="text-text-secondary"> · {formatIsoDay(r.validFrom)} – {r.validTo ? formatIsoDay(r.validTo) : 'dosud'}</span>
+              {r.ratioSource && <span className="text-text-secondary"> · váhy z {r.ratioSource}</span>}
+              {r.reason && <p className="text-xs text-text-muted">{r.reason}</p>}
+            </div>
+            {detail.rules.length > 1 && (
+              <button type="button" disabled={busy} onClick={() => setDeleting(r)} aria-label={`Smazat pravidlo ${methodLabels[r.method]} od ${formatIsoDay(r.validFrom)}`}
+                className="text-xs font-medium text-text-muted hover:text-danger disabled:opacity-50">
+                Smazat
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -363,6 +449,15 @@ function RulesSection({ detail, onChanged }: { detail: CostComponentDetail; onCh
         <button type="submit" disabled={busy} className={primaryBtn}>Změnit metodu</button>
       </form>
       <Errors items={errors} />
+      {deleting && (
+        <ReasonConfirmDialog
+          title="Smazat pravidlo?"
+          message={`Pravidlo „${methodLabels[deleting.method]}“ od ${formatIsoDay(deleting.validFrom)} bylo zadané omylem? Po smazání se prodlouží předchozí pravidlo.`}
+          confirmLabel="Smazat pravidlo"
+          onConfirm={(r) => void remove(deleting, r)}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }
@@ -375,6 +470,7 @@ function ParticipationSection({ detail, houses, onChanged }: { detail: CostCompo
   const [weight, setWeight] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState<Participation | null>(null);
   const showWeight = detail.rules.some((r) => r.method === 'Percent' || (r.method === 'Ratio' && !r.ratioSource));
 
   const run = async (action: () => Promise<unknown>) => {
@@ -392,11 +488,13 @@ function ParticipationSection({ detail, houses, onChanged }: { detail: CostCompo
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    const parsedWeight = weight.trim() ? parseCzechNumber(weight) : undefined;
+    if (parsedWeight === null) { setErrors([invalidNumberMessage('Váha / %')]); return; }
     void run(() => addParticipation(componentId, {
       houseId,
       validFrom,
       validTo: validTo || undefined,
-      weight: weight ? parseCzechNumber(weight) : undefined,
+      weight: parsedWeight,
     }));
   };
 
@@ -410,7 +508,7 @@ function ParticipationSection({ detail, houses, onChanged }: { detail: CostCompo
             participation={p}
             busy={busy}
             onEnd={(to) => void run(() => endParticipation(componentId, p.id, { validTo: to }))}
-            onDelete={() => void run(() => deleteParticipation(componentId, p.id))}
+            onDelete={() => setDeleting(p)}
           />
         ))}
         {detail.participations.length === 0 && <li className="px-3 py-2 text-text-muted">Žádná účast.</li>}
@@ -440,6 +538,19 @@ function ParticipationSection({ detail, houses, onChanged }: { detail: CostCompo
         <button type="submit" disabled={busy || !houseId} className={primaryBtn}>Přidat účast</button>
       </form>
       <Errors items={errors} />
+      {deleting && (
+        <ReasonConfirmDialog
+          title="Smazat účast?"
+          message={`Smazat účast domu ${deleting.houseName} (${formatIsoDay(deleting.validFrom)} – ${deleting.validTo ? formatIsoDay(deleting.validTo) : 'dosud'})? Mazat se má jen účast zadaná omylem — konec účasti nastavte tlačítkem „Ukončit k datu“.`}
+          confirmLabel="Smazat účast"
+          onConfirm={(reason) => {
+            const target = deleting;
+            setDeleting(null);
+            void run(() => deleteParticipation(componentId, target.id, reason));
+          }}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }
