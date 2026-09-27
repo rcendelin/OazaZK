@@ -52,6 +52,8 @@ var host = new HostBuilder()
         services.AddSingleton<Oaza.Application.UseCases.OpeningBalancesUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.CostEntriesUseCase>();
         services.AddSingleton<Oaza.Application.UseCases.WaterSettlementUseCase>();
+        services.AddSingleton<Oaza.Application.Ledger.LedgerCostCollector>();
+        services.AddSingleton<Oaza.Application.Ledger.HouseLedgerUseCase>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
         // Infrastructure: Table Storage, Blob Storage, all repositories, email

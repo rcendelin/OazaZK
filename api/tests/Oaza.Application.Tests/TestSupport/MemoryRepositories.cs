@@ -82,3 +82,16 @@ public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow() => now;
 }
+
+public sealed class MemoryCostEntries() : MemoryRepo<CostEntry>(e => e.ComponentId, e => e.Id), ICostEntryRepository
+{
+    public Task<IReadOnlyList<CostEntry>> GetByComponentAsync(string componentId) => GetByPartitionKeyAsync(componentId);
+}
+
+public sealed class MemoryPayments() : MemoryRepo<AdvancePayment>(p => p.HouseId, p => p.RowKey), IAdvancePaymentRepository
+{
+    public Task<IReadOnlyList<AdvancePayment>> GetByHouseIdAsync(string houseId) => GetByPartitionKeyAsync(houseId);
+
+    public Task<IReadOnlyList<AdvancePayment>> GetByHouseAndPeriodAsync(string houseId, DateTime dateFrom, DateTime dateTo) =>
+        Task.FromResult<IReadOnlyList<AdvancePayment>>(Items.Values.Where(p => p.HouseId == houseId && p.EffectiveDate() >= dateFrom && p.EffectiveDate() <= dateTo).ToList());
+}
