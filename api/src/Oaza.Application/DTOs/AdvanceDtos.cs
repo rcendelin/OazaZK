@@ -46,6 +46,7 @@ public class AdvanceResponse
     public string Type { get; set; } = "Advance";
     public string? Note { get; set; }
     public bool IsFundTransfer { get; set; }
+    public bool IsFromBank { get; set; }
     public string RowKey { get; set; } = string.Empty;
 }
 

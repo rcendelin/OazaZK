@@ -78,6 +78,7 @@ public static class EntityMapper
             Type = payment.Type.ToString(),
             Note = payment.Note,
             IsFundTransfer = payment.IsFundTransfer,
+            IsFromBank = payment.BankTransactionId is not null,
             RowKey = payment.RowKey,
         };
     }

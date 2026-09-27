@@ -41,6 +41,15 @@ public class AdvancePayment
     public bool IsFundTransfer { get; set; }
 
     /// <summary>
+    /// Set when the payment was created by the bank statement import: the own
+    /// account key and bank operation id of the source <see cref="BankTransaction"/>.
+    /// Drives the "Z banky" badge and lets deleting the payment release the movement
+    /// for re-import.
+    /// </summary>
+    public string? BankOwnAccountKey { get; set; }
+    public string? BankTransactionId { get; set; }
+
+    /// <summary>
     /// Storage RowKey. For advances this is "YYYY-MM" (computed from Year/Month).
     /// For doplatky it is a unique key "D-{invertedTicks}-{guid8}" assigned at creation.
     /// Populated on read; used to address a specific payment for update/delete.

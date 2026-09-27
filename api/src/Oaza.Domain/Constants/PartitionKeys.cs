@@ -7,4 +7,5 @@ public static class PartitionKeys
     public const string Meter = "METER";
     public const string Period = "PERIOD";
     public const string Invoice = "INVOICE";
+    public const string BankAccountMapping = "MAP";
 }
