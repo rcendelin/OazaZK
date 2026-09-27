@@ -23,6 +23,7 @@ import { CostsPage } from './pages/CostsPage';
 import { WaterPage } from './pages/WaterPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { InterimClosingsPage } from './pages/InterimClosingsPage';
+import { CashBookPage } from './pages/CashBookPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
@@ -75,6 +76,7 @@ function App() {
               />
               <Route path="/saldo" element={<SaldoPage />} />
               <Route path="/saldo-domu" element={<LedgerPage />} />
+              <Route path="/pokladna" element={<CashBookPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route
                 path="/mezizaverky"
