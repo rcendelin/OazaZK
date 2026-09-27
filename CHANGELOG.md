@@ -48,6 +48,9 @@ se sekce přejmenuje na verzi s datem.
   stavy: stav vodoměru (zapíše se i jako odečet, případně odhad), podíl domu ve fondu spolku a kredit složky u dodavatele
   s náhledem rozdělení mezi domy (např. −20 000 Kč vodárny → 4 × −5 000 Kč). Každá kombinace nejvýš jednou, za
   mezizávěrkou jen oprava s důvodem, vše v auditu.
+- **Počáteční stavy – průvodce (T03, část B).** Administrace → Počáteční stavy: start účtování k datu, stav každého
+  vodoměru s tlačítkem „Navrhnout z odečtů“ (interpolace, zdroj a příznak odhadu se vyplní samy), podíl ve fondu
+  spolku a kredit složky s náhledem rozdělení mezi domy. Uzavřené hodnoty lze jen opravit s důvodem.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

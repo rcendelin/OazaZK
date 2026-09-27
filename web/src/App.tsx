@@ -18,6 +18,7 @@ import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
 import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { CostComponentsPage } from './pages/admin/CostComponentsPage';
+import { OpeningBalancesPage } from './pages/admin/OpeningBalancesPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
@@ -102,6 +103,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Admin">
                     <CostComponentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/opening-balances"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <OpeningBalancesPage />
                   </ProtectedRoute>
                 }
               />
