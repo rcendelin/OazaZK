@@ -26,6 +26,20 @@ docker run -d --name azurite \
 
 Tabulky a blob kontejnery si aplikace vytváří sama při prvním použití.
 
+**Test izolace prostředí (T01).** `EnvironmentIsolationIntegrationTests` potřebuje druhý, oddělený emulátor
+(= „druhé prostředí“). Bez něj se test přeskočí:
+
+```bash
+docker run -d --name azurite2 -p 20000:10000 -p 20001:10001 -p 20002:10002 mcr.microsoft.com/azure-storage/azurite
+export AZURE_STORAGE_CONNECTION_2="DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=<veřejný vývojový klíč Azurite>;BlobEndpoint=http://127.0.0.1:20000/devstoreaccount1;TableEndpoint=http://127.0.0.1:20002/devstoreaccount1"
+```
+
+Veřejný vývojový klíč Azurite (není tajný) je v `.github/workflows/ci.yml` a v dokumentaci Azurite.
+
+**Pojistka prostředí.** Když je nastavené `Environment` (`dev` / `test` / `prod`), API odmítne nastartovat nad
+storage jiného prostředí (`StorageIsolation`): produkce ne nad `…dev`/`…test` ani nad emulátorem, dev a test jen nad
+svým účtem (`…dev`, `…test`) nebo emulátorem. Bez `Environment` (lokální vývoj) se nekontroluje nic.
+
 ---
 
 ## 2. API (Azure Functions)

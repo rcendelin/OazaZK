@@ -33,7 +33,17 @@ Všechny tři workflow používají **jednotný způsob nasazení** (stejný jak
 
 ## Prerekvizity v Azure (jednorázově, per prostředí)
 
-Pro **TEST** i **PROD** vytvoř resources analogicky ke krokům 1–5 v `DEPLOYMENT-DEV.md`, jen s příslušnými názvy. Zkráceně:
+**Skript (T01):** `infra/provision.sh <dev|test|prod> [--dry-run] [--yes]` založí nebo doplní resource group,
+storage (s 14denní obnovou smazaných blobů), Functions App, Static Web App, app settings (`Environment`,
+`JwtSecret` jen poprvé, na PROD odebere `ENABLE_SEED`) a CORS. Sdílené hodnoty čte z proměnných
+`OAZA_ENTRA_TENANT_ID`, `OAZA_ENTRA_CLIENT_ID`, `OAZA_ACS_CONNECTION_STRING`, `OAZA_ACS_FROM_EMAIL`. Na PROD
+nejdřív `--dry-run`, pak `--yes`. DNS, GitHub secrety, Required reviewers a RBAC service principalu zůstávají ruční
+(skript je na konci vypíše).
+
+**Izolace dat:** každé prostředí má vlastní storage account. API to hlídá při startu (`StorageIsolation`, viz
+`LOKALNI-VYVOJ.md`) a CI to ověřuje testem se dvěma emulátory (`EnvironmentIsolationIntegrationTests`).
+
+Ručně (ekvivalent skriptu) — pro **TEST** i **PROD** analogicky ke krokům 1–5 v `DEPLOYMENT-DEV.md`, jen s příslušnými názvy. Zkráceně:
 
 ```bash
 # ---- TEST (opakuj obdobně pro PROD: rg-oaza-prod / stoaza / func-oaza-prod / swa-oaza-prod) ----
