@@ -2,7 +2,7 @@
 
 **Datum:** 2026-09-27
 **Autor:** smyčka nad TASK.md (Claude) pro Rosťu Čendelína
-**Stav:** návrh ke schválení — nic se neimplementuje, dokud se neodsouhlasí §4
+**Stav:** schváleno 27. 9. 2026 (varianta B; „dnes“ vždy v `Europe/Prague`, i pro uživatele mimo ČR), kroky 1–3 implementovány
 
 ## 1. Kontext
 

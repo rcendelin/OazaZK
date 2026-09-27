@@ -45,6 +45,7 @@ var host = new HostBuilder()
         // Auth services
         services.AddSingleton<IJwtService, JwtService>();
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<Oaza.Domain.Time.IClock>(sp => new Oaza.Domain.Time.PragueClock(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<Oaza.Application.Audit.IAuditLogger, Oaza.Application.Audit.AuditLogger>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
@@ -119,12 +120,14 @@ var host = new HostBuilder()
         // Use cases: Settlement PDF generation
         services.AddSingleton<GenerateSettlementPdfUseCase>(sp =>
             new GenerateSettlementPdfUseCase(
-                sp.GetRequiredService<ILogger<GenerateSettlementPdfUseCase>>()));
+                sp.GetRequiredService<ILogger<GenerateSettlementPdfUseCase>>(),
+                sp.GetRequiredService<Oaza.Domain.Time.IClock>()));
 
         // Use cases: Finance report generation
         services.AddSingleton<GenerateFinanceReportUseCase>(sp =>
             new GenerateFinanceReportUseCase(
-                sp.GetRequiredService<ILogger<GenerateFinanceReportUseCase>>()));
+                sp.GetRequiredService<ILogger<GenerateFinanceReportUseCase>>(),
+                sp.GetRequiredService<Oaza.Domain.Time.IClock>()));
 
         services.AddSingleton<GenerateFinanceExcelUseCase>(sp =>
             new GenerateFinanceExcelUseCase(

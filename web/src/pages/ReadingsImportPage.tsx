@@ -7,6 +7,7 @@ import { useApi } from '../hooks/useApi.ts';
 import { HelpNote } from '../components/help/HelpNote';
 import { HelpTerm } from '../components/help/HelpTerm';
 import type { ImportPreviewResponse, ImportValidationMessage, WaterMeter } from '../types/index.ts';
+import { todayIso } from '../utils/date';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 1,
@@ -102,7 +103,7 @@ function ManualEntry() {
     useCallback(() => getMeters(), []),
   );
 
-  const [readingDate, setReadingDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [readingDate, setReadingDate] = useState(todayIso);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -269,7 +270,7 @@ export function ReadingsImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState<number | null>(null);
   const [clipText, setClipText] = useState('');
-  const [clipDate, setClipDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [clipDate, setClipDate] = useState(todayIso);
   const inFlight = useRef(false);
 
   const { data: meters } = useApi<WaterMeter[]>(useCallback(() => getMeters(), []));

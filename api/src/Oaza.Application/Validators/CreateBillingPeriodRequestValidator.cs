@@ -1,11 +1,16 @@
 using FluentValidation;
 using Oaza.Application.DTOs;
+using Oaza.Domain.Time;
 
 namespace Oaza.Application.Validators;
 
 public class CreateBillingPeriodRequestValidator : AbstractValidator<CreateBillingPeriodRequest>
 {
-    public CreateBillingPeriodRequestValidator()
+    public CreateBillingPeriodRequestValidator() : this(PragueClock.System)
+    {
+    }
+
+    public CreateBillingPeriodRequestValidator(IClock clock)
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Název je povinný.")
@@ -15,6 +20,6 @@ public class CreateBillingPeriodRequestValidator : AbstractValidator<CreateBilli
             .LessThan(x => x.DateTo).WithMessage("Datum od musí být před datem do.");
 
         RuleFor(x => x.DateTo)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(2)).WithMessage("Datum do nesmí být příliš v budoucnosti.");
+            .LessThanOrEqualTo(PragueClock.AsUtcMidnight(clock.Today).AddYears(2)).WithMessage("Datum do nesmí být příliš v budoucnosti.");
     }
 }

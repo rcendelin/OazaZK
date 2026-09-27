@@ -1,11 +1,16 @@
 using FluentValidation;
 using Oaza.Application.DTOs;
+using Oaza.Domain.Time;
 
 namespace Oaza.Application.Validators;
 
 public class CreateAdvanceRequestValidator : AbstractValidator<CreateAdvanceRequest>
 {
-    public CreateAdvanceRequestValidator()
+    public CreateAdvanceRequestValidator() : this(PragueClock.System)
+    {
+    }
+
+    public CreateAdvanceRequestValidator(IClock clock)
     {
         RuleFor(x => x.HouseId)
             .NotEmpty().WithMessage("ID domácnosti je povinné.")
@@ -26,6 +31,6 @@ public class CreateAdvanceRequestValidator : AbstractValidator<CreateAdvanceRequ
             .WithMessage("Celková částka musí být větší než 0.");
 
         RuleFor(x => x.PaymentDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum platby nesmí být příliš v budoucnosti.");
+            .LessThanOrEqualTo(PragueClock.AsUtcMidnight(clock.Today).AddYears(1)).WithMessage("Datum platby nesmí být příliš v budoucnosti.");
     }
 }

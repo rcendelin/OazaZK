@@ -29,8 +29,13 @@ se sekce přejmenuje na verzi s datem.
 - **Odhad odečtu (T04, část).** Odečet může být označený jako odhad s popisem, jak vznikl (v přehledech „≈“ s nápovědou);
   `GET /api/readings/estimate` dopočítá stav vodoměru k datu interpolací po dnech mezi odečty, případně vezme
   nejbližší odečet, když existuje jen z jedné strany.
+- **Kalendářní dny v pražském čase (X5).** `IClock`/`PragueClock` („dnes“ = den v `Europe/Prague`) a `DateRange`
+  (uzavřený interval po dnech: počet dnů, průnik, řez pro mezizávěrky) jako základ nového modelu T02–T10.
 
 ### Opraveno
+- **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
+  importu odečtů, plateb na stránce Saldo, filtru auditu a grafu spotřeby, kontrola „datum není v budoucnosti“
+  a datum vystavení PDF se berou z pražského kalendáře.
 - **Potvrzení importu odečtů (X7 §8.6/§8.7)** už nezávisí na paměti serveru (dřív mohlo skončit „relace vypršela“,
   když požadavek obsloužila jiná instance) a neukládá napůl: celá dávka se ověří předem a opakované potvrzení po
   výpadku dokončí zbytek.

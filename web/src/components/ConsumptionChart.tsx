@@ -15,6 +15,7 @@ import { getChartData } from '../api/readings.ts';
 import { getHouses } from '../api/houses.ts';
 import { Spinner } from './Spinner.tsx';
 import type { ChartDataPoint, House } from '../types/index.ts';
+import { shiftIsoDate, todayIso } from '../utils/date';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 1,
@@ -42,13 +43,9 @@ export function ConsumptionChart({
   );
   const [timeRange, setTimeRange] = useState<TimeRange>(defaultRange);
 
-  const fromDate = useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - timeRange);
-    return d.toISOString().split('T')[0];
-  }, [timeRange]);
+  const toDate = useMemo(() => todayIso(), []);
 
-  const toDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const fromDate = useMemo(() => shiftIsoDate(toDate, { months: -timeRange }), [toDate, timeRange]);
 
   const effectiveHouseId = fixedHouseId ?? selectedHouseId;
 

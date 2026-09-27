@@ -3,8 +3,8 @@ import { useApi } from '../../hooks/useApi';
 import { Spinner } from '../../components/Spinner';
 import { getAuditLog } from '../../api/audit';
 import type { AuditLogEntry, AuditLogFilter } from '../../api/audit';
+import { shiftIsoDate, todayIso } from '../../utils/date';
 
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const fmtTime = (iso: string) =>
   new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(iso));
 
@@ -27,10 +27,8 @@ function prettyJson(value: string | null): string {
 /** Read-only audit log (X4): who changed what, when, from what to what and why. Admin only. */
 export function AuditLogPage() {
   const [draft, setDraft] = useState<AuditLogFilter>(() => {
-    const today = new Date();
-    const from = new Date(today);
-    from.setDate(from.getDate() - 90);
-    return { from: isoDate(from), to: isoDate(today), entityType: '', entityId: '' };
+    const today = todayIso();
+    return { from: shiftIsoDate(today, { days: -90 }), to: today, entityType: '', entityId: '' };
   });
   const [filter, setFilter] = useState<AuditLogFilter>(draft);
 
