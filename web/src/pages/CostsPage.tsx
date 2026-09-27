@@ -115,7 +115,7 @@ function ComponentCosts({ component, isAdmin, prefillDocument, onChanged }: {
   const [range, setRange] = useState({ from: shiftIsoDate(todayIso(), { months: -12 }), to: todayIso() });
   const [draft, setDraft] = useState(range);
   const { data: entries, loading, error, refetch } = useApi<CostEntry[]>(
-    useCallback(() => getCostEntries(component.id, range.from, range.to), [component.id, range]),
+    useCallback(() => getCostEntries(component.id, range.from, range.to), [component.id, range]), [component.id, range],
   );
   const { data: documents } = useApi<DocumentResponse[]>(useCallback(() => getDocuments(), []));
   const [openId, setOpenId] = useState<string | null>(null);
@@ -264,7 +264,7 @@ function EntryRows({ entry: e, metered, open, documentName, onToggle, onDownload
 /** Drill-down: how the entry splits into segments and houses, so everyone can see why a house has its cost. */
 function Allocation({ entry }: { entry: CostEntry }) {
   const { data, loading, error } = useApi<CostEntryAllocation>(
-    useCallback(() => getCostEntryAllocation(entry.componentId, entry.id), [entry.componentId, entry.id]),
+    useCallback(() => getCostEntryAllocation(entry.componentId, entry.id), [entry.componentId, entry.id]), [entry.componentId, entry.id],
   );
   if (loading) return <Spinner />;
   if (error) return <p className="text-sm text-danger">{error}</p>;
@@ -479,7 +479,7 @@ function UnaccountedDocuments({ onBook }: { onBook: (d: UnaccountedDocument) => 
   const { user } = useAuth();
   const canSee = user?.role === 'Admin' || user?.role === 'Accountant';
   const { data } = useApi<UnaccountedDocument[]>(
-    useCallback(() => (canSee ? getUnaccountedDocuments() : Promise.resolve([])), [canSee]),
+    useCallback(() => (canSee ? getUnaccountedDocuments() : Promise.resolve([])), [canSee]), [canSee],
   );
   if (!data || data.length === 0) return null;
   return (

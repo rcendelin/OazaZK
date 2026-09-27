@@ -7,6 +7,10 @@ se sekce přejmenuje na verzi s datem.
 ## [Nevydáno]
 
 ### Přidáno
+- **Regresní E2E scénáře S1–S8 (T14).** Automatické testy procházejí v prohlížeči všech osm zkušebních scénářů
+  ze zadání — ztráty vody, kredit vodárny, přistoupení domu, převod domu, pokladnu, oddělený fond, zaokrouhlení
+  a dopočet odečtu — a kontrolují čísla tak, jak je uvidí uživatel. Data pro ně vyrábí skutečný výpočet backendu,
+  takže test odhalí chybu ve výpočtu i v zobrazení.
 - **Návod pro správce (T12).** Nová stránka Návod pro správce (v menu pod „Jak to funguje“, pro správce a účetní):
   pět postupů krok za krokem s obrázky — zadat měsíční odečty, vložit fakturu a zálohu, zapsat výdaj z pokladny,
   udělat mezizávěrku a převést dům na nového majitele. Automatické testy procházejí stejné kroky, takže návod
@@ -137,6 +141,9 @@ se sekce přejmenuje na verzi s datem.
   ruční přepis zálohy zůstal.
 
 ### Opraveno
+- **Filtry období se znovu načtou.** Tlačítko „Zobrazit“ na stránkách Voda a ztráty, Saldo domu, Pokladna, Náklady,
+  Nákladové složky a Audit a výběr období vlastnictví v saldu domu teď opravdu načtou data pro zvolené období
+  (dřív zůstala zobrazená původní data). Odhalily to regresní scénáře T14.
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
   importu odečtů, plateb na stránce Saldo, filtru auditu a grafu spotřeby, kontrola „datum není v budoucnosti“
   a datum vystavení PDF se berou z pražského kalendáře.

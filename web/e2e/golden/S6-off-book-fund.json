@@ -1,0 +1,156 @@
+{
+  "features": {
+    "offBookFund": true
+  },
+  "funds": [
+    {
+      "id": "id-1",
+      "name": "Fond na ohňostroje",
+      "purpose": null,
+      "managerName": "Karel Vzorový",
+      "accountDescription": "soukromý účet správce",
+      "active": true,
+      "balance": 6150,
+      "outstanding": 0
+    }
+  ],
+  "detail": {
+    "fund": {
+      "id": "id-1",
+      "name": "Fond na ohňostroje",
+      "purpose": null,
+      "managerName": "Karel Vzorový",
+      "accountDescription": "soukromý účet správce",
+      "active": true,
+      "balance": 6150,
+      "outstanding": 0
+    },
+    "calls": [
+      {
+        "id": "id-2",
+        "date": "2026-12-01",
+        "dueDate": "2026-12-15",
+        "amountPerHouse": 1230,
+        "text": "Silvestr 2026",
+        "collected": 6150,
+        "debtors": 1,
+        "houses": [
+          {
+            "houseId": "A",
+            "houseName": "RD A",
+            "expected": 1230,
+            "paid": 1230,
+            "isPaid": true
+          },
+          {
+            "houseId": "B",
+            "houseName": "RD B",
+            "expected": 1230,
+            "paid": 1230,
+            "isPaid": true
+          },
+          {
+            "houseId": "C",
+            "houseName": "RD C",
+            "expected": 1230,
+            "paid": 1230,
+            "isPaid": true
+          },
+          {
+            "houseId": "D",
+            "houseName": "RD D",
+            "expected": 1230,
+            "paid": 1230,
+            "isPaid": true
+          },
+          {
+            "houseId": "E",
+            "houseName": "RD E",
+            "expected": 1230,
+            "paid": 1230,
+            "isPaid": true
+          },
+          {
+            "houseId": "F",
+            "houseName": "RD F",
+            "expected": 1230,
+            "paid": 0,
+            "isPaid": false
+          }
+        ]
+      }
+    ],
+    "records": [
+      {
+        "id": "id-3",
+        "kind": "Contribution",
+        "date": "2026-12-09",
+        "amount": 1230,
+        "text": "",
+        "houseName": "RD E",
+        "callId": "id-2",
+        "method": "převod",
+        "paidBy": null,
+        "hasReceipt": false,
+        "expenseId": null,
+        "paidTo": null
+      },
+      {
+        "id": "id-4",
+        "kind": "Contribution",
+        "date": "2026-12-08",
+        "amount": 1230,
+        "text": "",
+        "houseName": "RD D",
+        "callId": "id-2",
+        "method": "převod",
+        "paidBy": null,
+        "hasReceipt": false,
+        "expenseId": null,
+        "paidTo": null
+      },
+      {
+        "id": "id-5",
+        "kind": "Contribution",
+        "date": "2026-12-07",
+        "amount": 1230,
+        "text": "",
+        "houseName": "RD C",
+        "callId": "id-2",
+        "method": "převod",
+        "paidBy": null,
+        "hasReceipt": false,
+        "expenseId": null,
+        "paidTo": null
+      },
+      {
+        "id": "id-6",
+        "kind": "Contribution",
+        "date": "2026-12-06",
+        "amount": 1230,
+        "text": "",
+        "houseName": "RD B",
+        "callId": "id-2",
+        "method": "převod",
+        "paidBy": null,
+        "hasReceipt": false,
+        "expenseId": null,
+        "paidTo": null
+      },
+      {
+        "id": "id-7",
+        "kind": "Contribution",
+        "date": "2026-12-05",
+        "amount": 1230,
+        "text": "",
+        "houseName": "RD A",
+        "callId": "id-2",
+        "method": "převod",
+        "paidBy": null,
+        "hasReceipt": false,
+        "expenseId": null,
+        "paidTo": null
+      }
+    ]
+  }
+}

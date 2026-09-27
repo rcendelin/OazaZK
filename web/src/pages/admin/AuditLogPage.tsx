@@ -33,7 +33,7 @@ export function AuditLogPage() {
   const [filter, setFilter] = useState<AuditLogFilter>(draft);
 
   const { data: entries, loading, error } = useApi<AuditLogEntry[]>(
-    useCallback(() => getAuditLog(filter), [filter]),
+    useCallback(() => getAuditLog(filter), [filter]), [filter],
   );
 
   const inputCls = 'border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';

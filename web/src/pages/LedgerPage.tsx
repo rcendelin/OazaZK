@@ -33,7 +33,7 @@ export function LedgerPage() {
   const houseId = isManager ? selected : user?.houseId ?? null;
 
   const { data: overview, loading, error } = useApi<LedgerOverview>(
-    useCallback(() => getLedgerOverview(range), [range]),
+    useCallback(() => getLedgerOverview(range), [range]), [range],
   );
 
   return (
@@ -155,7 +155,7 @@ function HouseDetail({ houseId, range, getToken }: {
 }) {
   const [periodId, setPeriodId] = useState<string | undefined>(undefined);
   const { data: ledger, loading, error } = useApi<HouseLedger>(
-    useCallback(() => getHouseLedger(houseId, { ...range, ownershipPeriodId: periodId }), [houseId, range, periodId]),
+    useCallback(() => getHouseLedger(houseId, { ...range, ownershipPeriodId: periodId }), [houseId, range, periodId]), [houseId, range, periodId],
   );
 
   if (loading && !ledger) return <Spinner />;
