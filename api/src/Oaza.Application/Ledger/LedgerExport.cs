@@ -8,6 +8,9 @@ namespace Oaza.Application.Ledger;
 /// <summary>An exported file.</summary>
 public record ExportFile(byte[] Content, string ContentType, string FileName);
 
+/// <summary>A volume in m³ — exported with three decimals (1 litre).</summary>
+public readonly record struct CubicMetres(decimal Value);
+
 /// <summary>
 /// Exports of the house ledger and the overview (T07) to XLSX and CSV. CSV is for Czech Excel: UTF-8 with BOM,
 /// „;“ separator, decimal comma. The saldo sign follows X1 (positive = přeplatek).
@@ -66,6 +69,10 @@ public static class LedgerExport
         var title = $"Saldo domů za {Day(overview.From)} – {Day(overview.To)} (kladné = přeplatek, náklady kladně)";
         return Build(format, name, "Přehled", title, header, rows, []);
     }
+
+    /// <summary>Any table in the same CSV / XLSX format (e.g. the readings export, T04).</summary>
+    public static ExportFile Table(string format, string name, string sheet, string title, string[] header, List<object?[]> rows) =>
+        Build(format, name, sheet, title, header, rows, []);
 
     private static ExportFile Build(string format, string name, string sheet, string title, string[] header, List<object?[]> rows, object?[][] summary)
     {
@@ -128,6 +135,10 @@ public static class LedgerExport
                 cell.Value = d;
                 cell.Style.NumberFormat.Format = "#,##0.00";
                 return;
+            case CubicMetres m3:
+                cell.Value = m3.Value;
+                cell.Style.NumberFormat.Format = "#,##0.000";
+                return;
             case DateOnly day:
                 cell.Value = day.ToDateTime(TimeOnly.MinValue);
                 cell.Style.DateFormat.Format = "d.m.yyyy";
@@ -142,6 +153,7 @@ public static class LedgerExport
     {
         null => string.Empty,
         decimal d => d.ToString("0.00", Czech),
+        CubicMetres m3 => m3.Value.ToString("0.000", Czech),
         DateOnly day => Day(day),
         _ => value.ToString() ?? string.Empty,
     };
@@ -149,7 +161,7 @@ public static class LedgerExport
     private static string Quote(string value) =>
         value.IndexOfAny([';', '"', '\n', '\r']) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
 
-    private static string Day(DateOnly day) => day.ToString("d. M. yyyy", CultureInfo.InvariantCulture);
+    internal static string Day(DateOnly day) => day.ToString("d. M. yyyy", CultureInfo.InvariantCulture);
 
     private static string Slug(string value)
     {

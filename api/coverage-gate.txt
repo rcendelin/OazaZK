@@ -15,3 +15,4 @@ src/Oaza.Application/OffBookFunds/OffBookFundUseCase.cs
 src/Oaza.Application/Documents/*.cs
 src/Oaza.Application/UseCases/Calculate*.cs
 src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs
+src/Oaza.Application/Readings/*.cs

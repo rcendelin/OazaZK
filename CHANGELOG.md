@@ -102,6 +102,8 @@ se sekce přejmenuje na verzi s datem.
   nahrání více souborů najednou s přiřazením nákladové složky; u faktury tlačítko „Vytvořit náklad“, které otevře Náklady
   s předvyplněnou složkou i dokladem. V Nákladech přehled „Dokumenty bez zaúčtování“ — dokument z něj zmizí, jakmile
   k němu vznikne náklad.
+- **Export odečtů (T04).** Na stránce Seznam odečtů lze stáhnout odečty za zvolené období do XLSX nebo CSV; export
+  ukazuje spotřebu od předchozího odečtu a u odhadnutých hodnot sloupec „Odhad“ s popisem, jak vznikly.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich

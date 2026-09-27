@@ -5,6 +5,8 @@ import { getAllReadings, updateReading } from '../api/readings';
 import { getMeters } from '../api/meters';
 import { Spinner } from '../components/Spinner';
 import type { ReadingResponse, WaterMeter } from '../types';
+import { useAuth } from '../auth/AuthContext';
+import { downloadLedgerExport } from '../api/ledger';
 
 const czNum = (v: number, d = 1) =>
   new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
@@ -119,6 +121,8 @@ export function ReadingsListPage() {
           Všechny odečty — řádky = vodoměry, sloupce = data měření. Klikněte na hodnotu pro editaci.
         </p>
       </div>
+
+      <ReadingsExport />
 
       {saveSuccess && (
         <div className="rounded-xl border border-success/20 bg-success-light px-4 py-2">
@@ -248,5 +252,41 @@ export function ReadingsListPage() {
         Tooltip ukazuje detail (spotřeba, zdroj).
       </p>
     </div>
+  );
+}
+
+/** Export of readings with the estimate flag (T04): optional range, XLSX or CSV for Czech Excel. */
+function ReadingsExport() {
+  const { getAccessToken } = useAuth();
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [exportError, setExportError] = useState<string | null>(null);
+  const inputCls = 'border border-border rounded-lg px-2 py-1 text-sm bg-surface-raised';
+  const btn = 'rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface-sunken';
+
+  const download = async (format: 'xlsx' | 'csv') => {
+    setExportError(null);
+    try {
+      await downloadLedgerExport('/readings/export', { format, from: from || undefined, to: to || undefined }, getAccessToken);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export se nezdařil');
+    }
+  };
+
+  return (
+    <section aria-label="Export odečtů" className="flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-surface-raised p-3 shadow-card">
+      <label className="text-xs text-text-secondary">
+        <span className="mb-1 block">Od</span>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
+      </label>
+      <label className="text-xs text-text-secondary">
+        <span className="mb-1 block">Do</span>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
+      </label>
+      <button type="button" className={btn} onClick={() => void download('xlsx')}>Export odečtů (XLSX)</button>
+      <button type="button" className={btn} onClick={() => void download('csv')}>CSV</button>
+      <p className="w-full text-xs text-text-muted">Export obsahuje sloupec „Odhad“ s popisem, jak byla hodnota dopočtena.</p>
+      {exportError && <p role="alert" className="w-full text-sm text-danger">{exportError}</p>}
+    </section>
   );
 }
