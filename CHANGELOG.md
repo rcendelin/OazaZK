@@ -143,6 +143,19 @@ se sekce přejmenuje na verzi s datem.
   ruční přepis zálohy zůstal.
 
 ### Opraveno
+- **Čísla ve formulářích:** „−20 000“ (typografické mínus, jak radí nápověda) se přijme; nesmysl („abc“) se už tiše
+  neuloží jako 0, formulář ukáže chybu.
+- **Počáteční stavy po převodu domu** ukazují a upravují hodnoty nového vlastníka; dřívější hodnoty jsou vidět jen pro
+  čtení. Hláška „Uloženo.“ už po uložení nezmizí.
+- **Náklady:** záznam jde upravit, smazání se potvrzuje (s nepovinným důvodem) a opravný záznam za mezizávěrku jde
+  zadat s důvodem přímo ve formuláři. **Nákladové složky:** úprava názvu, aktivity a poznámky, smazání omylem
+  zadaného pravidla, potvrzení smazání účasti.
+- **Zálohy:** přepis zálohy se ukládá po jednotlivých domech — dva správci si už navzájem nepřepíší změny;
+  přepisy jsou v auditu.
+- **Vypršelé přihlášení** vede na přihlašovací stránku s hláškou „Přihlášení vypršelo, přihlaste se znovu.“
+- **Nahrávání dokumentů:** soubor nad 20 MB nebo nepovoleného typu dostane hlášku, chyby ukazují důvod ze serveru,
+  v okně „Nahrát dokument“ je kategorie „Faktury a vyúčtování“; historie verzí ukazuje i aktuální verzi.
+- **Platby:** po uložení platby zůstane vybraný dům, rok i datum a měsíc se posune na další.
 - **Stažené dokumenty a exporty hospodaření byly prázdné (0 B).** Odpověď se v isolated workeru neodeslala;
   všechny soubory teď jdou přes jednotný zápis (`FileResponse`). Dokument s diakritikou v názvu („Zápis…“) už nekončí
   chybou 500 a exporty se ukládají pod správným jménem (dřív „saldo.xlsx“).
