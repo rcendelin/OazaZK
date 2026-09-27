@@ -133,6 +133,8 @@ Počítá se po celých dnech, výsledek na 3 desetinná místa (0,001 m³ = 1 l
 Uložený odečet nese `IsEstimate` a `EstimateNote` (popis metody a zdrojových odečtů); v přehledech odečtů je označen „≈“.
 Ruční zadání odhadu vyžaduje popis. Kód: `Oaza.Domain.Services.ReadingEstimator`.
 
+Export odečtů (`GET /readings/export`, tlačítko na stránce Seznam odečtů) nese sloupce „Odhad“ a „Popis odhadu“; spotřeba se počítá od předchozího odečtu vodoměru, i když leží před zvoleným obdobím (`Oaza.Application/Readings/ReadingsExportUseCase`).
+
 ---
 
 ## 6. Známá omezení
