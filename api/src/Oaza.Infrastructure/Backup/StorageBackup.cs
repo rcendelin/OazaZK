@@ -16,6 +16,8 @@ public sealed record BackupSummary(IReadOnlyDictionary<string, int> Tables, IRea
 /// Format: <c>tables/{table}.jsonl</c> (one entity per line with typed properties, so a restore gives back the same
 /// Edm types) and <c>blobs/{container}/{blob name}</c>. Restore replaces every backed-up entity and blob and deletes
 /// entities and blobs that were not in the backup, only in the tables and containers the backup holds.
+/// Data of the Functions host itself (keys, deployment packages, host locks — the app's storage account is also its
+/// <c>AzureWebJobsStorage</c>) is never backed up nor restored: restoring it would roll back or break the running app.
 /// </summary>
 public sealed class StorageBackup
 {
@@ -23,13 +25,22 @@ public sealed class StorageBackup
     private readonly BlobServiceClient _blobs;
     private readonly Func<string, bool> _include;
 
-    /// <param name="include">Which tables and containers to process (by name); default all.</param>
+    /// <param name="include">Which tables and containers to process (by name); default all app data.</param>
     public StorageBackup(string connectionString, Func<string, bool>? include = null)
     {
         _tables = new TableServiceClient(connectionString);
         _blobs = new BlobServiceClient(connectionString);
-        _include = include ?? (_ => true);
+        var chosen = include ?? (_ => true);
+        _include = name => !IsHostManaged(name) && chosen(name);
     }
+
+    /// <summary>Tables and containers the Azure Functions host manages (secrets, packages, locks, timers).</summary>
+    public static bool IsHostManaged(string name) =>
+        name.StartsWith("azure-webjobs", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("AzureFunctions", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("AzureWebJobs", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("function-releases", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("scm-releases", StringComparison.OrdinalIgnoreCase);
 
     public async Task<BackupSummary> BackupAsync(string folder, CancellationToken ct = default)
     {
