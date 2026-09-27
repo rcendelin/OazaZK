@@ -22,6 +22,7 @@ import type { ComponentCreditPreview, OpeningBalance, OwnershipPeriod, SaveOpeni
 import type { House, WaterMeter } from '../../types';
 import { formatIsoDay } from '../../utils/date';
 import { parseCzechNumber } from '../../utils/number';
+import { HelpDisclosure } from '../../components/help/HelpDisclosure';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
@@ -100,6 +101,7 @@ export function OpeningBalancesPage() {
           vodoměru, podíl domu ve fondu spolku a přeplatek (kredit) složky u dodavatele. U každé hodnoty uveďte,
           odkud je, a u dopočtené hodnoty zaškrtněte „odhad“.
         </p>
+        <HelpDisclosure sectionId="openingBalances" />
       </div>
 
       <section className="space-y-3 rounded-2xl border border-border bg-surface-raised p-4 shadow-card" aria-label="Start účtování">

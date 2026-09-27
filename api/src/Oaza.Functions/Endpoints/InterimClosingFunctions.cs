@@ -35,6 +35,18 @@ public class InterimClosingFunctions
         string id) =>
         ModelEndpoint.HandleAsync(req, _logger, async () => await _useCase.GetAsync(Uri.UnescapeDataString(id)));
 
+    /// <summary>GET /interim-closings/{id}/export?format=xlsx|csv — for the accountant (annual closing).</summary>
+    [Function("ExportInterimClosing")]
+    [RequireRole(UserRole.Admin, UserRole.Accountant)]
+    public Task<HttpResponseData> ExportAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "interim-closings/{id}/export")] HttpRequestData req,
+        string id) =>
+        ModelEndpoint.HandleFileAsync(req, _logger, async () =>
+        {
+            var file = await _useCase.ExportAsync(Uri.UnescapeDataString(id), ModelEndpoint.Query(req, "format") ?? "xlsx");
+            return (file.Content, file.ContentType, file.FileName);
+        });
+
     [Function("CreateInterimClosing")]
     [RequireRole(UserRole.Admin)]
     public Task<HttpResponseData> CreateAsync(

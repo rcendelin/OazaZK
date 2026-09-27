@@ -19,7 +19,7 @@ export type SectionId =
   | 'billingAdmin' | 'billingMember' | 'fundDraw' | 'waterPriceCarry'
   | 'closedSnapshot' | 'saldoLive' | 'lossMethod' | 'paymentTypes'
   | 'importTwoStep' | 'invoiceLineItems' | 'documentVersions'
-  | 'receivedInvoicesFund';
+  | 'receivedInvoicesFund' | 'interimClosing' | 'openingBalances';
 
 export interface Term {
   label: string;
@@ -106,6 +106,16 @@ export const terms: Record<TermId, Term> = {
 };
 
 export const sections: Record<SectionId, Section> = {
+  interimClosing: {
+    note: 'Mezizávěrka zafixuje saldo všech domů (nebo jednoho domu) k datu. Co je do toho dne, se už nemění; pozdní opravy se zaúčtují až po řezu.',
+    disclosureTitle: 'Co mezizávěrka udělá a kdy ji dělat',
+    disclosure: '**Co udělá.** Uloží saldo každého domu k vybranému dni (snímek) a od té chvíle zamkne vše, co do toho dne patří: pravidla a účast ve složkách, náklady, počáteční stavy, odečty i platby.\n\n**Roční závěrka** je mezizávěrka všech domů k 31. 12. Z jejího detailu stáhnete export pro účetní.\n\n**Mezizávěrka jednoho domu** se dělá při prodeji: den před předáním se uzavře saldo původního vlastníka.\n\n**Co když přijde vyúčtování až potom.** Zadejte ho normálně s celým obdobím. Portál ho rozdělí podle toho, kdo se kdy na složce podílel, ale do salda ho zaúčtuje k prvnímu dni po mezizávěrce jako opravný záznam — uzavřené saldo zůstane. Stejně tak pozdě zapsaná platba s datem před řezem se zaúčtuje po řezu.\n\n**Omyl.** Zrušit lze jen poslední mezizávěrku a jen s uvedeným důvodem. V detailu je vidět, jestli se saldo k datu mezizávěrky od snímku nezměnilo (rozdíl by měl být vždy nula).',
+  },
+  openingBalances: {
+    note: 'Portál nepřepočítává celou historii. Začíná od známých hodnot k datu startu účtování — u každé hodnoty uveďte, odkud je, a dopočtenou označte jako odhad.',
+    disclosureTitle: 'Jak zadat počáteční stavy',
+    disclosure: '**1. Start účtování.** Zvolte datum (voda a elektřina vodárny se účtují od 1. 11. 2023) a klikněte na „Start účtování k datu“. Každý dům dostane období vlastnictví se současným vlastníkem.\n\n**2. Stavy vodoměrů.** Nejlépe skutečný odečet k tomu dni. Když chybí, tlačítko „Navrhnout z odečtů“ dopočítá stav mezi dvěma nejbližšími odečty (podle dní) a označí ho jako odhad. Hodnotu můžete přijmout nebo přepsat.\n\n**3. Podíl ve fondu.** Stav z poslední roční závěrky. Kladné číslo znamená, že dům má u spolku přeplatek.\n\n**4. Kredit u dodavatele.** Přeplatek složky u dodavatele (např. elektřina vodárny) zadejte záporně. „Náhled rozdělení“ ukáže, kolik připadne na každý dům.\n\n**Po mezizávěrce** jde hodnotu už jen opravit s uvedeným důvodem.',
+  },
   billingAdmin: {
     note: 'Zúčtovací období je časový úsek, za který se rozpočítá voda mezi domácnosti. Dokud je otevřené, můžete do něj přidávat faktury a odečty a průběžně si nechat spočítat náhled.',
     disclosureTitle: 'Jak se počítá vyúčtování',
