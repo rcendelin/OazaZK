@@ -87,6 +87,9 @@ se sekce přejmenuje na verzi s datem.
 - **Převod domu (T03, část C).** Administrace → Počáteční stavy → Převod domu: náhled dopadů (závěrečné saldo původního
   vlastníka, návrh stavu vodoměru z odečtů, co brání převodu) a převod — mezizávěrka domu den před předáním, ukončení
   období vlastnictví, nový vlastník od data předání s vlastním stavem vodoměru a nulovým podílem ve fondu (nebo vkladem).
+- **Pokladna – API (T09, část A).** Pokladní kniha spolku: vklady (výběr z účtu s odkazem na pohyb), výdaje i bez dokladu
+  (pak je povinné komu), průběžný zůstatek, který nikdy nesmí být záporný (ani při zpětném zápisu), storno místo mazání,
+  volitelné navázání výdaje na nákladovou složku (vznikne náklad hrazený hotově). Export pokladní knihy do XLSX a PDF.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
