@@ -1,0 +1,10 @@
+house;owner_name;contact;valid_from;valid_to
+Dům 1 – Ukázkovi;Alena Ukázková;dum1@example.invalid;2023-11-01;
+Dům 2 – Vzoroví;Bohumil Vzorový;dum2@example.invalid;2023-11-01;
+Dům 3 – Testovací;Cyril Testovací;dum3@example.invalid;2023-11-01;
+Dům 4 – Fiktivní;Dana Fiktivní;dum4@example.invalid;2023-11-01;
+Dům 5 – Smyšlení;Emil Smyšlený;dum5@example.invalid;2023-11-01;
+Dům 6 – Příkladní;Filip Předchozí;;2023-11-01;2025-03-14
+Dům 6 – Příkladní;Františka Příkladná;dum6@example.invalid;2025-03-15;
+Dům 7 – Modeloví;Gustav Modelový;dum7@example.invalid;2023-11-01;
+Dům 8 – Cviční;Hana Cvičná;dum8@example.invalid;2023-11-01;

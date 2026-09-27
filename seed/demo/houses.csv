@@ -1,0 +1,9 @@
+name;address;contact_person;email;active
+Dům 1 – Ukázkovi;Za Oázou 1;Alena Ukázková;dum1@example.invalid;ano
+Dům 2 – Vzoroví;Za Oázou 2;Bohumil Vzorový;dum2@example.invalid;ano
+Dům 3 – Testovací;Za Oázou 3;Cyril Testovací;dum3@example.invalid;ano
+Dům 4 – Fiktivní;Za Oázou 4;Dana Fiktivní;dum4@example.invalid;ano
+Dům 5 – Smyšlení;Za Oázou 5;Emil Smyšlený;dum5@example.invalid;ano
+Dům 6 – Příkladní;Za Oázou 6;Františka Příkladná;dum6@example.invalid;ano
+Dům 7 – Modeloví;Za Oázou 7;Gustav Modelový;dum7@example.invalid;ano
+Dům 8 – Cviční;Za Oázou 8;Hana Cvičná;dum8@example.invalid;ano

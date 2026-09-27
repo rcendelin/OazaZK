@@ -191,6 +191,22 @@ public class SeedImportUseCaseTests
     }
 
     [Fact]
+    public async Task DemoData_ImportsCleanly_AndLooksLikeARealYear()
+    {
+        var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "SeedDemo"), "*.csv")
+            .ToDictionary(f => Path.GetFileName(f), File.ReadAllText);
+
+        var report = await Sut().ApplyAsync(files, Admin);
+
+        report.Issues.Should().BeEmpty();
+        report.Applied.Should().BeTrue();
+        report.Houses.Should().HaveCount(8);
+        report.Components.Should().OnlyContain(c => c.Matches);
+        _periods.Items.Values.Count(p => p.HouseId == _houses.Items.Values.Single(h => h.Name == "Dům 6 – Příkladní").Id).Should().Be(2);
+        (await Sut().DryRunAsync(files)).CanApply.Should().BeFalse(); // everything is there already
+    }
+
+    [Fact]
     public void Templates_HaveExactlyTheImportedColumns()
     {
         foreach (var spec in SeedFiles.All)

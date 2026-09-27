@@ -1,0 +1,10 @@
+meter_number;date;value;is_estimate;source;note
+DEMO-H;2023-11-01;1250.5;ne;ukázkový odečet;
+DEMO-01;2023-11-01;310,25;ne;ukázkový odečet;
+DEMO-02;2023-11-01;255,0;ne;ukázkový odečet;
+DEMO-03;2023-11-01;120,125;ano;dopočteno mezi odečty;
+DEMO-04;2023-11-01;98,5;ne;ukázkový odečet;
+DEMO-05;2023-11-01;402,75;ne;ukázkový odečet;
+DEMO-06;2023-11-01;188,0;ne;ukázkový odečet;
+DEMO-07;2023-11-01;276,4;ne;ukázkový odečet;
+DEMO-08;2023-11-01;90,0;ne;ukázkový odečet;
