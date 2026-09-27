@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -23,6 +23,7 @@ import {
   BookOpen,
   Lock,
   PiggyBank,
+  Sparkles,
   Scale,
   CircleHelp,
   LogOut,
@@ -32,6 +33,9 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useApi } from '../hooks/useApi';
+import { getFeatures } from '../api/features';
+import type { Features } from '../api/features';
 
 interface NavItem {
   label: string;
@@ -39,6 +43,7 @@ interface NavItem {
   icon: ReactNode;
   adminOnly?: boolean;
   financeManager?: boolean; // visible to Admin + Accountant only
+  feature?: 'offBookFund'; // only when the feature flag is on (T10)
   children?: NavItem[];
 }
 
@@ -56,6 +61,7 @@ const navItems: NavItem[] = [
       { label: 'Saldo domu', path: '/saldo-domu', icon: <BookOpen size={iconSize} /> },
       { label: 'Saldo a platby', path: '/saldo', icon: <Scale size={iconSize} /> },
       { label: 'Pokladna', path: '/pokladna', icon: <PiggyBank size={iconSize} /> },
+      { label: 'Oddělený fond', path: '/fond', icon: <Sparkles size={iconSize} />, feature: 'offBookFund' },
       { label: 'Import z banky', path: '/advances/import', icon: <Landmark size={iconSize} />, adminOnly: true },
       { label: 'Vyúčtování', path: '/billing', icon: <Receipt size={iconSize} /> },
       { label: 'Náklady', path: '/naklady', icon: <Coins size={iconSize} />, financeManager: true },
@@ -89,6 +95,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'Admin';
   const isAccountant = user?.role === 'Accountant';
+  const { data: features } = useApi<Features>(useCallback(() => getFeatures(), []));
   const location = useLocation();
 
   const isParentActive = (item: NavItem): boolean => {
@@ -150,7 +157,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 {item.children && active && (
                   <div className="mt-1 space-y-0.5">
                     {item.children
-                      .filter((child) => (!child.adminOnly || isAdmin) && (!child.financeManager || isAdmin || isAccountant))
+                      .filter((child) => (!child.adminOnly || isAdmin) && (!child.financeManager || isAdmin || isAccountant) && (!child.feature || features?.[child.feature]))
                       .map((child) => (
                         <NavLink
                           key={child.path}

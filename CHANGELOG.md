@@ -93,6 +93,11 @@ se sekce přejmenuje na verzi s datem.
 - **Pokladna – stránka (T09, část B).** Hospodaření → Pokladna: vidí ji všichni členové; zůstatek, příjmy a výdaje za
   období, záznamy s průběžným zůstatkem a štítkem „bez dokladu“, stornované přeškrtnuté. Správce a účetní zapisují vklad
   nebo výdaj (i jako společný náklad složky), stornují s důvodem a exportují do XLSX a PDF.
+- **Oddělený fond (T10).** Evidence neformálního fondu mimo účetnictví spolku (např. na ohňostroje), za přepínačem
+  `OFF_BOOK_FUND_ENABLED` (výchozí vypnuto — modul pak není v menu a API vrací 404). Výzvy k příspěvkům s přehledem, kdo
+  zaplatil a kdo ne, příspěvky, výdaje (i placené předem) a vyrovnání; zůstatek fondu. Trvalé upozornění „Fond mimo
+  účetnictví spolku – peníze nejsou na účtu spolku“. Data fondu se nikdy nedostanou do salda, mezizávěrek, pokladny
+  ani exportů pro účetní.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

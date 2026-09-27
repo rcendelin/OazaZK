@@ -11,6 +11,7 @@ src/Oaza.Application/UseCases/InterimClosingsUseCase.cs
 src/Oaza.Application/Interfaces/IClosingBoundary.cs
 src/Oaza.Application/UseCases/CashBookUseCase.cs
 src/Oaza.Application/UseCases/HouseTransferUseCase.cs
+src/Oaza.Application/OffBookFunds/OffBookFundUseCase.cs
 src/Oaza.Application/UseCases/Calculate*.cs
 src/Oaza.Application/UseCases/CloseBillingPeriodUseCase.cs
 src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs

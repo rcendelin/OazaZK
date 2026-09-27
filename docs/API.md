@@ -255,6 +255,20 @@ Nový model (T09, R10). Záznamy se nemažou ani neupravují — oprava je storn
 | POST | `/cash-book` | Admin, Accountant | `{ date, type: Deposit\|Expense, amount, category, description, counterparty?, hasReceipt, documentId?, bankTransactionRef?, componentId? }` → 201. Výdaj bez dokladu vyžaduje `counterparty`. Zůstatek nesmí být v žádný den záporný (ani zpětně). Ne do dne uzavřeného mezizávěrkou ani do budoucnosti. `componentId` u výdaje vytvoří jednorázový náklad složky hrazený hotově. |
 | POST | `/cash-book/{id}/storno` | Admin, Accountant | `{ reason }` → 201 storno k dnešku; navázaný náklad se opraví záporným nákladem. Storno nesmí shodit zůstatek do mínusu, stornovat lze jednou. |
 
+## Oddělený fond — `OffBookFundFunctions.cs`
+
+Nový model (T10, O4). **Za přepínačem `OFF_BOOK_FUND_ENABLED` (app setting, výchozí vypnuto): když je vypnutý, všechny endpointy fondu vrací 404.** Fond je mimo účetnictví spolku; jeho data nečte saldo, mezizávěrky, pokladna ani exporty (hlídá test izolace).
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/features` | přihlášený | `{ offBookFund }` — které volitelné moduly jsou zapnuté (frontend podle toho skryje menu). |
+| GET | `/off-book-funds` | přihlášený | Fondy se zůstatkem (příspěvky − výdaje z fondu − vyrovnání) a dluhem vůči těm, kdo platili předem. |
+| GET | `/off-book-funds/{id}` | přihlášený | Detail: výzvy s tím, kdo zaplatil a kdo ne, pohyby. |
+| POST | `/off-book-funds` | Admin | `{ name, purpose?, managerName, accountDescription?, active }` → 201. Celé číslo účtu se odmítne. |
+| PUT | `/off-book-funds/{id}` | Admin | Stejné tělo. |
+| POST | `/off-book-funds/{id}/records` | Admin | `{ kind: Call\|Contribution\|Expense\|Settlement, date, amount, text?, dueDate?, houseIds?, houseId?, callId?, method?, paidBy?, hasReceipt?, expenseId? }` → 201. Výdaj z fondu jen do výše zůstatku, jinak s `paidBy`; vyrovnání jen do výše dluhu. |
+| DELETE | `/off-book-funds/{id}/records/{recordId}?reason=` | Admin | Smaže záznam zadaný omylem (ne výzvu s příspěvky ani výdaj s vyrovnáním). |
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |

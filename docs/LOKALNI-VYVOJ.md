@@ -49,6 +49,7 @@ func start                                            # http://localhost:7071/ap
 | `EntraId__TenantId`, `EntraId__ClientId` | ne | Přihlášení přes Microsoft Entra ID. Prázdné = Entra vypnuto |
 | `AzureCommunicationServices__ConnectionString`, `__FromEmail`, `__FromName` | ne | Odesílání e-mailů (ACS). Prázdné = e-maily se neodešlou (chyba se jen zaloguje) |
 | `ENABLE_SEED` | ne | `true` zpřístupní `POST /api/seed` (bez autentizace!) — **nikdy nezapínej v PROD** |
+| `OFF_BOOK_FUND_ENABLED` | ne | `true` zapne modul Oddělený fond (T10). Výchozí vypnuto, dokud není vyřešeno právní a daňové řešení (O4). |
 
 `Host.CORS` v příkladu povoluje volání z Vite dev serveru (`http://localhost:5173`).
 
