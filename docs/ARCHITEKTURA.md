@@ -45,7 +45,7 @@ flowchart TB
 |---------|-------|-----------|
 | `Oaza.Domain` | entity, enumy, konstanty (`TableNames`, `PartitionKeys`, `BlobContainerNames`), rozhraní repozitářů, helpery (`InvertedTimestamp`, `TokenHasher`) | — |
 | `Oaza.Application` | use cases (`UseCases/`), DTO, FluentValidation validátory, `EntityMapper`, `AppException`, rozhraní služeb (e-mail, blob, cache) | Domain |
-| `Oaza.Infrastructure` | Table Storage repozitáře (`TableStorageRepository<T>`, `TableEntityMapper`), `BlobStorageService`, `JwtService`, `EntraIdTokenValidator`, `AcsEmailService`, `NotificationService`, `InMemoryImportSessionCache`, `DependencyInjection` | Application, Domain |
+| `Oaza.Infrastructure` | Table Storage repozitáře (`TableStorageRepository<T>`, `TableEntityMapper`), `BlobStorageService`, `JwtService`, `EntraIdTokenValidator`, `AcsEmailService`, `NotificationService`, `DependencyInjection` | Application, Domain |
 | `Oaza.Functions` | `Program.cs` (DI, middleware), HTTP endpointy (`Endpoints/`), timer (`Triggers/`), atributy `[RequireRole]`/`[AllowAnonymous]` | vše |
 
 Konvence:

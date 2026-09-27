@@ -183,6 +183,9 @@ export interface ReadingResponse {
   source: string;
   importedAt: string;
   importedBy: string;
+  /** Estimated value, not a physical reading (T04). */
+  isEstimate: boolean;
+  estimateNote: string | null;
 }
 
 export interface MonthlyReadingsResponse {
@@ -207,7 +210,6 @@ export interface ImportPreviewRow {
 
 // Matches backend ImportPreviewResponse DTO
 export interface ImportPreviewResponse {
-  importSessionId: string;
   rows: ImportPreviewRow[];
   errors: ImportValidationMessage[];
   warnings: ImportValidationMessage[];

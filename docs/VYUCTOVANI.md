@@ -217,14 +217,34 @@ Tělo `{ "text": "...", "readingDate": "2026-02-01" }`. Text oddělený tabulát
 
 ### 7.4 Potvrzení
 
-`POST /readings/import/confirm { importSessionId }`. Náhled je uložen v paměti procesu (`InMemoryImportSessionCache`) na **30 minut** a potvrdit ho smí jen stejný uživatel.
+`POST /readings/import/confirm { readings: [{ meterId, readingDate, value }] }`. **Bezstavové:** klient pošle odečty
+z náhledu a server je znovu ověří stejnými pravidly jako náhled (§7.3) proti aktuálním datům. Náhled se na serveru
+neukládá, takže nezáleží na tom, která instance Functions potvrzení obslouží.
+
+- Celá dávka se ověří **před prvním zápisem** — když cokoli neprojde, neuloží se nic.
+- Odečet, který už v DB je se stejným vodoměrem, datem i hodnotou, se přeskočí. Opakované potvrzení po výpadku
+  uprostřed zápisu tak doběhne místo hlášení vlastních dřívějších zápisů jako konfliktu.
 
 | Situace | HTTP |
 |---------|------|
-| session neexistuje / vypršela | 404 |
-| jiný uživatel | 403 |
-| náhled obsahuje chyby / žádné odečty | 400 |
-| mezitím přibyl odečet ve stejném měsíci | 409 |
+| žádné odečty, neznámý vodoměr, duplicita v dávce, záporná spotřeba | 400 |
+| mezitím přibyl jiný odečet ve stejném měsíci | 409 |
+
+### 7.5 Odhad odečtu (T04)
+
+`GET /readings/estimate?meterId=&date=` spočítá stav vodoměru k libovolnému dni (např. počáteční stav pro nového majitele).
+Počítá se po celých dnech, výsledek na 3 desetinná místa (0,001 m³ = 1 litr), zaokrouhlení od nuly.
+
+| Situace | Výsledek | Odhad? |
+|---|---|---|
+| odečet přesně v ten den | hodnota odečtu | ne |
+| odečty před i po | `před + (po − před) × dnů_od_před / dnů_mezi` | ano |
+| jen dřívější odečty | nejbližší předchozí hodnota (bez extrapolace), v poznámce vzdálenost ve dnech | ano |
+| jen pozdější odečty | nejbližší následující hodnota, v poznámce vzdálenost ve dnech | ano |
+| žádný odečet | bez hodnoty | — |
+
+Uložený odečet nese `IsEstimate` a `EstimateNote` (popis metody a zdrojových odečtů); v přehledech odečtů je označen „≈“.
+Ruční zadání odhadu vyžaduje popis. Kód: `Oaza.Domain.Services.ReadingEstimator`.
 
 ---
 
@@ -237,8 +257,8 @@ Zjištěno při sepisování dokumentace. Nejde o dokumentační chyby, ale o ch
 3. **Neúplný zámek uzavřeného období.** Import a ruční zadání odečtu ani přesun odečtu na nové datum (`PUT` s `newDate`) nekontrolují uzavřené období.
 4. **Uzavření není atomické.** Zápisy plateb, výdaje, ceny, vyúčtování a stavu jsou oddělené. Při opakování po částečném selhání už zapsaný výdaj `fund-{periodId}` snižuje zůstatek fondu, takže kontrola zůstatku může nové čerpání odmítnout.
 5. **Čerpání z fondu** jde všem aktivním domům (i těm, které vyúčtování vynechalo) a kvůli zaokrouhlení se Σ doplatků může o haléře lišit od výdaje. Smazání doplatku `FUND-…` výdaj neodstraní.
-6. **Session importu je v paměti.** Na Consumption plánu s více instancemi může potvrzení skončit na jiné instanci → 404; stačí import zopakovat.
-7. **Potvrzení importu není atomické** — při 409 zůstanou dříve uložené odečty uložené.
+6. ~~**Session importu je v paměti.**~~ Opraveno (X7): potvrzení je bezstavové (§7.4).
+7. ~~**Potvrzení importu není atomické.**~~ Opraveno (X7): dávka se ověří celá před prvním zápisem, opakování je idempotentní (§7.4).
 8. **Období se mohou překrývat** — validátor překryv nekontroluje.
-9. **Nápověda k Excel importu na stránce Vodoměry je obráceně.** `web/src/pages/admin/MetersPage.tsx` uvádí „vodoměry jako záhlaví sloupců, sloupec A = datum", parser ale čte data v řádku 1 a čísla vodoměrů ve sloupci A (§7.1).
+9. ~~**Nápověda k Excel importu na stránce Vodoměry je obráceně.**~~ Opraveno (X7, PR #6). `web/src/pages/admin/MetersPage.tsx` uvádí „vodoměry jako záhlaví sloupců, sloupec A = datum", parser ale čte data v řádku 1 a čísla vodoměrů ve sloupci A (§7.1).
 10. **Opačné znaménko na dashboardu.** Karta „Stav účtu" člena zobrazuje `−TotalSaldo` (kladné = přeplatek), stránka Saldo používá konvenci kladné = nedoplatek.

@@ -17,5 +17,9 @@ public class CreateReadingRequestValidator : AbstractValidator<CreateReadingRequ
 
         RuleFor(x => x.Value)
             .GreaterThanOrEqualTo(0).WithMessage("Hodnota musí být větší nebo rovna 0.");
+
+        RuleFor(x => x.EstimateNote)
+            .NotEmpty().When(x => x.IsEstimate).WithMessage("U odhadu uveďte, jak vznikl.")
+            .MaximumLength(500).WithMessage("Popis odhadu může mít nejvýš 500 znaků.");
     }
 }
