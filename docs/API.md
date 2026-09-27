@@ -147,6 +147,18 @@ Kategorie: `voda`, `elektro`, `udrzba`, `pojisteni`, `jine`, systémová `fond-v
 | POST | `/notifications/send` | Admin | `{ type, periodId?, year?, month? }`, `type` = `reading_reminder` \| `import_completed` (vyžaduje `year`, `month`) \| `settlement_closed` (vyžaduje `periodId`). |
 | *timer* | `ReadingReminderTimer` | — | CRON `0 0 8 1 * *` — připomínka odečtu 1. dne v měsíci. |
 
+## Audit — `AuditFunctions.cs`
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/audit-log?from=&to=&entityType=&entityId=` | Admin | Záznamy auditu (X4), nejnovější první. Data `RRRR-MM-DD`, výchozí posledních 90 dní, `to` včetně celého dne, rozsah max. 2 roky. |
+
+## Systém — `SystemFunctions.cs`
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/environment` | veřejné | `{ environment }` = `dev` \| `test` \| `prod` \| `unknown` podle app settingu `Environment` (T01). |
+
 ## Seed — `SeedFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |
