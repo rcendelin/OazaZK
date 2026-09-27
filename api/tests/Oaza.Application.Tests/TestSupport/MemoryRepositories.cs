@@ -120,3 +120,13 @@ public sealed class MemoryOffBookFunds : IOffBookFundRepository
     public Task UpsertRecordAsync(FundRecord record) { Records[(record.FundId, record.Id)] = record; return Task.CompletedTask; }
     public Task DeleteRecordAsync(string fundId, string recordId) { Records.Remove((fundId, recordId)); return Task.CompletedTask; }
 }
+
+/// <summary>Prescribed advances over an empty new model — only the admin overrides matter.</summary>
+public static class PrescribedAdvances
+{
+    public static Oaza.Application.UseCases.CalculatePrescribedAdvancesUseCase WithoutCosts(IAdvanceSettingsRepository settings, IHouseRepository houses) =>
+        new(settings, houses, new MemoryComponents(),
+            new Oaza.Application.Ledger.LedgerCostCollector(new MemoryComponents(), new MemoryRules(), new MemoryParticipations(),
+                new MemoryCostEntries(), new MemoryOpeningBalances(), new MemoryMeters(), new MemoryReadings(), houses),
+            new Oaza.Domain.Time.PragueClock(new FixedTimeProvider(new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero))));
+}

@@ -64,53 +64,29 @@ Všechny funkce mají `AuthorizationLevel.Anonymous`; přístup vynucuje middlew
 | POST | `/readings/import/clipboard` | Admin | `{ text, readingDate }` — tabulátorový text s hlavičkou `Address`, `Value 1` → náhled. |
 | POST | `/readings/import/confirm` | Admin | `{ readings: [{ meterId, readingDate, value }] }` — odečty z náhledu; server je znovu ověří a uloží všechny, nebo žádný ([VYUCTOVANI §7.4](VYUCTOVANI.md#74-potvrzení)). 400 chyba validace, 409 odečet přibyl od náhledu. |
 
-Formát souborů a validační pravidla: [VYUCTOVANI.md §7](VYUCTOVANI.md#7-import-odečtů).
+Formát souborů a validační pravidla: [VYUCTOVANI.md §5](VYUCTOVANI.md#5-import-odečtů).
 
-## Faktury dodavatele vody — `InvoiceFunctions.cs`
+## Zálohy a platby — `AdvanceFunctions.cs`
 
-| Metoda | Cesta | Přístup | Popis |
-|--------|-------|---------|-------|
-| GET | `/invoices?year=` | Admin, Účetní | Faktury za vodu (rok podle `IssuedDate`). |
-| GET | `/invoices/all?year=&category=` | Admin, Účetní | Sjednocený přehled přijatých faktur: faktury za vodu + výdaje z hospodaření. Jen čtení. |
-| POST | `/invoices` | Admin | `{ invoiceNumber, issuedDate, dueDate, vatRatePercent, lineItems: [{ dateFrom, dateTo, startReading, endReading, consumptionM3, unitPrice, amountExclVat }] }` |
-| PUT | `/invoices/{id}` | Admin | Stejné tělo. 409 v uzavřeném období. |
-| DELETE | `/invoices/{id}` | Admin | 409 v uzavřeném období. |
-| POST | `/invoices/{id}/attachment` | Admin | PDF příloha (max 20 MB). |
-| GET | `/invoices/{id}/attachment` | Admin, Účetní | Stažení PDF. |
-
-## Zálohy, platby a saldo — `AdvanceFunctions.cs`
+Saldo domu je v části [Saldo domu](#saldo-domu--ledgerfunctionscs) (starý `GET /advances/saldo` je odstraněn, X2).
 
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
 | GET | `/advances?houseId=&year=` | přihlášený | Platby. Člen jen vlastní dům (cizí `houseId` → 403). |
-| GET | `/advances/saldo?houseId=` | přihlášený | Saldo domů ([VYUCTOVANI.md §5](VYUCTOVANI.md#5-saldo-domu)). Člen jen vlastní dům. |
 | POST | `/advances` | Admin | Měsíční záloha `{ houseId, year, month, waterAmount, electricityAmount, commonAmount, paymentDate }`. 409 při duplicitě. |
-| PUT | `/advances/{houseId}/{yyyy-MM}` | Admin | `{ waterAmount, electricityAmount, commonAmount, paymentDate }`. 409 v uzavřeném období. |
+| PUT | `/advances/{houseId}/{yyyy-MM}` | Admin | `{ waterAmount, electricityAmount, commonAmount, paymentDate }`. 409 v období uzavřeném mezizávěrkou. |
 | POST | `/advances/doplatek` | Admin | `{ houseId, waterAmount, electricityAmount, commonAmount, paymentDate, note? }` |
 | POST | `/advances/payout` | Admin | Výplata přeplatku `{ houseId, amount, paymentDate, note? }` |
-| POST | `/advances/opening-balance` | Admin | Počáteční stav `{ houseId, amount, isOverpayment, paymentDate, note? }` |
-| DELETE | `/advances/{houseId}/{rowKey}` | Admin | Smazání platby libovolného typu (měsíční záloha v uzavřeném období → 409). |
+| POST | `/advances/opening-balance` | Admin | Počáteční stav `{ houseId, amount, isOverpayment, paymentDate, note? }` — saldo domu ho ignoruje (náhradou je podíl na fondu, T03); UI ho už nenabízí. |
+| DELETE | `/advances/{houseId}/{rowKey}` | Admin | Smazání platby libovolného typu (platba v období uzavřeném mezizávěrkou → 409). |
 
 ## Nastavení záloh — `AdvanceSettingsFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
-| GET | `/advance-settings` | přihlášený | Ceny a sazby. Členovi se nevrací koeficienty elektřiny ani přepisy záloh. |
-| PUT | `/advance-settings` | Admin | `{ waterPricePerM3, waterPriceValidFrom, waterPriceValidTo?, monthlyElectricityCost, electricityCoefficients: {houseId: %}, monthlyCommonBaseFee, houseOverrides: {houseId: {waterAdvance, electricityAdvance, commonAdvance}}, lossAllocationMethod }` — koeficienty musí dát 100 % (±0,1). |
-| GET | `/advance-settings/calculate` | přihlášený | Doporučené a aktuální zálohy per dům ([VYUCTOVANI.md §4](VYUCTOVANI.md#4-výpočet-doporučených-záloh)). Člen jen vlastní dům. |
-
-## Zúčtovací období a vyúčtování — `BillingPeriodFunctions.cs`
-
-| Metoda | Cesta | Přístup | Popis |
-|--------|-------|---------|-------|
-| GET | `/billing-periods` | přihlášený | Období vč. součtu faktur. |
-| POST | `/billing-periods` | Admin | `{ name, dateFrom, dateTo }` |
-| PUT | `/billing-periods/{id}` | Admin | Stejné tělo. 409, pokud není otevřené. |
-| GET | `/billing-periods/{id}/calculate?method=` | Admin | Náhled vyúčtování, nic neukládá. `method` = `Equal` (výchozí) \| `ProportionalToConsumption`. |
-| POST | `/billing-periods/{id}/close` | Admin | `{ lossAllocationMethod, fundDrawAmount, applyNewWaterPrice, newWaterPriceValidFrom? }` — **nevratné**. |
-| GET | `/billing-periods/{id}/settlements` | přihlášený | Uložená vyúčtování. Člen jen vlastní dům. |
-| GET | `/billing-periods/{id}/settlements/{houseId}/pdf` | přihlášený | PDF pro jeden dům (jen uzavřené období). Člen jen vlastní dům. |
-| GET | `/billing-periods/{id}/pdf` | Admin | ZIP se všemi PDF. |
+| GET | `/advance-settings` | přihlášený | `{ houseOverrides }` — ruční přepisy záloh. Členovi se vrací prázdné. |
+| PUT | `/advance-settings` | Admin | `{ houseOverrides: {houseId: {waterAdvance, electricityAdvance, commonAdvance}} }` — nahradí všechny přepisy; záporná částka → 400. |
+| GET | `/advance-settings/calculate` | přihlášený | `{ from, to, months, houses: [{ houseId, houseName, costsInPeriod, recommended, actual, hasOverride }] }` — doporučené zálohy z nákladů domu za posledních 12 měsíců ÷ 12 ([VYUCTOVANI.md §3](VYUCTOVANI.md#3-doporučené-zálohy)); složky `{ water, electricity, common, total }`. Člen jen vlastní dům. |
 
 ## Dokumenty — `DocumentFunctions.cs`
 
@@ -132,7 +108,7 @@ Formát souborů a validační pravidla: [VYUCTOVANI.md §7](VYUCTOVANI.md#7-imp
 | GET | `/finance?year=&category=` | přihlášený | Příjmy a výdaje (kategorie se uplatní jen spolu s rokem). |
 | GET | `/finance/summary?year=` | přihlášený | Souhrn po kategoriích (rok povinný). |
 | GET | `/finance/balance` | přihlášený | Kumulativní stav účtu spolku. |
-| GET | `/finance/fund` | Admin, Účetní | Zůstatek společného fondu ([VYUCTOVANI.md §6](VYUCTOVANI.md#6-společný-fond)). |
+| GET | `/finance/fund` | Admin, Účetní | Zůstatek společného fondu ([VYUCTOVANI.md §4](VYUCTOVANI.md#4-saldo-domu-a-společný-fond)). |
 | POST | `/finance` | Admin | `{ type: Income\|Expense, category, amount, date, description }` |
 | PUT | `/finance/{id}` | Admin | Stejné tělo. |
 | POST | `/finance/{id}/attachment` | Admin | PDF příloha (max 20 MB). |
@@ -146,7 +122,7 @@ Kategorie: `voda`, `elektro`, `udrzba`, `pojisteni`, `jine`, systémová `fond-v
 
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
-| POST | `/notifications/send` | Admin | `{ type, periodId?, year?, month? }`, `type` = `reading_reminder` \| `import_completed` (vyžaduje `year`, `month`) \| `settlement_closed` (vyžaduje `periodId`). |
+| POST | `/notifications/send` | Admin | `{ type, year?, month? }`, `type` = `reading_reminder` \| `import_completed` (vyžaduje `year`, `month`). |
 | *timer* | `ReadingReminderTimer` | — | CRON `0 0 8 1 * *` — připomínka odečtu 1. dne v měsíci. |
 
 ## Audit — `AuditFunctions.cs`

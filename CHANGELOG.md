@@ -103,6 +103,14 @@ se sekce přejmenuje na verzi s datem.
   s předvyplněnou složkou i dokladem. V Nákladech přehled „Dokumenty bez zaúčtování“ — dokument z něj zmizí, jakmile
   k němu vznikne náklad.
 
+### Odebráno
+- **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich
+  PDF, faktury za vodu, staré saldo a ceník záloh (cena vody, elektřina s koeficienty, společný základ, metoda ztrát)
+  jsou pryč — nahradily je Náklady, Voda a ztráty, Saldo domu a Mezizávěrky. Platby domů zůstaly; stránka
+  „Saldo a platby“ se jmenuje **Platby** a karta salda na přehledu ukazuje nové saldo (kladné = přeplatek).
+  **Doporučené zálohy** se nově počítají z nákladů domu za posledních 12 měsíců ÷ 12 (voda, elektřina, společné);
+  ruční přepis zálohy zůstal.
+
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum
   importu odečtů, plateb na stránce Saldo, filtru auditu a grafu spotřeby, kontrola „datum není v budoucnosti“

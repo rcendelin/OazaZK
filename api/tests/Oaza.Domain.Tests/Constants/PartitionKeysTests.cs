@@ -10,8 +10,6 @@ public class PartitionKeysTests
         Assert.Equal("USER", PartitionKeys.User);
         Assert.Equal("HOUSE", PartitionKeys.House);
         Assert.Equal("METER", PartitionKeys.Meter);
-        Assert.Equal("PERIOD", PartitionKeys.Period);
-        Assert.Equal("INVOICE", PartitionKeys.Invoice);
     }
 
     [Fact]
@@ -21,10 +19,7 @@ public class PartitionKeysTests
         Assert.Equal("Houses", TableNames.Houses);
         Assert.Equal("WaterMeters", TableNames.WaterMeters);
         Assert.Equal("MeterReadings", TableNames.MeterReadings);
-        Assert.Equal("BillingPeriods", TableNames.BillingPeriods);
-        Assert.Equal("SupplierInvoices", TableNames.SupplierInvoices);
         Assert.Equal("AdvancePayments", TableNames.AdvancePayments);
-        Assert.Equal("Settlements", TableNames.Settlements);
         Assert.Equal("Documents", TableNames.Documents);
         Assert.Equal("FinancialRecords", TableNames.FinancialRecords);
     }
@@ -33,8 +28,6 @@ public class PartitionKeysTests
     public void BlobContainerNames_ShouldHaveCorrectValues()
     {
         Assert.Equal("documents", BlobContainerNames.Documents);
-        Assert.Equal("invoices", BlobContainerNames.Invoices);
-        Assert.Equal("settlements", BlobContainerNames.Settlements);
         Assert.Equal("finance", BlobContainerNames.Finance);
     }
 }

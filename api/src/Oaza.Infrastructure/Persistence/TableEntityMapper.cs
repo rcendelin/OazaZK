@@ -147,68 +147,6 @@ public static class TableEntityMapper
         };
     }
 
-    // ───────────────────── BillingPeriod ─────────────────────
-
-    public static TableEntity ToTableEntity(BillingPeriod period)
-    {
-        return new TableEntity(PartitionKeys.Period, period.Id)
-        {
-            { "Name", period.Name },
-            { "DateFrom", DateTime.SpecifyKind(period.DateFrom, DateTimeKind.Utc) },
-            { "DateTo", DateTime.SpecifyKind(period.DateTo, DateTimeKind.Utc) },
-            { "Status", period.Status.ToString() }
-        };
-    }
-
-    public static BillingPeriod ToBillingPeriod(TableEntity entity)
-    {
-        return new BillingPeriod
-        {
-            Id = entity.RowKey,
-            Name = entity.GetString("Name") ?? string.Empty,
-            DateFrom = entity.GetDateTimeOffset("DateFrom")?.UtcDateTime ?? DateTime.MinValue,
-            DateTo = entity.GetDateTimeOffset("DateTo")?.UtcDateTime ?? DateTime.MinValue,
-            Status = Enum.TryParse<BillingPeriodStatus>(entity.GetString("Status"), out var status) ? status : BillingPeriodStatus.Open
-        };
-    }
-
-    // ───────────────────── SupplierInvoice ─────────────────────
-
-    public static TableEntity ToTableEntity(SupplierInvoice invoice)
-    {
-        return new TableEntity(PartitionKeys.Invoice, invoice.Id)
-        {
-            { "Year", invoice.Year },
-            { "Month", invoice.Month },
-            { "InvoiceNumber", invoice.InvoiceNumber },
-            { "IssuedDate", DateTime.SpecifyKind(invoice.IssuedDate, DateTimeKind.Utc) },
-            { "DueDate", DateTime.SpecifyKind(invoice.DueDate, DateTimeKind.Utc) },
-            { "Amount", invoice.Amount.ToString("G29", CultureInfo.InvariantCulture) },
-            { "ConsumptionM3", invoice.ConsumptionM3.ToString("G29", CultureInfo.InvariantCulture) },
-            { "VatRatePercent", invoice.VatRatePercent.ToString("G29", CultureInfo.InvariantCulture) },
-            { "LineItemsJson", System.Text.Json.JsonSerializer.Serialize(invoice.LineItems) },
-            { "AttachmentBlobName", invoice.AttachmentBlobName }
-        };
-    }
-
-    public static SupplierInvoice ToSupplierInvoice(TableEntity entity)
-    {
-        return new SupplierInvoice
-        {
-            Id = entity.RowKey,
-            Year = entity.GetInt32("Year") ?? 0,
-            Month = entity.GetInt32("Month") ?? 0,
-            InvoiceNumber = entity.GetString("InvoiceNumber") ?? string.Empty,
-            IssuedDate = entity.GetDateTimeOffset("IssuedDate")?.UtcDateTime ?? DateTime.MinValue,
-            DueDate = entity.GetDateTimeOffset("DueDate")?.UtcDateTime ?? DateTime.MinValue,
-            Amount = decimal.TryParse(entity.GetString("Amount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) ? amount : 0m,
-            ConsumptionM3 = decimal.TryParse(entity.GetString("ConsumptionM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var consumption) ? consumption : 0m,
-            VatRatePercent = decimal.TryParse(entity.GetString("VatRatePercent"), NumberStyles.Any, CultureInfo.InvariantCulture, out var vat) ? vat : 0m,
-            LineItems = System.Text.Json.JsonSerializer.Deserialize<List<InvoiceLineItem>>(entity.GetString("LineItemsJson") ?? "[]") ?? new(),
-            AttachmentBlobName = entity.GetString("AttachmentBlobName")
-        };
-    }
-
     // ───────────────────── AdvancePayment ─────────────────────
     // PK = houseId. RK = "YYYY-MM" for advances, "D-{invertedTicks}-{guid8}" for doplatky.
 
@@ -323,45 +261,6 @@ public static class TableEntityMapper
         };
     }
 
-    // ───────────────────── Settlement ─────────────────────
-    // PK = periodId, RK = houseId
-
-    public static TableEntity ToTableEntity(Settlement settlement)
-    {
-        return new TableEntity(settlement.PeriodId, settlement.HouseId)
-        {
-            { "ConsumptionM3", settlement.ConsumptionM3.ToString("G29", CultureInfo.InvariantCulture) },
-            { "SharePercent", settlement.SharePercent.ToString("G29", CultureInfo.InvariantCulture) },
-            { "CalculatedAmount", settlement.CalculatedAmount.ToString("G29", CultureInfo.InvariantCulture) },
-            { "TotalAdvances", settlement.TotalAdvances.ToString("G29", CultureInfo.InvariantCulture) },
-            { "Balance", settlement.Balance.ToString("G29", CultureInfo.InvariantCulture) },
-            { "LossAllocatedM3", settlement.LossAllocatedM3.ToString("G29", CultureInfo.InvariantCulture) },
-            { "ElectricityCharge", settlement.ElectricityCharge.ToString("G29", CultureInfo.InvariantCulture) },
-            { "ElectricityAdvances", settlement.ElectricityAdvances.ToString("G29", CultureInfo.InvariantCulture) },
-            { "CommonCharge", settlement.CommonCharge.ToString("G29", CultureInfo.InvariantCulture) },
-            { "CommonAdvances", settlement.CommonAdvances.ToString("G29", CultureInfo.InvariantCulture) }
-        };
-    }
-
-    public static Settlement ToSettlement(TableEntity entity)
-    {
-        return new Settlement
-        {
-            PeriodId = entity.PartitionKey,
-            HouseId = entity.RowKey,
-            ConsumptionM3 = decimal.TryParse(entity.GetString("ConsumptionM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var consumptionM3) ? consumptionM3 : 0m,
-            SharePercent = decimal.TryParse(entity.GetString("SharePercent"), NumberStyles.Any, CultureInfo.InvariantCulture, out var sharePercent) ? sharePercent : 0m,
-            CalculatedAmount = decimal.TryParse(entity.GetString("CalculatedAmount"), NumberStyles.Any, CultureInfo.InvariantCulture, out var calculatedAmount) ? calculatedAmount : 0m,
-            TotalAdvances = decimal.TryParse(entity.GetString("TotalAdvances"), NumberStyles.Any, CultureInfo.InvariantCulture, out var totalAdvances) ? totalAdvances : 0m,
-            Balance = decimal.TryParse(entity.GetString("Balance"), NumberStyles.Any, CultureInfo.InvariantCulture, out var balance) ? balance : 0m,
-            LossAllocatedM3 = decimal.TryParse(entity.GetString("LossAllocatedM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var lossAllocatedM3) ? lossAllocatedM3 : 0m,
-            ElectricityCharge = decimal.TryParse(entity.GetString("ElectricityCharge"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elecCharge) ? elecCharge : 0m,
-            ElectricityAdvances = decimal.TryParse(entity.GetString("ElectricityAdvances"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elecAdv) ? elecAdv : 0m,
-            CommonCharge = decimal.TryParse(entity.GetString("CommonCharge"), NumberStyles.Any, CultureInfo.InvariantCulture, out var commonCharge) ? commonCharge : 0m,
-            CommonAdvances = decimal.TryParse(entity.GetString("CommonAdvances"), NumberStyles.Any, CultureInfo.InvariantCulture, out var commonAdv) ? commonAdv : 0m
-        };
-    }
-
     // ───────────────────── Document ─────────────────────
     // PK = category, RK = GUID
 
@@ -463,43 +362,21 @@ public static class TableEntityMapper
     public static TableEntity ToTableEntity(AdvanceSettings settings)
     {
         var jsonOpts = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
-        var entity = new TableEntity("SETTINGS", "advances")
+        return new TableEntity("SETTINGS", "advances")
         {
-            { "WaterPricePerM3", settings.WaterPricePerM3.ToString("G29", CultureInfo.InvariantCulture) },
-            { "WaterPriceValidFrom", DateTime.SpecifyKind(settings.WaterPriceValidFrom, DateTimeKind.Utc) },
-            { "MonthlyElectricityCost", settings.MonthlyElectricityCost.ToString("G29", CultureInfo.InvariantCulture) },
-            { "MonthlyCommonBaseFee", settings.MonthlyCommonBaseFee.ToString("G29", CultureInfo.InvariantCulture) },
-            { "LossAllocationMethod", settings.LossAllocationMethod },
-            { "ElectricityCoefficientsJson", System.Text.Json.JsonSerializer.Serialize(settings.ElectricityCoefficients) },
             { "HouseOverridesJson", System.Text.Json.JsonSerializer.Serialize(settings.HouseOverrides, jsonOpts) }
         };
-        if (settings.WaterPriceValidTo.HasValue)
-            entity["WaterPriceValidTo"] = DateTime.SpecifyKind(settings.WaterPriceValidTo.Value, DateTimeKind.Utc);
-        return entity;
     }
 
+    /// <summary>Old pricing columns of the record (X2) are ignored.</summary>
     public static AdvanceSettings ToAdvanceSettings(TableEntity entity)
     {
         var jsonOpts = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true };
-        var coeffJson = entity.GetString("ElectricityCoefficientsJson") ?? "{}";
-        var coefficients = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, decimal>>(coeffJson)
-            ?? new Dictionary<string, decimal>();
-
         var overridesJson = entity.GetString("HouseOverridesJson") ?? "{}";
         var overrides = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, HouseAdvanceOverride>>(overridesJson, jsonOpts)
             ?? new Dictionary<string, HouseAdvanceOverride>();
 
-        return new AdvanceSettings
-        {
-            WaterPricePerM3 = decimal.TryParse(entity.GetString("WaterPricePerM3"), NumberStyles.Any, CultureInfo.InvariantCulture, out var price) ? price : 0m,
-            WaterPriceValidFrom = entity.GetDateTimeOffset("WaterPriceValidFrom")?.UtcDateTime ?? DateTime.MinValue,
-            WaterPriceValidTo = entity.GetDateTimeOffset("WaterPriceValidTo")?.UtcDateTime,
-            MonthlyElectricityCost = decimal.TryParse(entity.GetString("MonthlyElectricityCost"), NumberStyles.Any, CultureInfo.InvariantCulture, out var elec) ? elec : 0m,
-            MonthlyCommonBaseFee = decimal.TryParse(entity.GetString("MonthlyCommonBaseFee"), NumberStyles.Any, CultureInfo.InvariantCulture, out var common) ? common : 0m,
-            LossAllocationMethod = entity.GetString("LossAllocationMethod") ?? "ProportionalToConsumption",
-            ElectricityCoefficients = coefficients,
-            HouseOverrides = overrides,
-        };
+        return new AdvanceSettings { HouseOverrides = overrides };
     }
 
     // ───────────────────── Calendar days (X5) ─────────────────────

@@ -1,47 +1,42 @@
 import { apiClient } from './client.ts';
 
+/** Admin-set monthly advance of one house (Kč per component). */
 export interface HouseAdvanceOverride {
   waterAdvance: number;
   electricityAdvance: number;
   commonAdvance: number;
 }
 
+/** Only per-house overrides remain; members receive an empty map. */
 export interface AdvanceSettingsData {
-  waterPricePerM3: number;
-  waterPriceValidFrom: string;
-  waterPriceValidTo: string | null;
-  monthlyElectricityCost: number;
-  monthlyCommonBaseFee: number;
-  electricityCoefficients: Record<string, number>;
   houseOverrides: Record<string, HouseAdvanceOverride>;
-  lossAllocationMethod: string;
+}
+
+export interface AdvanceAmounts {
+  water: number;
+  electricity: number;
+  common: number;
+  total: number;
 }
 
 export interface HouseAdvanceCalc {
   houseId: string;
   houseName: string;
-  avgMonthlyM3: number;
-  lossShareM3: number;
-  totalWaterM3: number;
-  sharePercent: number;
-  electricityCoefficient: number;
-  recommended: { water: number; electricity: number; common: number; total: number };
-  actual: { water: number; electricity: number; common: number; total: number };
+  /** Costs allocated to the house by the ledger over the period. */
+  costsInPeriod: AdvanceAmounts;
+  /** costsInPeriod ÷ months, rounded to whole Kč. */
+  recommended: AdvanceAmounts;
+  /** Admin override if set, otherwise the recommendation. */
+  actual: AdvanceAmounts;
   hasOverride: boolean;
 }
 
 export interface AdvanceCalculation {
-  settings: {
-    waterPricePerM3: number;
-    waterPriceValidFrom: string;
-    waterPriceValidTo: string | null;
-    monthlyElectricityCost: number;
-    monthlyCommonBaseFee: number;
-    lossAllocationMethod: string;
-  };
-  mainMeterMonthlyM3: number;
-  totalIndividualMonthlyM3: number;
-  monthlyLossM3: number;
+  /** yyyy-MM-dd */
+  from: string;
+  /** yyyy-MM-dd */
+  to: string;
+  months: number;
   houses: HouseAdvanceCalc[];
 }
 

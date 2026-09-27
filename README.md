@@ -13,10 +13,9 @@ Webový portál sdružení **Oáza Zadní Kopanina** (Praha, 8 domácností, ~15
 | Oblast | Co umí |
 |--------|--------|
 | **Odečty** | import z Excelu nebo ze schránky (export odečítacího zařízení), ruční zadání, opravy, graf spotřeby, detekce anomálií |
-| **Zálohy** | výpočet doporučených měsíčních záloh (voda, elektřina vodárny, společný základ), ruční přepisy per dům |
-| **Saldo a platby** | evidence záloh, doplatků, výplat přeplatků a počátečních stavů; jedno čisté saldo na dům |
-| **Vyúčtování** | zúčtovací období, faktury dodavatele vody, výpočet podílů se ztrátou, čerpání ze společného fondu, uzavření s PDF vyúčtováním |
-| **Hospodaření** | příjmy a výdaje spolku, přílohy, roční export PDF/XLSX, zůstatek fondu, přehled přijatých faktur |
+| **Zálohy** | doporučené měsíční zálohy z nákladů domu za posledních 12 měsíců (voda, elektřina, společné), ruční přepisy per dům |
+| **Platby** | evidence záloh, doplatků a výplat přeplatků, import z bankovního výpisu |
+| **Hospodaření** | příjmy a výdaje spolku, přílohy, roční export PDF/XLSX, zůstatek fondu |
 | **Dokumenty** | stanovy, zápisy, smlouvy — verzované (posledních 10 verzí) |
 | **Nápověda** | kontextová nápověda a stránka *Jak to funguje* se slovníkem pojmů |
 | **Přihlášení** | Microsoft Entra ID nebo odkaz e-mailem (magic link); role Admin / Účetní / Člen |

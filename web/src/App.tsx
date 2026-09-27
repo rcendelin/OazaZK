@@ -10,7 +10,6 @@ import { MagicLinkVerifyPage } from './pages/MagicLinkVerifyPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReadingsOverviewPage } from './pages/ReadingsOverviewPage';
 import { ReadingsImportPage } from './pages/ReadingsImportPage';
-import { BillingPage } from './pages/BillingPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { FinancePage } from './pages/FinancePage';
 import { HousesPage } from './pages/admin/HousesPage';
@@ -29,7 +28,6 @@ import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
 import { SaldoPage } from './pages/SaldoPage';
-import { InvoicesOverviewPage } from './pages/InvoicesOverviewPage';
 import { JakToFungujePage } from './pages/JakToFungujePage';
 
 function App() {
@@ -79,7 +77,6 @@ function App() {
               <Route path="/saldo-domu" element={<LedgerPage />} />
               <Route path="/pokladna" element={<CashBookPage />} />
               <Route path="/fond" element={<OffBookFundPage />} />
-              <Route path="/billing" element={<BillingPage />} />
               <Route
                 path="/mezizaverky"
                 element={
@@ -101,14 +98,6 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Accountant">
                     <CostsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/prehled-faktur"
-                element={
-                  <ProtectedRoute requiredRole="Accountant">
-                    <InvoicesOverviewPage />
                   </ProtectedRoute>
                 }
               />

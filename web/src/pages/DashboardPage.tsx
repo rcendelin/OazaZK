@@ -4,10 +4,9 @@ import { useAuth } from '../auth/AuthContext.tsx';
 import { useApi } from '../hooks/useApi.ts';
 import { getHouses } from '../api/houses.ts';
 import { getAllReadings } from '../api/readings.ts';
-import { getBillingPeriods } from '../api/billing.ts';
 import { getFinanceSummary, getFinanceBalance, getFinanceRecords } from '../api/finance.ts';
 import { getDocuments } from '../api/documents.ts';
-import { getSaldo } from '../api/advances.ts';
+import { getHouseLedger } from '../api/ledger.ts';
 import { MetricCard } from '../components/MetricCard.tsx';
 import { ConsumptionChart } from '../components/ConsumptionChart.tsx';
 import { Spinner } from '../components/Spinner.tsx';
@@ -18,8 +17,7 @@ import {
   Home,
   Wallet,
   Upload,
-  Receipt,
-  Calendar,
+  BookOpen,
   FileText,
   ArrowRight,
   TrendingUp,
@@ -224,11 +222,6 @@ function AdminDashboard() {
     [],
   );
 
-  const { data: periods, loading: periodsLoading } = useApi(
-    () => getBillingPeriods(),
-    [],
-  );
-
   const { data: financeSummary, loading: financeSummaryLoading } = useApi(
     () => getFinanceSummary(year),
     [year],
@@ -252,7 +245,6 @@ function AdminDashboard() {
   const loading =
     housesLoading ||
     readingsLoading ||
-    periodsLoading ||
     financeSummaryLoading ||
     financeBalanceLoading ||
     financeRecordsLoading ||
@@ -301,11 +293,6 @@ function AdminDashboard() {
       activeHouses,
     };
   }, [allReadings, houses, latestByMeter]);
-
-  const openPeriods = useMemo(
-    () => periods?.filter((p) => p.status === 'Open') ?? [],
-    [periods],
-  );
 
   const houseReadingsMap = useMemo(() => {
     if (!allReadings || !houses) return [];
@@ -494,46 +481,13 @@ function AdminDashboard() {
                 Import odečtů
               </button>
               <button
-                onClick={() => navigate('/billing')}
+                onClick={() => navigate('/saldo-domu')}
                 className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-sunken"
               >
-                <Receipt size={18} />
-                Nové vyúčtování
+                <BookOpen size={18} />
+                Saldo domů
               </button>
             </div>
-          </div>
-
-          {/* Open billing periods */}
-          <div className="rounded-2xl bg-surface-raised p-6 shadow-card">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-              Otevřená období
-            </h3>
-            {openPeriods.length === 0 ? (
-              <p className="mt-4 text-sm text-text-muted">
-                Žádná otevřená období
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {openPeriods.map((period) => (
-                  <li
-                    key={period.id}
-                    className="rounded-xl border border-border p-3.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Calendar size={14} className="text-accent" />
-                      <p className="text-sm font-medium text-text-primary">
-                        {period.name}
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs text-text-muted">
-                      {czDate.format(new Date(period.dateFrom))}
-                      {' \u2013 '}
-                      {czDate.format(new Date(period.dateTo))}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </div>
       </div>
@@ -558,12 +512,7 @@ function MemberDashboard() {
     [],
   );
 
-  const { data: periods, loading: periodsLoading } = useApi(
-    () => getBillingPeriods(),
-    [],
-  );
-
-  const loading = readingsLoading || periodsLoading;
+  const loading = readingsLoading;
 
   const myReading = useMemo(() => {
     if (!allReadings) return null;
@@ -572,17 +521,6 @@ function MemberDashboard() {
       .sort((a, b) => new Date(b.readingDate).getTime() - new Date(a.readingDate).getTime());
     return houseReadings[0] ?? null;
   }, [allReadings]);
-
-  const lastClosedPeriod = useMemo(
-    () =>
-      periods
-        ?.filter((p) => p.status === 'Closed')
-        .sort(
-          (a, b) =>
-            new Date(b.dateTo).getTime() - new Date(a.dateTo).getTime(),
-        )[0] ?? null,
-    [periods],
-  );
 
   const memberBalance = useMemberBalance(user?.houseId ?? null);
 
@@ -602,7 +540,7 @@ function MemberDashboard() {
       </p>
 
       {/* Metric cards */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Stav vodoměru"
           value={
@@ -624,41 +562,26 @@ function MemberDashboard() {
           subtitle="Měsíční spotřeba"
           icon={<Gauge size={20} />}
         />
-        <MetricCard
-          title="Poslední vyúčtování"
-          value={lastClosedPeriod ? lastClosedPeriod.name : '\u2014'}
-          subtitle={
-            lastClosedPeriod
-              ? `Období do ${czDate.format(new Date(lastClosedPeriod.dateTo))}`
-              : 'Žádné uzavřené období'
-          }
-          icon={<Receipt size={20} />}
-        />
-        <MetricCard
-          title="Stav účtu"
-          value={
-            memberBalance !== null
-              ? `${czCurrency.format(memberBalance)} Kč`
-              : '\u2014'
-          }
-          subtitle={
-            memberBalance !== null
-              ? memberBalance >= 0
-                ? 'Přeplatek'
-                : 'Nedoplatek'
-              : 'Zálohy vs. vyúčtování'
-          }
-          icon={<Wallet size={20} />}
-          trend={
-            memberBalance !== null
-              ? memberBalance > 0
-                ? 'up'
-                : memberBalance < 0
-                  ? 'down'
-                  : 'neutral'
-              : undefined
-          }
-        />
+        <Link to="/saldo-domu" className="block rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent/40">
+          <MetricCard
+            title="Saldo domu"
+            value={
+              memberBalance !== null
+                ? `${czCurrency.format(Math.abs(memberBalance))} Kč`
+                : '\u2014'
+            }
+            subtitle={
+              memberBalance === null
+                ? 'Zobrazit saldo domu'
+                : Math.round(memberBalance) === 0
+                  ? 'Vyrovnáno'
+                  : memberBalance > 0
+                    ? 'Přeplatek'
+                    : 'Nedoplatek'
+            }
+            icon={<Wallet size={20} />}
+          />
+        </Link>
       </div>
 
       {/* Consumption chart */}
@@ -668,45 +591,19 @@ function MemberDashboard() {
           defaultRange={12}
         />
       </div>
-
-      {/* Last settlement info */}
-      <div className="mt-6 rounded-2xl bg-surface-raised p-6 shadow-card">
-        <h2 className="text-base font-semibold text-text-primary">
-          Poslední vyúčtování
-        </h2>
-        {lastClosedPeriod ? (
-          <p className="mt-2 text-sm text-text-secondary">
-            Období: {lastClosedPeriod.name} (
-            {czDate.format(new Date(lastClosedPeriod.dateFrom))}
-            {' \u2013 '}
-            {czDate.format(new Date(lastClosedPeriod.dateTo))})
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-text-muted">
-            Zatím nebylo provedeno žádné vyúčtování.
-          </p>
-        )}
-      </div>
     </div>
   );
 }
 
+/** Current saldo of the member's house from the ledger (X1: positive = přeplatek, negative = nedoplatek). */
 function useMemberBalance(houseId: string | null): number | null {
-  const { data: saldos, loading } = useApi(
-    async () => {
-      if (!houseId) return null;
-      return getSaldo(houseId);
-    },
+  const { data: ledger, loading } = useApi(
+    async () => (houseId ? getHouseLedger(houseId, {}) : null),
     [houseId],
   );
 
-  return useMemo(() => {
-    if (loading || !saldos || !houseId) return null;
-    const mine = saldos.find((s) => s.houseId === houseId);
-    if (!mine) return null;
-    // Sign convention: positive = přeplatek, negative = nedoplatek.
-    return -mine.totalSaldo;
-  }, [saldos, houseId, loading]);
+  if (loading || !ledger || !houseId) return null;
+  return ledger.saldo;
 }
 
 export function DashboardPage() {

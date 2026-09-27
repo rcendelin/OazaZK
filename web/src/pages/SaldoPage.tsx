@@ -3,12 +3,10 @@ import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../auth/AuthContext';
 import {
-  getSaldo,
   getAllAdvances,
   createAdvance,
   createDoplatek,
   createPayout,
-  createOpeningBalance,
   deletePayment,
 } from '../api/advances';
 import { calculateAdvances } from '../api/advanceSettings';
@@ -17,8 +15,7 @@ import { Spinner } from '../components/Spinner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { HelpNote } from '../components/help/HelpNote';
 import { HelpDisclosure } from '../components/help/HelpDisclosure';
-import { HelpTerm } from '../components/help/HelpTerm';
-import type { HouseSaldo, AdvancePayment, House, PaymentType } from '../types';
+import type { AdvancePayment, House, PaymentType } from '../types';
 import type { AdvanceCalculation } from '../api/advanceSettings';
 import { parseCzechNumber } from '../utils/number';
 import { todayIso } from '../utils/date';
@@ -27,15 +24,12 @@ const fmt = (v: number | null | undefined) => {
   const n = typeof v === 'number' && !isNaN(v) ? v : 0;
   return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 };
-const fmt1 = (v: number | null | undefined) => {
-  const n = typeof v === 'number' && !isNaN(v) ? v : 0;
-  return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
-};
 const fmtDate = (s: string | null | undefined) => {
   if (!s || s.startsWith('0001')) return '—';
   try { return new Intl.DateTimeFormat('cs-CZ').format(new Date(s)); } catch { return '—'; }
 };
 
+// OpeningBalance stays only to label records made before opening balances moved to Správa → Počáteční stavy.
 const typeLabel: Record<PaymentType, string> = {
   Advance: 'Záloha',
   Doplatek: 'Doplatek',
@@ -49,39 +43,26 @@ const typeChipCls: Record<PaymentType, string> = {
   OpeningBalance: 'bg-surface-sunken text-text-secondary',
 };
 
-/** Coloured saldo cell: positive = nedoplatek (red), negative = přeplatek (green). */
-function SaldoValue({ value }: { value: number }) {
-  if (Math.abs(value) < 0.5) return <span className="text-text-muted">0</span>;
-  const owes = value > 0;
-  return (
-    <span className={owes ? 'text-danger font-semibold' : 'text-success font-semibold'}>
-      {owes ? `+${fmt(value)}` : fmt(value)}
-    </span>
-  );
-}
-
+/**
+ * Platby: recording payments (advance / doplatek / payout) and the list of recorded payments.
+ * The house saldo itself lives in the ledger (/saldo-domu).
+ */
 export function SaldoPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
-  const isMember = user?.role === 'Member';
-  const memberHouseId = user?.houseId ?? undefined;
 
-  const { data: saldos, loading: saldoLoading, refetch: refetchSaldo } = useApi<HouseSaldo[]>(
-    useCallback(() => getSaldo(isMember ? memberHouseId : undefined), [isMember, memberHouseId]),
-  );
-  const { data: payments, refetch: refetchPayments } = useApi<AdvancePayment[]>(
-    useCallback(() => (isAdmin ? getAllAdvances() : Promise.resolve([])), [isAdmin]),
+  const { data: payments, loading, error, refetch: refetchPayments } = useApi<AdvancePayment[]>(
+    useCallback(() => getAllAdvances(), []),
   );
   const { data: houses } = useApi<House[]>(useCallback(() => getHouses(), []));
-  const { data: plan } = useApi<AdvanceCalculation>(
-    useCallback(() => (isAdmin ? calculateAdvances() : Promise.resolve(null as unknown as AdvanceCalculation)), [isAdmin]),
+  const { data: plan } = useApi<AdvanceCalculation | null>(
+    useCallback(() => (isAdmin ? calculateAdvances() : Promise.resolve(null)), [isAdmin]),
   );
 
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AdvancePayment | null>(null);
 
-  if (saldoLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+  if (loading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
 
   const activeHouses = houses?.filter((h) => h.isActive) ?? [];
 
@@ -89,7 +70,7 @@ export function SaldoPage() {
     <div className="space-y-6">
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-text-primary">Saldo a platby</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Platby</h1>
           {isAdmin && (
             <Link to="/advances/import" className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
               Import z banky
@@ -97,10 +78,9 @@ export function SaldoPage() {
           )}
         </div>
         <p className="mt-1 text-sm text-text-secondary">
-          Každý dům má jeden čistý zůstatek (přeplatek v jedné složce pokryje nedoplatek v jiné).
-          Kladné = nedoplatek, záporné = přeplatek. Rozpad na vodu/elektřinu/společný je informativní.
+          Zaznamenané zálohy, doplatky a výplaty přeplatků. Saldo domu najdete v části{' '}
+          <Link to="/saldo-domu" className="text-accent hover:underline">Saldo domu</Link>.
         </p>
-        <HelpNote sectionId="saldoLive" />
       </div>
 
       {msg && (
@@ -108,30 +88,24 @@ export function SaldoPage() {
           <p className={`text-sm ${msg.type === 'ok' ? 'text-success' : 'text-danger'}`}>{msg.text}</p>
         </div>
       )}
-
-      <SaldoTable
-        saldos={saldos ?? []}
-        expanded={expanded}
-        onToggle={(id) => setExpanded(expanded === id ? null : id)}
-      />
+      {error && <div className="rounded-xl bg-danger-light p-4 text-sm text-danger">{error}</div>}
 
       {isAdmin && (
         <PaymentForm
           houses={activeHouses}
           plan={plan ?? null}
-          saldos={saldos ?? []}
           onSaved={(text) => {
             setMsg({ type: 'ok', text });
-            refetchSaldo();
             refetchPayments();
           }}
           onError={(text) => setMsg({ type: 'err', text })}
         />
       )}
 
-      {isAdmin && payments && payments.length > 0 && (
-        <PaymentsList payments={payments} onDelete={(p) => setConfirmDelete(p)} />
-      )}
+      <PaymentsList
+        payments={payments ?? []}
+        onDelete={isAdmin ? (p) => setConfirmDelete(p) : undefined}
+      />
 
       <ConfirmDialog
         isOpen={confirmDelete !== null}
@@ -151,7 +125,6 @@ export function SaldoPage() {
           try {
             await deletePayment(p.houseId, p.rowKey);
             setMsg({ type: 'ok', text: 'Záznam smazán.' });
-            refetchSaldo();
             refetchPayments();
           } catch (err) {
             setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Smazání selhalo.' });
@@ -162,177 +135,18 @@ export function SaldoPage() {
   );
 }
 
-// ───────────────────── Saldo table ─────────────────────
-
-function SaldoTable({
-  saldos,
-  expanded,
-  onToggle,
-}: {
-  saldos: HouseSaldo[];
-  expanded: string | null;
-  onToggle: (houseId: string) => void;
-}) {
-  if (saldos.length === 0) {
-    return (
-      <div className="bg-surface-raised border border-border rounded-2xl p-6 shadow-card text-sm text-text-muted">
-        Zatím nejsou žádná data pro výpočet salda.
-      </div>
-    );
-  }
-
-  const totalSaldo = saldos.reduce((acc, s) => acc + s.totalSaldo, 0);
-
-  return (
-    <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
-      <div className="px-6 py-4 border-b border-border">
-        <h2 className="text-lg font-semibold">Saldo domácností</h2>
-        <p className="text-xs text-text-muted mt-0.5">Klikněte na dům pro rozpad podle složek a období.</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-surface-sunken border-b border-border text-xs text-text-muted uppercase">
-              <th className="text-left px-4 py-3">Domácnost</th>
-              <th className="text-right px-3 py-3 bg-accent-light border-l border-border">Voda</th>
-              <th className="text-right px-3 py-3 bg-warning-light border-l border-border">Elektřina</th>
-              <th className="text-right px-3 py-3 bg-surface-sunken border-l border-border">Společný</th>
-              <th className="text-right px-3 py-3 border-l border-border">Úpravy <HelpTerm id="upravy" /></th>
-              <th className="text-right px-4 py-3 bg-success-light border-l border-border font-bold">Čistý zůstatek <HelpTerm id="cistyZustatek" /></th>
-            </tr>
-          </thead>
-          <tbody>
-            {saldos.map((s) => (
-              <SaldoRow key={s.houseId} saldo={s} expanded={expanded === s.houseId} onToggle={() => onToggle(s.houseId)} />
-            ))}
-            <tr className="bg-surface-sunken font-semibold border-t-2">
-              <td className="px-4 py-3">Celkem</td>
-              <td className="px-3 py-3 text-right font-mono bg-accent-light/50 border-l border-border"><SaldoValue value={saldos.reduce((a, s) => a + s.water.saldo, 0)} /></td>
-              <td className="px-3 py-3 text-right font-mono bg-warning-light/50 border-l border-border"><SaldoValue value={saldos.reduce((a, s) => a + s.electricity.saldo, 0)} /></td>
-              <td className="px-3 py-3 text-right font-mono bg-surface-sunken border-l border-border"><SaldoValue value={saldos.reduce((a, s) => a + s.common.saldo, 0)} /></td>
-              <td className="px-3 py-3 text-right font-mono border-l border-border"><SaldoValue value={saldos.reduce((a, s) => a + s.netAdjustments, 0)} /></td>
-              <td className="px-4 py-3 text-right font-mono bg-success-light/50 border-l border-border"><SaldoValue value={totalSaldo} /></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function SaldoRow({ saldo, expanded, onToggle }: { saldo: HouseSaldo; expanded: boolean; onToggle: () => void }) {
-  return (
-    <>
-      <tr className="border-b border-border hover:bg-surface-sunken/50 cursor-pointer" onClick={onToggle}>
-        <td className="px-4 py-3 font-medium">
-          <span className="text-text-muted mr-1">{expanded ? '▾' : '▸'}</span>
-          {saldo.houseName}
-          {saldo.dissolving && (
-            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-warning-light text-warning font-medium">rozpouští přeplatek</span>
-          )}
-          {saldo.totalSaldo < 0 && saldo.monthsCovered != null && (
-            <span className="ml-2 text-[10px] text-text-muted">přeplatek ≈ {fmt1(saldo.monthsCovered)} měs.</span>
-          )}
-        </td>
-        <td className="px-3 py-3 text-right font-mono bg-accent-light/30 border-l border-border"><SaldoValue value={saldo.water.saldo} /></td>
-        <td className="px-3 py-3 text-right font-mono bg-warning-light/30 border-l border-border"><SaldoValue value={saldo.electricity.saldo} /></td>
-        <td className="px-3 py-3 text-right font-mono bg-surface-sunken border-l border-border"><SaldoValue value={saldo.common.saldo} /></td>
-        <td className="px-3 py-3 text-right font-mono border-l border-border">
-          {Math.abs(saldo.netAdjustments) < 0.5 ? <span className="text-text-muted">—</span> : <SaldoValue value={saldo.netAdjustments} />}
-        </td>
-        <td className="px-4 py-3 text-right font-mono bg-success-light/30 border-l border-border"><SaldoValue value={saldo.totalSaldo} /></td>
-      </tr>
-      {expanded && (
-        <tr className="bg-surface-sunken/40 border-b border-border">
-          <td colSpan={6} className="px-4 py-3">
-            <div className="text-xs text-text-secondary space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {([
-                  ['Voda', saldo.water, 'text-accent'],
-                  ['Elektřina vodárna', saldo.electricity, 'text-warning'],
-                  ['Společný základ', saldo.common, 'text-text-secondary'],
-                ] as const).map(([label, c, cls]) => (
-                  <div key={label} className="rounded-lg bg-surface-raised border border-border p-2">
-                    <p className={`font-medium ${cls}`}>{label}</p>
-                    <p className="mt-0.5">Předpis: <span className="font-mono">{fmt(c.charged)}</span> Kč</p>
-                    <p>Zaplaceno: <span className="font-mono">{fmt(c.paid)}</span> Kč</p>
-                    <p>Saldo: <SaldoValue value={c.saldo} /> Kč</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-lg bg-surface-raised border border-border p-2 flex flex-wrap gap-x-6 gap-y-1">
-                <span>Součet složek: <SaldoValue value={saldo.componentSaldo} /> Kč</span>
-                <span>Úpravy (výplaty / počáteční stav): <SaldoValue value={saldo.netAdjustments} /> Kč</span>
-                <span className="font-semibold">Čistý zůstatek: <SaldoValue value={saldo.totalSaldo} /> Kč</span>
-                {saldo.prescribedMonthly > 0 && <span>Předepsaná platba: <span className="font-mono">{fmt(saldo.prescribedMonthly)}</span> Kč/měs.</span>}
-              </div>
-
-              {saldo.adjustments.length > 0 && (
-                <div>
-                  <p className="font-medium mb-1">Úpravy zůstatku</p>
-                  <table className="w-full">
-                    <tbody>
-                      {saldo.adjustments.map((a) => (
-                        <tr key={a.rowKey} className="border-t border-border/60">
-                          <td className="py-1">{fmtDate(a.date)}</td>
-                          <td className="py-1">{typeLabel[a.type]}</td>
-                          <td className="py-1 text-text-muted">{a.note}</td>
-                          <td className="py-1 text-right font-mono"><SaldoValue value={a.amount} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {saldo.periods.length > 0 && (
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-[10px] text-text-muted uppercase">
-                      <th className="text-left py-1">Období</th>
-                      <th className="text-right py-1">Voda</th>
-                      <th className="text-right py-1">Elektřina</th>
-                      <th className="text-right py-1">Společný</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {saldo.periods.map((p) => (
-                      <tr key={p.periodId} className="border-t border-border/60">
-                        <td className="py-1">
-                          {p.periodName}
-                          {!p.closed && <span className="ml-1 text-[10px] text-accent">(otevřené)</span>}
-                        </td>
-                        <td className="py-1 text-right font-mono"><SaldoValue value={p.water.saldo} /></td>
-                        <td className="py-1 text-right font-mono"><SaldoValue value={p.electricity.saldo} /></td>
-                        <td className="py-1 text-right font-mono"><SaldoValue value={p.common.saldo} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
 // ───────────────────── Payment form ─────────────────────
 
-type Kind = 'advance' | 'doplatek' | 'payout' | 'opening';
+type Kind = 'advance' | 'doplatek' | 'payout';
 
 function PaymentForm({
   houses,
   plan,
-  saldos,
   onSaved,
   onError,
 }: {
   houses: House[];
   plan: AdvanceCalculation | null;
-  saldos: HouseSaldo[];
   onSaved: (text: string) => void;
   onError: (text: string) => void;
 }) {
@@ -346,7 +160,6 @@ function PaymentForm({
   const [elec, setElec] = useState('');
   const [common, setCommon] = useState('');
   const [amount, setAmount] = useState('');
-  const [isOverpayment, setIsOverpayment] = useState(true);
   const [note, setNote] = useState('');
   const savingRef = useRef(false);
 
@@ -355,24 +168,10 @@ function PaymentForm({
 
   const prefillFromPlan = () => {
     const h = plan?.houses.find((x) => x.houseId === houseId);
-    if (!h) { onError('Pro tento dům nejsou v plánu doporučené zálohy.'); return; }
+    if (!h) { onError('Pro tento dům není předepsaná záloha.'); return; }
     setWater(String(h.actual.water));
     setElec(String(h.actual.electricity));
     setCommon(String(h.actual.common));
-  };
-
-  const prefillFromSaldo = () => {
-    const s = saldos.find((x) => x.houseId === houseId);
-    if (!s) { onError('Pro tento dům není saldo.'); return; }
-    setWater(s.water.saldo > 0 ? String(Math.round(s.water.saldo)) : '0');
-    setElec(s.electricity.saldo > 0 ? String(Math.round(s.electricity.saldo)) : '0');
-    setCommon(s.common.saldo > 0 ? String(Math.round(s.common.saldo)) : '0');
-  };
-
-  const prefillPayout = () => {
-    const s = saldos.find((x) => x.houseId === houseId);
-    if (!s) { onError('Pro tento dům není saldo.'); return; }
-    setAmount(s.totalSaldo < 0 ? String(Math.round(-s.totalSaldo)) : '0');
   };
 
   const reset = () => { setWater(''); setElec(''); setCommon(''); setAmount(''); setNote(''); };
@@ -396,14 +195,10 @@ function PaymentForm({
           await createDoplatek({ ...body, note: note || undefined });
           onSaved('Doplatek uložen.');
         }
-      } else if (kind === 'payout') {
+      } else {
         if (num(amount) <= 0) { onError('Zadejte částku výplaty.'); return; }
         await createPayout({ houseId, amount: num(amount), paymentDate: new Date(date).toISOString(), note: note || undefined });
         onSaved('Výplata přeplatku uložena.');
-      } else {
-        if (num(amount) <= 0) { onError('Zadejte částku počátečního stavu.'); return; }
-        await createOpeningBalance({ houseId, amount: num(amount), isOverpayment, paymentDate: new Date(date).toISOString(), note: note || undefined });
-        onSaved('Počáteční stav uložen.');
       }
       reset();
     } catch (err) {
@@ -420,14 +215,17 @@ function PaymentForm({
     { k: 'advance', label: 'Měsíční záloha' },
     { k: 'doplatek', label: 'Doplatek' },
     { k: 'payout', label: 'Výplata přeplatku' },
-    { k: 'opening', label: 'Počáteční stav' },
   ];
 
   return (
     <div className="bg-surface-raised border border-border rounded-2xl p-6 shadow-card space-y-4">
-      <h2 className="text-lg font-semibold">Zaznamenat platbu / úpravu</h2>
+      <h2 className="text-lg font-semibold">Zaznamenat platbu</h2>
       <HelpNote sectionId="paymentTypes" />
       <HelpDisclosure sectionId="paymentTypes" />
+      <p className="text-xs text-text-muted">
+        Počáteční stavy domů se zadávají v části Správa →{' '}
+        <Link to="/admin/opening-balances" className="text-accent hover:underline">Počáteční stavy</Link>.
+      </p>
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
@@ -488,19 +286,10 @@ function PaymentForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">
-              {kind === 'payout' ? 'Vyplacená částka (Kč)' : 'Částka (Kč)'}
+              Vyplacená částka (Kč)
             </label>
             <input type="text" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputCls} />
           </div>
-          {kind === 'opening' && (
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Typ</label>
-              <select value={isOverpayment ? 'over' : 'under'} onChange={(e) => setIsOverpayment(e.target.value === 'over')} className={inputCls}>
-                <option value="over">Přeplatek (dům má u nás kredit)</option>
-                <option value="under">Nedoplatek (dům nám dluží)</option>
-              </select>
-            </div>
-          )}
         </div>
       )}
 
@@ -516,18 +305,8 @@ function PaymentForm({
           Uložit{componentKind ? ` (${fmt(componentTotal)} Kč)` : ''}
         </button>
         {kind === 'advance' && (
-          <button onClick={prefillFromPlan} className="bg-surface-sunken text-text-secondary px-3 py-2 rounded-xl hover:bg-surface-sunken text-sm">
-            Předvyplnit dle plánu
-          </button>
-        )}
-        {kind === 'doplatek' && (
-          <button onClick={prefillFromSaldo} className="bg-surface-sunken text-text-secondary px-3 py-2 rounded-xl hover:bg-surface-sunken text-sm">
-            Předvyplnit dle nedoplatku
-          </button>
-        )}
-        {kind === 'payout' && (
-          <button onClick={prefillPayout} className="bg-surface-sunken text-text-secondary px-3 py-2 rounded-xl hover:bg-surface-sunken text-sm">
-            Předvyplnit dle přeplatku
+          <button onClick={prefillFromPlan} disabled={!plan} className="bg-surface-sunken text-text-secondary px-3 py-2 rounded-xl hover:bg-surface-sunken text-sm disabled:opacity-50">
+            Předvyplnit předepsanou zálohu
           </button>
         )}
       </div>
@@ -537,62 +316,68 @@ function PaymentForm({
 
 // ───────────────────── Payments list ─────────────────────
 
-function PaymentsList({ payments, onDelete }: { payments: AdvancePayment[]; onDelete: (p: AdvancePayment) => void }) {
+function PaymentsList({ payments, onDelete }: { payments: AdvancePayment[]; onDelete?: (p: AdvancePayment) => void }) {
   const sorted = [...payments].sort((a, b) => (a.paymentDate < b.paymentDate ? 1 : -1));
   const isComponent = (p: AdvancePayment) => p.type === 'Advance' || p.type === 'Doplatek';
   return (
     <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
       <div className="px-6 py-4 border-b border-border">
-        <h2 className="text-lg font-semibold">Zaznamenané platby a úpravy</h2>
+        <h2 className="text-lg font-semibold">Zaznamenané platby</h2>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-surface-sunken border-b border-border text-xs text-text-muted uppercase">
-              <th className="text-left px-4 py-3">Datum</th>
-              <th className="text-left px-2 py-3">Domácnost</th>
-              <th className="text-left px-2 py-3">Typ</th>
-              <th className="text-right px-2 py-3">Voda</th>
-              <th className="text-right px-2 py-3">Elektřina</th>
-              <th className="text-right px-2 py-3">Společný</th>
-              <th className="text-right px-2 py-3 font-bold">Celkem</th>
-              <th className="text-left px-2 py-3">Poznámka</th>
-              <th className="px-2 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((p) => (
-              <tr key={`${p.houseId}-${p.rowKey}`} className="border-b border-border hover:bg-surface-sunken/50">
-                <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(p.paymentDate)}</td>
-                <td className="px-2 py-2.5">{p.houseName}</td>
-                <td className="px-2 py-2.5">
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${typeChipCls[p.type]}`}>{typeLabel[p.type]}</span>
-                </td>
-                <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.waterAmount) : '—'}</td>
-                <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.electricityAmount) : '—'}</td>
-                <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.commonAmount) : '—'}</td>
-                <td className="px-2 py-2.5 text-right font-mono font-semibold">{fmt(p.amount)}</td>
-                <td className="px-2 py-2.5 text-text-muted max-w-[12rem] truncate">
-                  {p.isFundTransfer && (
-                    <span className="mr-1 rounded bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
-                      Z fondu
-                    </span>
-                  )}
-                  {p.isFromBank && (
-                    <span className="mr-1 rounded bg-success-light px-1.5 py-0.5 text-xs font-medium text-success">
-                      Z banky
-                    </span>
-                  )}
-                  {p.note}
-                </td>
-                <td className="px-2 py-2.5 text-right">
-                  <button onClick={() => onDelete(p)} className="text-xs text-text-muted hover:text-danger">Smazat</button>
-                </td>
+      {sorted.length === 0 ? (
+        <p className="px-6 py-6 text-sm text-text-muted">Zatím nejsou zaznamenané žádné platby.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-surface-sunken border-b border-border text-xs text-text-muted uppercase">
+                <th className="text-left px-4 py-3">Datum</th>
+                <th className="text-left px-2 py-3">Domácnost</th>
+                <th className="text-left px-2 py-3">Typ</th>
+                <th className="text-right px-2 py-3">Voda</th>
+                <th className="text-right px-2 py-3">Elektřina</th>
+                <th className="text-right px-2 py-3">Společný</th>
+                <th className="text-right px-2 py-3 font-bold">Celkem</th>
+                <th className="text-left px-2 py-3">Poznámka</th>
+                {onDelete && <th className="px-2 py-3"></th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {sorted.map((p) => (
+                <tr key={`${p.houseId}-${p.rowKey}`} className="border-b border-border hover:bg-surface-sunken/50">
+                  <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(p.paymentDate)}</td>
+                  <td className="px-2 py-2.5">{p.houseName}</td>
+                  <td className="px-2 py-2.5">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${typeChipCls[p.type]}`}>{typeLabel[p.type]}</span>
+                  </td>
+                  <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.waterAmount) : '—'}</td>
+                  <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.electricityAmount) : '—'}</td>
+                  <td className="px-2 py-2.5 text-right font-mono">{isComponent(p) ? fmt(p.commonAmount) : '—'}</td>
+                  <td className="px-2 py-2.5 text-right font-mono font-semibold">{fmt(p.amount)}</td>
+                  <td className="px-2 py-2.5 text-text-muted max-w-[12rem] truncate">
+                    {p.isFundTransfer && (
+                      <span className="mr-1 rounded bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent">
+                        Z fondu
+                      </span>
+                    )}
+                    {p.isFromBank && (
+                      <span className="mr-1 rounded bg-success-light px-1.5 py-0.5 text-xs font-medium text-success">
+                        Z banky
+                      </span>
+                    )}
+                    {p.note}
+                  </td>
+                  {onDelete && (
+                    <td className="px-2 py-2.5 text-right">
+                      <button onClick={() => onDelete(p)} className="text-xs text-text-muted hover:text-danger">Smazat</button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

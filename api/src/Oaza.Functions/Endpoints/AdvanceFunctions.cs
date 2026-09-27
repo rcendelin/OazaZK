@@ -23,9 +23,7 @@ public class AdvanceFunctions
 {
     private readonly IAdvancePaymentRepository _advanceRepository;
     private readonly IHouseRepository _houseRepository;
-    private readonly IBillingPeriodRepository _billingPeriodRepository;
     private readonly IBankTransactionRepository _bankTransactionRepository;
-    private readonly CalculateHouseSaldoUseCase _calculateHouseSaldoUseCase;
     private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<AdvanceFunctions> _logger;
 
@@ -38,18 +36,14 @@ public class AdvanceFunctions
     public AdvanceFunctions(
         IAdvancePaymentRepository advanceRepository,
         IHouseRepository houseRepository,
-        IBillingPeriodRepository billingPeriodRepository,
         IBankTransactionRepository bankTransactionRepository,
-        CalculateHouseSaldoUseCase calculateHouseSaldoUseCase,
         IClosingBoundary closingBoundary,
         ILogger<AdvanceFunctions> logger)
     {
         _closingBoundary = closingBoundary ?? throw new ArgumentNullException(nameof(closingBoundary));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
-        _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
         _bankTransactionRepository = bankTransactionRepository ?? throw new ArgumentNullException(nameof(bankTransactionRepository));
-        _calculateHouseSaldoUseCase = calculateHouseSaldoUseCase ?? throw new ArgumentNullException(nameof(calculateHouseSaldoUseCase));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -209,16 +203,6 @@ public class AdvanceFunctions
                 throw new NotFoundException("AdvancePayment", $"{houseId}/{yearMonth}");
             }
 
-            // Check if advance falls in a closed billing period
-            var advanceDate = new DateTime(existing.Year, existing.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var allPeriods = await _billingPeriodRepository.GetByPartitionKeyAsync(PartitionKeys.Period);
-            var inClosedPeriod = allPeriods.Any(p =>
-                p.Status == BillingPeriodStatus.Closed &&
-                advanceDate >= p.DateFrom && advanceDate <= p.DateTo);
-            if (inClosedPeriod)
-            {
-                return await WriteErrorResponseAsync(req, 409, "Zálohu nelze upravit v uzavřeném zúčtovacím období.");
-            }
             if (ClosedPeriodPayments.IsClosed(existing, await _closingBoundary.GetLastClosedDayAsync(houseId)))
             {
                 return await WriteErrorResponseAsync(req, 409, "Zálohu nelze upravit — měsíc je uzavřený mezizávěrkou.");
@@ -452,22 +436,6 @@ public class AdvanceFunctions
                 throw new NotFoundException("Payment", $"{houseId}/{rowKey}");
             }
 
-            // A regular monthly advance inside a closed period cannot be removed
-            // (it is locked into that period's settlement). Doplatky are appends and
-            // can always be deleted — they never mutate a stored settlement.
-            if (existing.Type == PaymentType.Advance)
-            {
-                var advanceDate = new DateTime(existing.Year, existing.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                var allPeriods = await _billingPeriodRepository.GetByPartitionKeyAsync(PartitionKeys.Period);
-                var inClosedPeriod = allPeriods.Any(p =>
-                    p.Status == BillingPeriodStatus.Closed &&
-                    advanceDate >= p.DateFrom && advanceDate <= p.DateTo);
-                if (inClosedPeriod)
-                {
-                    return await WriteErrorResponseAsync(req, 409, "Zálohu nelze smazat v uzavřeném zúčtovacím období.");
-                }
-            }
-
             if (ClosedPeriodPayments.IsClosed(existing, await _closingBoundary.GetLastClosedDayAsync(houseId)))
             {
                 return await WriteErrorResponseAsync(req, 409, "Platbu nelze smazat — je v období uzavřeném mezizávěrkou.");
@@ -484,46 +452,6 @@ public class AdvanceFunctions
             _logger.LogInformation("Payment deleted for house {HouseId} ({RowKey}).", houseId, rowKey);
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new { deleted = true });
-        }
-        catch (AppException ex)
-        {
-            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
-        }
-        catch (Exception)
-        {
-            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
-        }
-    }
-
-    [Function("GetSaldo")]
-    public async Task<HttpResponseData> GetSaldoAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "advances/saldo")] HttpRequestData req,
-        FunctionContext context)
-    {
-        try
-        {
-            var user = GetAuthenticatedUser(context);
-            var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-            var houseIdParam = queryParams["houseId"];
-
-            // Members may only see their own house's saldo.
-            if (user.Role == UserRole.Member)
-            {
-                if (string.IsNullOrEmpty(user.HouseId))
-                {
-                    return await WriteJsonResponseAsync(req, HttpStatusCode.OK, Array.Empty<HouseSaldoResponse>());
-                }
-                if (!string.IsNullOrEmpty(houseIdParam) && houseIdParam != user.HouseId)
-                {
-                    return await WriteErrorResponseAsync(req, 403, "Přístup odepřen.");
-                }
-                houseIdParam = user.HouseId;
-            }
-
-            var saldo = await _calculateHouseSaldoUseCase.CalculateAsync(
-                string.IsNullOrEmpty(houseIdParam) ? null : houseIdParam);
-
-            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, saldo);
         }
         catch (AppException ex)
         {
