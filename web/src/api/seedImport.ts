@@ -1,4 +1,5 @@
 import { apiClient, ApiError } from './client.ts';
+import { fileNameFromDisposition } from '../utils/download';
 
 export interface SeedFileSummary {
   file: string;
@@ -69,8 +70,7 @@ export async function downloadSeedReport(
     body: JSON.stringify({ files }),
   });
   if (!response.ok) throw new ApiError(response.status, 'Stažení reportu se nezdařilo');
-  const disposition = response.headers.get('Content-Disposition') ?? '';
-  const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `import-report.${format}`;
+  const fileName = fileNameFromDisposition(response.headers.get('Content-Disposition'), `import-report.${format}`);
   const url = URL.createObjectURL(await response.blob());
   const a = document.createElement('a');
   a.href = url;

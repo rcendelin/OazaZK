@@ -40,6 +40,11 @@ internal static class ModelEndpoint
         {
             return await WriteJsonAsync(req, HttpStatusCode.BadRequest, new { error = "Neplatné tělo požadavku." });
         }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 400)
+        {
+            logger.LogWarning(ex, "Storage refused the value in {Url}.", req.Url);
+            return await WriteJsonAsync(req, HttpStatusCode.BadRequest, new { error = "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná." });
+        }
         catch (BusinessRuleException ex)
         {
             var errors = ex.Errors.Select(message => new { field = string.Empty, message }).ToList();
@@ -63,11 +68,7 @@ internal static class ModelEndpoint
         try
         {
             var (content, contentType, fileName) = await action();
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", contentType);
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
-            await response.WriteBytesAsync(content);
-            return response;
+            return await FileResponse.WriteAsync(req, content, contentType, fileName);
         }
         catch (ArgumentException ex)
         {

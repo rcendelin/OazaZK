@@ -67,6 +67,14 @@ public class BankImportFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during bank statement preview.");
@@ -100,6 +108,10 @@ public class BankImportFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during bank import confirmation.");
@@ -120,6 +132,14 @@ public class BankImportFunctions
                 .Select(ToResponse)
                 .ToList();
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, response);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -178,6 +198,10 @@ public class BankImportFunctions
         {
             return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
         }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating bank account mapping.");
@@ -196,6 +220,14 @@ public class BankImportFunctions
             await _mappingRepository.DeleteAsync(PartitionKeys.BankAccountMapping, accountKey);
             _logger.LogInformation("Bank account {AccountKey} unassigned.", accountKey);
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new { deleted = true });
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {

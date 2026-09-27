@@ -1,5 +1,6 @@
 import { apiClient, ApiError } from './client.ts';
 import type { AllocationMethod } from './costComponents.ts';
+import { fileNameFromDisposition } from '../utils/download';
 
 // House ledger and overview (T07). Saldo sign (X1): positive = přeplatek, negative = nedoplatek.
 
@@ -90,8 +91,7 @@ export async function downloadLedgerExport(
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!response.ok) throw new ApiError(response.status, 'Export se nezdařil');
-  const disposition = response.headers.get('Content-Disposition') ?? '';
-  const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'saldo';
+  const fileName = fileNameFromDisposition(response.headers.get('Content-Disposition'), 'saldo');
   const url = URL.createObjectURL(await response.blob());
   const a = document.createElement('a');
   a.href = url;

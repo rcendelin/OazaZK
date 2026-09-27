@@ -22,6 +22,10 @@ public class CostEntriesUseCase
 {
     public const string CostEntryEntity = "CostEntry";
 
+    public const int MaxNoteLength = 2000;
+    public const int MaxSupplierLength = 200;
+    public const decimal MaxAmount = 100_000_000m;
+
     private readonly ICostEntryRepository _entries;
     private readonly ICostComponentRepository _components;
     private readonly IComponentAllocationRuleRepository _rules;
@@ -227,6 +231,12 @@ public class CostEntriesUseCase
         else if (entry.PeriodFrom < component.StartDate)
             errors.Add($"Období začíná před začátkem účtování složky ({Day(component.StartDate)}); starší náklady se nezadávají (R3).");
 
+        if (entry.Note?.Length > MaxNoteLength)
+            errors.Add($"Poznámka může mít nejvýš {MaxNoteLength} znaků.");
+        if (entry.Supplier?.Length > MaxSupplierLength)
+            errors.Add($"Dodavatel může mít nejvýš {MaxSupplierLength} znaků.");
+        if (Math.Abs(entry.Amount) > MaxAmount)
+            errors.Add("Částka je mimo rozumný rozsah.");
         if (decimal.Round(entry.Amount, 2) != entry.Amount)
             errors.Add("Částka může mít nejvýš dvě desetinná místa.");
         if (entry.Type == CostEntryType.Advance && entry.Amount <= 0)

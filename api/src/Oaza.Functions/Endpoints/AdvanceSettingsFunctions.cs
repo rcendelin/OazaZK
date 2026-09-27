@@ -54,6 +54,14 @@ public class AdvanceSettingsFunctions
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
         }
         catch (AppException ex) { return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message); }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Advance settings error.");
@@ -86,6 +94,14 @@ public class AdvanceSettingsFunctions
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
         }
         catch (AppException ex) { return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message); }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating advance settings.");
@@ -129,6 +145,14 @@ public class AdvanceSettingsFunctions
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, result);
         }
         catch (AppException ex) { return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message); }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calculating advances.");

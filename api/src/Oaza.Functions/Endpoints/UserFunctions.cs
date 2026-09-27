@@ -59,6 +59,14 @@ public class UserFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -155,6 +163,14 @@ public class UserFunctions
                 await _emailService.SendEmailAsync(user.Email, user.Name, subject, plainText, html);
                 _logger.LogInformation("Invitation email sent to {Email}.", user.Email);
             }
+            catch (System.Text.Json.JsonException)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+            }
+            catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+            {
+                return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+            }
             catch (Exception emailEx)
             {
                 _logger.LogError(emailEx, "Failed to send invitation email to {Email}. User was created successfully.", user.Email);
@@ -229,6 +245,14 @@ public class UserFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -268,6 +292,14 @@ public class UserFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
