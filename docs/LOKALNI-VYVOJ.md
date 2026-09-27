@@ -121,6 +121,7 @@ npm run build               # tsc -b && vite build
 - **Integrační testy:** `Oaza.Infrastructure.Tests` běží proti Azurite. Používají `[SkippableFact]` — bez běžícího Azurite se přeskočí (CI Azurite spouští jako service container).
 - **Frontend** nemá automatické testy; lint používá přísná pravidla React Compileru (`react-hooks/preserve-manual-memoization`, `set-state-in-effect`).
 - E2E testy nejsou — ověřuje se ručně na DEV.
+- **Property-based testy:** FsCheck (`FsCheck.Xunit`, atribut `[Property]`) v `Oaza.Domain.Tests` — invarianty výpočtů na náhodných vstupech (vzor: `AllocatorPropertyTests`). Použít pro ledger T07 (Σ rozpočtu = celkem).
 - **Warningy = chyby.** `api/Directory.Build.props` zapíná `TreatWarningsAsErrors` (výjimka: NuGet advisories NU1901–NU1904).
 - **CI na pull requestech** (`.github/workflows/ci.yml`): build API bez warningů, testy, kontrola pokrytí souborů
   z `api/coverage-gate.txt` (výpočetní logika, kombinovaně ≥ 90 %; nové výpočty tam přidávat) a lint + build webu.
