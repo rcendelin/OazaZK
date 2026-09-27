@@ -21,6 +21,7 @@ import { HelpTerm } from '../components/help/HelpTerm';
 import type { HouseSaldo, AdvancePayment, House, PaymentType } from '../types';
 import type { AdvanceCalculation } from '../api/advanceSettings';
 import { parseCzechNumber } from '../utils/number';
+import { todayIso } from '../utils/date';
 
 const fmt = (v: number | null | undefined) => {
   const n = typeof v === 'number' && !isNaN(v) ? v : 0;
@@ -34,7 +35,6 @@ const fmtDate = (s: string | null | undefined) => {
   if (!s || s.startsWith('0001')) return '—';
   try { return new Intl.DateTimeFormat('cs-CZ').format(new Date(s)); } catch { return '—'; }
 };
-const isoToday = () => new Date().toISOString().slice(0, 10);
 
 const typeLabel: Record<PaymentType, string> = {
   Advance: 'Záloha',
@@ -341,7 +341,7 @@ function PaymentForm({
   const [houseId, setHouseId] = useState('');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [date, setDate] = useState(isoToday());
+  const [date, setDate] = useState(todayIso());
   const [water, setWater] = useState('');
   const [elec, setElec] = useState('');
   const [common, setCommon] = useState('');

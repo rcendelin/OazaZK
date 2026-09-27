@@ -55,7 +55,7 @@ OazaZK/
 │       ├── hooks/                # useApi
 │       ├── pages/                # Route-level pages; pages/admin/ = Houses, Users, Meters
 │       ├── types/                # TS interfaces mirroring API DTOs
-│       └── utils/                # parseCzechNumber
+│       └── utils/                # parseCzechNumber, Prague calendar days (date.ts)
 └── docs/
     ├── ARCHITEKTURA.md           # layers, data model, auth, roles, frontend, CI/CD
     ├── VYUCTOVANI.md             # settlement / advances / saldo / fund / import — as implemented
@@ -356,6 +356,7 @@ Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admit
 - **Error handling:** Throw `AppException(message, statusCode)` / `NotFoundException`; each endpoint catches and writes `{ "error": … }` (validation: `{ error, errors: [{field, message}] }`). There is no global exception middleware.
 - **No magic strings:** Use constants for PartitionKey values, Blob container names, claim types
 - **Decimal for money:** Always use `decimal` for CZK amounts, never `double`
+- **Calendar days (X5):** an accounting day is a calendar day in `Europe/Prague`. New model (T02–T10): `DateOnly` + `DateRange` (closed interval `[From, To]`, `Oaza.Domain.Time`), stored as `yyyy-MM-dd` strings; instants stay UTC. "Today" only from `IClock.Today` (`PragueClock`, in DI) — never `DateTime.UtcNow.Date` for an accounting day. Old model keeps midnight-UTC `DateTime` (`PragueClock.AsUtcMidnight`).
 
 ### Frontend (React/TypeScript)
 
@@ -366,6 +367,7 @@ Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admit
 - **API calls:** Typed fetch wrapper in `api/` directory, all errors handled
 - **Auth state:** React Context (`AuthContext`) wrapping the app, `useAuth()` hook
 - **Date formatting:** Use `Intl.DateTimeFormat('cs-CZ')` for Czech locale
+- **Today (X5):** `todayIso()` / `pragueIsoDate()` / `shiftIsoDate()` from `utils/date.ts` (Europe/Prague for every user). Never `new Date().toISOString().slice(0, 10)` — that is the UTC day.
 - **Number formatting:** Use `Intl.NumberFormat('cs-CZ')` — comma as decimal separator
 - **No console.log in production** — use proper error boundaries
 - **Lint je CI gate (přísná React Compiler pravidla):** `npm run lint` musí projít. Pozor na `react-hooks/preserve-manual-memoization` (deps `useMemo`/`useCallback` musí přesně sedět) a `set-state-in-effect`. Build = `tsc -b && vite build` (Vite v8/rolldown).

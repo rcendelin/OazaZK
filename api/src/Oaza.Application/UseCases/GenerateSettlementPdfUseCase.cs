@@ -4,6 +4,7 @@ using Oaza.Application.DTOs;
 using Oaza.Domain.Entities;
 using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
+using Oaza.Domain.Time;
 
 namespace Oaza.Application.UseCases;
 
@@ -11,9 +12,11 @@ public class GenerateSettlementPdfUseCase
 {
     private static readonly CultureInfo CzechCulture = new("cs-CZ");
     private readonly ILogger<GenerateSettlementPdfUseCase> _logger;
+    private readonly IClock _clock;
 
-    public GenerateSettlementPdfUseCase(ILogger<GenerateSettlementPdfUseCase> logger)
+    public GenerateSettlementPdfUseCase(ILogger<GenerateSettlementPdfUseCase> logger, IClock clock)
     {
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -113,7 +116,7 @@ public class GenerateSettlementPdfUseCase
         y = page.Height - 40;
         gfx.DrawLine(new XPen(XColors.LightGray, 0.5), leftMargin, y, rightEdge, y);
         y += 12;
-        gfx.DrawString($"Datum vystavení: {DateTime.UtcNow.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
+        gfx.DrawString($"Datum vystavení: {_clock.Today.ToString("d. MMMM yyyy", CzechCulture)}", fontSmall, XBrushes.Gray, leftMargin, y);
         var footerText = "Vygenerováno portálem Oáza Zadní Kopanina";
         var footerWidth = gfx.MeasureString(footerText, fontSmall).Width;
         gfx.DrawString(footerText, fontSmall, XBrushes.Gray, rightEdge - footerWidth, y);
