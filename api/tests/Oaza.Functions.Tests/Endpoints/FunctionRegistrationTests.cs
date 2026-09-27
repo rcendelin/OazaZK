@@ -42,3 +42,14 @@ public class FunctionRegistrationTests
         duplicates.Should().BeEmpty();
     }
 }
+
+public class FileResponseTests
+{
+    [Theory]
+    [InlineData("Zápis ze schůze 2026.pdf", "attachment; filename=\"Zapis ze schuze 2026.pdf\"; filename*=UTF-8''Z%C3%A1pis%20ze%20sch%C5%AFze%202026.pdf")]
+    [InlineData("stanovy.pdf", "attachment; filename=\"stanovy.pdf\"; filename*=UTF-8''stanovy.pdf")]
+    [InlineData("a\"b;c\r\n.pdf", "attachment; filename=\"a_b_c.pdf\"; filename*=UTF-8''a%22b%3Bc.pdf")]
+    [InlineData("", "attachment; filename=\"soubor\"; filename*=UTF-8''soubor")]
+    public void ContentDisposition_IsAsciiSafe_WithUtf8Name(string name, string expected) =>
+        Oaza.Functions.Endpoints.FileResponse.ContentDisposition(name).Should().Be(expected);
+}

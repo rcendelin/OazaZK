@@ -202,7 +202,7 @@ public class CashBookUseCase
 
     private async Task EnsureOpenAsync(DateOnly date)
     {
-        if (await _closingBoundary.GetLastClosedDayAsync() is { } closed && date <= closed)
+        if (await _closingBoundary.GetLastAllHousesClosedDayAsync() is { } closed && date <= closed)
             throw new BusinessRuleException([$"Den {CashBook.Day(date)} je uzavřený mezizávěrkou k {CashBook.Day(closed)}; zapište záznam s pozdějším datem."]);
     }
 

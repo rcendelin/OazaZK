@@ -26,6 +26,10 @@ public class AdvanceFunctions
     private readonly IBankTransactionRepository _bankTransactionRepository;
     private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<AdvanceFunctions> _logger;
+    private readonly Oaza.Application.Audit.IAuditLogger _audit;
+
+    /// <summary>Audit entity of a house payment (advance, doplatek, payout, legacy opening balance).</summary>
+    public const string PaymentEntity = "AdvancePayment";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -38,8 +42,10 @@ public class AdvanceFunctions
         IHouseRepository houseRepository,
         IBankTransactionRepository bankTransactionRepository,
         IClosingBoundary closingBoundary,
+        Oaza.Application.Audit.IAuditLogger audit,
         ILogger<AdvanceFunctions> logger)
     {
+        _audit = audit ?? throw new ArgumentNullException(nameof(audit));
         _closingBoundary = closingBoundary ?? throw new ArgumentNullException(nameof(closingBoundary));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
@@ -112,6 +118,14 @@ public class AdvanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -121,7 +135,8 @@ public class AdvanceFunctions
     [Function("CreateAdvance")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CreateAdvanceAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances")] HttpRequestData req,
+        FunctionContext context)
     {
         try
         {
@@ -171,6 +186,7 @@ public class AdvanceFunctions
             }
 
             await _advanceRepository.UpsertAsync(payment);
+            await AuditAsync(context, AuditActions.Create, null, payment);
 
             _logger.LogInformation("Advance payment created for house {HouseId} for {Year}-{Month}.",
                 payment.HouseId, payment.Year, payment.Month);
@@ -181,6 +197,14 @@ public class AdvanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -193,7 +217,8 @@ public class AdvanceFunctions
     public async Task<HttpResponseData> UpdateAdvanceAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "advances/{houseId}/{yearMonth}")] HttpRequestData req,
         string houseId,
-        string yearMonth)
+        string yearMonth,
+        FunctionContext context)
     {
         try
         {
@@ -221,6 +246,7 @@ public class AdvanceFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
+            var before = Snapshot(existing);
             existing.WaterAmount = request.WaterAmount;
             existing.ElectricityAmount = request.ElectricityAmount;
             existing.CommonAmount = request.CommonAmount;
@@ -228,6 +254,7 @@ public class AdvanceFunctions
             existing.PaymentDate = request.PaymentDate;
 
             await _advanceRepository.UpsertAsync(existing);
+            await AuditAsync(context, AuditActions.Update, before, existing);
 
             // Get house name for response
             var house = await _houseRepository.GetAsync(PartitionKeys.House, houseId);
@@ -242,6 +269,14 @@ public class AdvanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -251,7 +286,8 @@ public class AdvanceFunctions
     [Function("CreateDoplatek")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CreateDoplatekAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/doplatek")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/doplatek")] HttpRequestData req,
+        FunctionContext context)
     {
         try
         {
@@ -293,6 +329,7 @@ public class AdvanceFunctions
 
             ClosedPeriodPayments.BookAfterClosing(payment, await _closingBoundary.GetLastClosedDayAsync(request.HouseId));
             await _advanceRepository.UpsertAsync(payment);
+            await AuditAsync(context, AuditActions.Create, null, payment);
 
             _logger.LogInformation("Doplatek recorded for house {HouseId} ({RowKey}).",
                 payment.HouseId, payment.RowKey);
@@ -304,6 +341,14 @@ public class AdvanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -313,7 +358,8 @@ public class AdvanceFunctions
     [Function("CreatePayout")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CreatePayoutAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/payout")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/payout")] HttpRequestData req,
+        FunctionContext context)
     {
         try
         {
@@ -350,6 +396,7 @@ public class AdvanceFunctions
 
             ClosedPeriodPayments.BookAfterClosing(payment, await _closingBoundary.GetLastClosedDayAsync(request.HouseId));
             await _advanceRepository.UpsertAsync(payment);
+            await AuditAsync(context, AuditActions.Create, null, payment);
             _logger.LogInformation("Payout recorded for house {HouseId} ({RowKey}).", payment.HouseId, payment.RowKey);
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.Created,
@@ -358,6 +405,14 @@ public class AdvanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -368,7 +423,8 @@ public class AdvanceFunctions
     [Function("CreateLegacyOpeningBalancePayment")]
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> CreateOpeningBalanceAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/opening-balance")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "advances/opening-balance")] HttpRequestData req,
+        FunctionContext context)
     {
         try
         {
@@ -406,6 +462,7 @@ public class AdvanceFunctions
             };
 
             await _advanceRepository.UpsertAsync(payment);
+            await AuditAsync(context, AuditActions.Create, null, payment);
             _logger.LogInformation("Opening balance recorded for house {HouseId} ({RowKey}).", payment.HouseId, payment.RowKey);
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.Created,
@@ -414,6 +471,14 @@ public class AdvanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -426,7 +491,8 @@ public class AdvanceFunctions
     public async Task<HttpResponseData> DeletePaymentAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "advances/{houseId}/{rowKey}")] HttpRequestData req,
         string houseId,
-        string rowKey)
+        string rowKey,
+        FunctionContext context)
     {
         try
         {
@@ -442,6 +508,7 @@ public class AdvanceFunctions
             }
 
             await _advanceRepository.DeleteAsync(houseId, rowKey);
+            await AuditAsync(context, AuditActions.Delete, existing, null);
 
             // Release the source bank movement so the statement import offers it again.
             if (existing.BankOwnAccountKey is not null && existing.BankTransactionId is not null)
@@ -457,11 +524,28 @@ public class AdvanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
+
+    private Task AuditAsync(FunctionContext context, string action, AdvancePayment? before, AdvancePayment? after)
+    {
+        var payment = (after ?? before)!;
+        return _audit.LogAsync(PaymentEntity, $"{payment.HouseId}/{payment.RowKey}", action, before, after, ModelEndpoint.GetActor(context));
+    }
+
+    private static AdvancePayment Snapshot(AdvancePayment payment) =>
+        JsonSerializer.Deserialize<AdvancePayment>(JsonSerializer.Serialize(payment))!;
 
     private static User GetAuthenticatedUser(FunctionContext context)
     {

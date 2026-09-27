@@ -55,6 +55,19 @@ public class CostEntriesUseCaseTests
     };
 
     [Fact]
+    public async Task TooLongTextsAndAbsurdAmounts_AreValidationErrors()
+    {
+        var request = Advance(500m, D(2023, 11, 1), D(2023, 11, 30), PaidFrom.Bank);
+        request.Note = new string('x', CostEntriesUseCase.MaxNoteLength + 1);
+        request.Supplier = new string('y', CostEntriesUseCase.MaxSupplierLength + 1);
+        var tooLong = () => Sut().CreateAsync("vodarna", request, _actor);
+        (await tooLong.Should().ThrowAsync<BusinessRuleException>()).Which.Errors.Should().HaveCount(2);
+
+        var huge = () => Sut().CreateAsync("vodarna", Advance(1_000_000_000m, D(2023, 11, 1), D(2023, 11, 30), PaidFrom.Bank), _actor);
+        (await huge.Should().ThrowAsync<BusinessRuleException>()).Which.Errors.Should().Contain(e => e.Contains("rozsah"));
+    }
+
+    [Fact]
     public async Task S2_AdvancePaidFromSupplierCreditIsAllocatedLikeOnePaidFromBank()
     {
         var fromCredit = await Sut().CreateAsync("vodarna", Advance(500m, D(2023, 11, 1), D(2023, 11, 30), PaidFrom.SupplierCredit), _actor);

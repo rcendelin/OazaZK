@@ -107,7 +107,8 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IMeterReadingRepository>(),
                 sp.GetRequiredService<IWaterMeterRepository>(),
                 sp.GetRequiredService<ILogger<ImportReadingsUseCase>>(),
-                sp.GetRequiredService<Oaza.Application.Interfaces.IClosingBoundary>()));
+                sp.GetRequiredService<Oaza.Application.Interfaces.IClosingBoundary>(),
+                sp.GetRequiredService<Oaza.Application.Audit.IAuditLogger>()));
 
         // Use cases: Prescribed advances + bank statement import
         services.AddSingleton<CalculatePrescribedAdvancesUseCase>(sp =>
@@ -126,7 +127,8 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IBankTransactionRepository>(),
                 sp.GetRequiredService<CalculatePrescribedAdvancesUseCase>(),
                 sp.GetRequiredService<ILogger<ImportBankStatementUseCase>>(),
-                sp.GetRequiredService<Oaza.Application.Interfaces.IClosingBoundary>()));
+                sp.GetRequiredService<Oaza.Application.Interfaces.IClosingBoundary>(),
+                sp.GetRequiredService<Oaza.Application.Audit.IAuditLogger>()));
     })
     .Build();
 

@@ -29,6 +29,7 @@ public class ImportBankStatementUseCase
     private readonly IBankTransactionRepository _transactionRepository;
     private readonly CalculatePrescribedAdvancesUseCase _prescribedAdvancesUseCase;
     private readonly IClosingBoundary _closingBoundary;
+    private readonly Oaza.Application.Audit.IAuditLogger? _audit;
     private readonly ILogger<ImportBankStatementUseCase> _logger;
 
     public ImportBankStatementUseCase(
@@ -38,8 +39,10 @@ public class ImportBankStatementUseCase
         IBankTransactionRepository transactionRepository,
         CalculatePrescribedAdvancesUseCase prescribedAdvancesUseCase,
         ILogger<ImportBankStatementUseCase> logger,
-        IClosingBoundary? closingBoundary = null)
+        IClosingBoundary? closingBoundary = null,
+        Oaza.Application.Audit.IAuditLogger? audit = null)
     {
+        _audit = audit;
         _closingBoundary = closingBoundary ?? new NoClosingBoundary();
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
@@ -409,6 +412,9 @@ public class ImportBankStatementUseCase
             // Payment first, then the processed-movement record: if the write fails in
             // between, the movement shows up as New again on the next upload.
             await _advanceRepository.UpsertAsync(payment);
+            if (_audit is not null)
+                await _audit.LogAsync("AdvancePayment", $"{payment.HouseId}/{payment.RowKey}", Oaza.Domain.Constants.AuditActions.Create, null, payment,
+                    new Oaza.Application.Audit.AuditActor(importedBy, null), "import z banky");
 
             tx.Status = BankTransactionStatus.Imported;
             tx.HouseId = payment.HouseId;

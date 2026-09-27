@@ -16,6 +16,7 @@ public class ImportReadingsUseCase
     private readonly IMeterReadingRepository _readingRepository;
     private readonly IWaterMeterRepository _meterRepository;
     private readonly IClosingBoundary _closingBoundary;
+    private readonly Oaza.Application.Audit.IAuditLogger? _audit;
     private readonly ILogger<ImportReadingsUseCase> _logger;
 
     private static readonly CultureInfo CzechCulture = new("cs-CZ");
@@ -24,8 +25,10 @@ public class ImportReadingsUseCase
         IMeterReadingRepository readingRepository,
         IWaterMeterRepository meterRepository,
         ILogger<ImportReadingsUseCase> logger,
-        IClosingBoundary? closingBoundary = null)
+        IClosingBoundary? closingBoundary = null,
+        Oaza.Application.Audit.IAuditLogger? audit = null)
     {
+        _audit = audit;
         _closingBoundary = closingBoundary ?? new NoClosingBoundary();
         _readingRepository = readingRepository ?? throw new ArgumentNullException(nameof(readingRepository));
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
@@ -38,7 +41,7 @@ public class ImportReadingsUseCase
     /// </summary>
     public async Task<ImportPreviewResponse> ParseAndValidateAsync(Stream excelStream, string importedBy)
     {
-        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
+        var closedDays = new MeterClosingDays(_closingBoundary);
         var errors = new List<ImportValidationMessage>();
         var warnings = new List<ImportValidationMessage>();
         var previewRows = new List<ImportPreviewRow>();
@@ -192,7 +195,7 @@ public class ImportReadingsUseCase
 
                 // Validate (duplicate / negative / anomaly) — shared with the clipboard import.
                 if (!TryValidateReading(meter, readingDate, value, existingReadings,
-                        seenMeterDates, rowNum, errors, warnings, lastClosed))
+                        seenMeterDates, rowNum, errors, warnings, await closedDays.ForAsync(meter)))
                 {
                     continue;
                 }
@@ -266,7 +269,7 @@ public class ImportReadingsUseCase
     /// <returns>Number of readings written by this call.</returns>
     public async Task<int> ConfirmImportAsync(ConfirmImportRequest request, string importedBy)
     {
-        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
+        var closedDays = new MeterClosingDays(_closingBoundary);
         if (request.Readings.Count == 0)
         {
             throw new AppException("Nejsou žádné odečty k importu.");
@@ -303,7 +306,7 @@ public class ImportReadingsUseCase
 
             conflict |= existing.Any(r => r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
 
-            if (!TryValidateReading(meter, readingDate, item.Value, existing, seenMeterDates, null, errors, warnings, lastClosed))
+            if (!TryValidateReading(meter, readingDate, item.Value, existing, seenMeterDates, null, errors, warnings, await closedDays.ForAsync(meter)))
             {
                 continue;
             }
@@ -328,6 +331,9 @@ public class ImportReadingsUseCase
         foreach (var reading in toWrite)
         {
             await _readingRepository.UpsertAsync(reading);
+            if (_audit is not null)
+                await _audit.LogAsync("MeterReading", $"{reading.MeterId}|{reading.ReadingDate:yyyy-MM-dd}", Oaza.Domain.Constants.AuditActions.Create, null, reading,
+                    new Oaza.Application.Audit.AuditActor(importedBy, null), "import odečtů");
         }
 
         _logger.LogInformation(
@@ -346,7 +352,7 @@ public class ImportReadingsUseCase
     public async Task<ImportPreviewResponse> ParseClipboardAndValidateAsync(
         string pastedText, DateTime readingDate, string importedBy)
     {
-        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
+        var closedDays = new MeterClosingDays(_closingBoundary);
         var errors = new List<ImportValidationMessage>();
         var warnings = new List<ImportValidationMessage>();
         var previewRows = new List<ImportPreviewRow>();
@@ -463,7 +469,7 @@ public class ImportReadingsUseCase
             }
 
             if (!TryValidateReading(meter, readingDate, value, existingReadingsByMeter[meter.Id],
-                    seenMeterDates, rowNum, errors, warnings, lastClosed))
+                    seenMeterDates, rowNum, errors, warnings, await closedDays.ForAsync(meter)))
             {
                 continue;
             }

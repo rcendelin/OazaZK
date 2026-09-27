@@ -143,6 +143,16 @@ se sekce přejmenuje na verzi s datem.
   ruční přepis zálohy zůstal.
 
 ### Opraveno
+- **Stažené dokumenty a exporty hospodaření byly prázdné (0 B).** Odpověď se v isolated workeru neodeslala;
+  všechny soubory teď jdou přes jednotný zápis (`FileResponse`). Dokument s diakritikou v názvu („Zápis…“) už nekončí
+  chybou 500 a exporty se ukládají pod správným jménem (dřív „saldo.xlsx“).
+- **Neplatné nebo extrémní vstupy vracely chybu serveru** (poznámka 20 000 znaků, částka 1e30) — teď 400 s hláškou;
+  náklad má limity délky poznámky a dodavatele.
+- **Mezizávěrka jednoho domu (prodej) zamykala i ostatní domy.** Odečty domovního vodoměru zamyká jen mezizávěrka
+  jeho domu nebo všech domů, pokladnu jen mezizávěrka všech domů.
+- **Audit** nově zaznamenává platby (ruční i z banky), ruční odečty, jejich opravy a import a nahrání, nové verze
+  a smazání dokumentů.
+- Chybové hlášky odečtů ukazují čísla s desetinnou čárkou.
 - **Počáteční stavy nešly uložit na nasazeném prostředí.** Dvě funkce API měly stejné jméno, takže po nasazení
   chyběl endpoint `POST /opening-balances` (průvodce počátečními stavy hlásil chybu). Nový test hlídá unikátní jména
   i cesty všech funkcí. Nalezeno živým E2E testem na DEV.
