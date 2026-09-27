@@ -444,7 +444,7 @@ ENABLE_SEED=true            # only on DEV/local — enables anonymous POST /api/
 
 - **Unit tests:** Domain logic (settlement calculation, loss allocation, validation rules) in `Oaza.Application.Tests`
 - **Integration tests:** Table Storage repository operations in `Oaza.Infrastructure.Tests` (use Azurite local emulator)
-- **No E2E automation** — manual E2E testing (15 users, not worth the investment)
+- **E2E smoke tests (Playwright)** in `web/e2e/` against `vite preview` with the API mocked via `page.route` (`e2e/mockApi.ts`); CI job `e2e`. Full scenario suite S1–S8 comes with T14.
 - Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 8.0.x.
 - Integrační testy potřebují Azurite: `docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`. Používají `[SkippableFact]` (skip když chybí); CI běží Azurite jako service container.
 
