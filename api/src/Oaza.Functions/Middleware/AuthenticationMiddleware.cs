@@ -23,7 +23,8 @@ public class AuthenticationMiddleware : IFunctionsWorkerMiddleware
     private static readonly HashSet<string> AnonymousPaths = new(StringComparer.OrdinalIgnoreCase)
     {
         "/api/auth/magic-link",
-        "/api/auth/magic-link/verify"
+        "/api/auth/magic-link/verify",
+        "/api/environment"
     };
 
     public AuthenticationMiddleware(

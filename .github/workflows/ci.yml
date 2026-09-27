@@ -1,0 +1,85 @@
+name: CI (pull requests)
+
+# Deploy workflows only run on push to develop / release/** / master. This one
+# checks every pull request before merge: backend build without warnings, tests,
+# coverage gate for the calculation logic, and frontend lint + build.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+
+jobs:
+  api:
+    name: API — build, test, coverage
+    runs-on: ubuntu-latest
+    services:
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 10000:10000
+          - 10001:10001
+          - 10002:10002
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Oaza.sln
+
+      - name: Build (warnings are errors, see Directory.Build.props)
+        run: dotnet build Oaza.sln --configuration Release --no-restore
+
+      - name: Test with coverage
+        run: >
+          dotnet test Oaza.sln --configuration Release --no-build
+          --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Coverage gate (calculation logic ≥ 90 %)
+        run: python3 tools/coverage_gate.py ./coverage --threshold 90
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: api/coverage
+          retention-days: 14
+
+  web:
+    name: Web — lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

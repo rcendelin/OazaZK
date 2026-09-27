@@ -69,8 +69,11 @@ az functionapp config appsettings set --name func-oaza-test --resource-group rg-
   "EntraId__ClientId=<TEST_ENTRA_CLIENT_ID>" \
   "AzureCommunicationServices__ConnectionString=<SHARED_ACS_CONNECTION_STRING>" \
   "AzureCommunicationServices__FromEmail=<SHARED_ACS_FROM_EMAIL>" \
-  "AzureCommunicationServices__FromName=Oáza ZK TEST"
+  "AzureCommunicationServices__FromName=Oáza ZK TEST" \
+  "Environment=test"
 ```
+
+> `Environment` = `dev` / `test` / `prod` — podle něj backend hlásí prostředí (`GET /api/environment`) a UI mimo `prod` zobrazí pruh „TESTOVACÍ PROSTŘEDÍ“. Chybějící hodnota se hlásí jako `unknown` a pruh se zobrazí taky. Frontend dostává `VITE_ENVIRONMENT` při buildu z workflow; když se hodnoty neshodují, pruh varuje.
 
 > `AzureCommunicationServices__*` = **stejné hodnoty jako DEV/PROD** (sdílená ACS). `JwtSecret` naopak **vždy unikátní** per prostředí. Na PROD **nenastavuj** `ENABLE_SEED`.
 

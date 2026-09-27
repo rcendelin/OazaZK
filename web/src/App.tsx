@@ -4,6 +4,7 @@ import { msalInstance } from './auth/msalConfig';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import { EnvironmentBanner } from './components/EnvironmentBanner';
 import { LoginPage } from './pages/LoginPage';
 import { MagicLinkVerifyPage } from './pages/MagicLinkVerifyPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -15,6 +16,7 @@ import { FinancePage } from './pages/FinancePage';
 import { HousesPage } from './pages/admin/HousesPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
+import { AuditLogPage } from './pages/admin/AuditLogPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
 import { BankImportPage } from './pages/BankImportPage';
@@ -26,6 +28,7 @@ function App() {
   return (
     <MsalProvider instance={msalInstance}>
       <AuthProvider>
+        <EnvironmentBanner />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -90,6 +93,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Admin">
                     <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/audit"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <AuditLogPage />
                   </ProtectedRoute>
                 }
               />
