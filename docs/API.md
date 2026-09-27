@@ -173,6 +173,20 @@ Nový model (T02). Data `RRRR-MM-DD`, metody `Metered` | `Equal` | `Ratio` | `Pe
 
 Změna, která zasahuje do uzavřeného období (mezizávěrka, T08), se odmítne.
 
+## Počáteční stavy — `OpeningBalanceFunctions.cs`
+
+Nový model (T03). Typy `MeterReading` (m³) | `FundShare` (Kč, **kladné = dům má u spolku přeplatek**, X1) | `ComponentCredit` (Kč, záporné = kredit u dodavatele). Klíč stavu je `{typ}|{cíl}|{období vlastnictví nebo -}`; v URL se kóduje (`|` = `%7C`).
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/ownership-periods` | Admin, Accountant | Období vlastnictví všech domů. |
+| POST | `/ownership-periods/start` | Admin | `{ startDate }` — každý aktivní dům bez období dostane období od `startDate` (vlastník = kontaktní osoba). Idempotentní. |
+| GET | `/opening-balances` | Admin, Accountant | Všechny počáteční stavy se jmény domů, vodoměrů a složek; `locked` = datum je za mezizávěrkou. |
+| GET | `/opening-balances/component-credit-preview?componentId=&date=&value=` | Admin, Accountant | Jak se kredit složky rozdělí mezi domy podle pravidla a účasti k datu (S2: −20 000 → 4 × −5 000). |
+| POST | `/opening-balances` | Admin | `{ type, houseId?, meterId?, componentId?, date, value, isEstimate, source, note? }` → 201; 409, pokud pro stejnou kombinaci stav už je. `source` povinný. Stav vodoměru se zapíše i jako odečet k datu (odhad s poznámkou); jiný existující odečet se nepřepíše. |
+| PUT | `/opening-balances/{key}` | Admin | Stejné tělo + `reason?`. Za mezizávěrkou jen s důvodem (audit `Correction`). |
+| DELETE | `/opening-balances/{key}?reason=` | Admin | Smaže stav zadaný omylem (ne za mezizávěrkou); odečet zůstává. |
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |

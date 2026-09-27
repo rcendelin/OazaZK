@@ -3,12 +3,11 @@ using Moq;
 using Oaza.Application.Audit;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
-using Oaza.Application.Interfaces;
+using Oaza.Application.Tests.TestSupport;
 using Oaza.Application.UseCases;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
-using Oaza.Domain.Interfaces;
 using Oaza.Domain.Time;
 
 namespace Oaza.Application.Tests.UseCases;
@@ -17,49 +16,10 @@ public class CostComponentsUseCaseTests
 {
     private static DateOnly D(int y, int m, int d) => new(y, m, d);
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
-    /// <summary>In-memory table: PK + RK → entity.</summary>
-    private class MemoryRepo<T>(Func<T, string> pk, Func<T, string> rk) : IRepository<T> where T : class
-    {
-        public readonly Dictionary<(string, string), T> Items = new();
-        public Task<T?> GetAsync(string partitionKey, string rowKey) => Task.FromResult(Items.GetValueOrDefault((partitionKey, rowKey)));
-        public Task<IReadOnlyList<T>> GetByPartitionKeyAsync(string partitionKey) =>
-            Task.FromResult<IReadOnlyList<T>>(Items.Where(i => i.Key.Item1 == partitionKey).Select(i => i.Value).ToList());
-        public Task<IReadOnlyList<T>> GetAllAsync() => Task.FromResult<IReadOnlyList<T>>(Items.Values.ToList());
-        public Task UpsertAsync(T entity) { Items[(pk(entity), rk(entity))] = entity; return Task.CompletedTask; }
-        public Task DeleteAsync(string partitionKey, string rowKey) { Items.Remove((partitionKey, rowKey)); return Task.CompletedTask; }
-    }
-
-    private sealed class Components() : MemoryRepo<CostComponent>(_ => PartitionKeys.CostComponent, c => c.Id), ICostComponentRepository
-    {
-        public Task<IReadOnlyList<CostComponent>> GetAllComponentsAsync() => GetByPartitionKeyAsync(PartitionKeys.CostComponent);
-    }
-
-    private sealed class Rules() : MemoryRepo<ComponentAllocationRule>(r => r.ComponentId, r => r.Id), IComponentAllocationRuleRepository
-    {
-        public Task<IReadOnlyList<ComponentAllocationRule>> GetByComponentAsync(string componentId) => GetByPartitionKeyAsync(componentId);
-    }
-
-    private sealed class Participations() : MemoryRepo<Participation>(p => p.ComponentId, p => p.Id), IParticipationRepository
-    {
-        public Task<IReadOnlyList<Participation>> GetByComponentAsync(string componentId) => GetByPartitionKeyAsync(componentId);
-    }
-
-    private sealed class Houses() : MemoryRepo<House>(_ => PartitionKeys.House, h => h.Id), IHouseRepository;
-
-    private sealed class ClosedUntil(DateOnly? day) : IClosingBoundary
-    {
-        public Task<DateOnly?> GetLastClosedDayAsync() => Task.FromResult(day);
-    }
-
-    private readonly Components _components = new();
-    private readonly Rules _rules = new();
-    private readonly Participations _participations = new();
-    private readonly Houses _houses = new();
+    private readonly MemoryComponents _components = new();
+    private readonly MemoryRules _rules = new();
+    private readonly MemoryParticipations _participations = new();
+    private readonly MemoryHouses _houses = new();
     private readonly Mock<IAuditLogger> _audit = new();
     private readonly AuditActor _actor = new("admin-1", "Rosťa");
     private DateOnly? _closedUntil;

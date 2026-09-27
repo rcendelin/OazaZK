@@ -9,4 +9,5 @@ public static class PartitionKeys
     public const string Invoice = "INVOICE";
     public const string BankAccountMapping = "MAP";
     public const string CostComponent = "COMPONENT";
+    public const string OpeningBalance = "OPENING";
 }
