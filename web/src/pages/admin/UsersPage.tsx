@@ -4,6 +4,7 @@ import { getUsers, createUser, updateUser, deleteUser } from '../../api/users';
 import { getHouses } from '../../api/houses';
 import { Spinner } from '../../components/Spinner';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { HelpTerm } from '../../components/help/HelpTerm';
 import type { User, House, UserRole, AuthMethod } from '../../types/index';
 
 const czDate = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
@@ -172,7 +173,7 @@ export function UsersPage() {
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">Role</label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Role<HelpTerm id="role" /></label>
               <select value={createForm.role}
                 onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20">

@@ -15,6 +15,7 @@ import {
   Users,
   Gauge,
   Scale,
+  CircleHelp,
   LogOut,
   Menu,
   X,
@@ -57,6 +58,7 @@ const navItems: NavItem[] = [
       { label: 'Import odečtů', path: '/readings/import', icon: <Upload size={iconSize} />, adminOnly: true },
     ],
   },
+  { label: 'Jak to funguje', path: '/jak-to-funguje', icon: <CircleHelp size={iconSize} /> },
 ];
 
 const adminNavItems: NavItem[] = [

@@ -13,6 +13,7 @@ import {
 import { FileUploadZone } from '../components/FileUploadZone';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
+import { HelpNote } from '../components/help/HelpNote';
 import type { DocumentResponse, DocumentVersionResponse } from '../types';
 
 const CATEGORIES = [
@@ -134,6 +135,7 @@ export function DocumentsPage() {
           </button>
         )}
       </div>
+      <HelpNote sectionId="documentVersions" />
 
       {/* Category tabs */}
       <div className="mt-6 border-b border-border">

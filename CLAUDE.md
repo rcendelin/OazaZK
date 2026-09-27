@@ -516,7 +516,7 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 
 ### Git conventions
 
-- **Branch strategy:** `develop` → test/DEV (`deploy-dev.yml` → `func-oaza-dev`); `master` → production (`deploy.yml` → `func-oaza-prod`).
+- **Branch strategy:** `develop` → DEV (`deploy-dev.yml` → `func-oaza-dev`); `release/**` → TEST (`deploy-test.yml` → `func-oaza-test`); `master` → PROD (`deploy.yml` → `func-oaza-prod`). All three share the same Azure tenant/subscription (differ by resource group `rg-oaza-{dev,test,prod}`) and use the unified `Azure/login` + `AZURE_CREDENTIALS` + `az config-zip` deploy; the domain (`cendelinovi.cz`) and the ACS email service are shared. See `docs/DEPLOYMENT-TEST-PROD.md`.
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
 - **No force push to master**

@@ -14,6 +14,9 @@ import { calculateAdvances } from '../api/advanceSettings';
 import { getHouses } from '../api/houses';
 import { Spinner } from '../components/Spinner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { HelpNote } from '../components/help/HelpNote';
+import { HelpDisclosure } from '../components/help/HelpDisclosure';
+import { HelpTerm } from '../components/help/HelpTerm';
 import type { HouseSaldo, AdvancePayment, House, PaymentType } from '../types';
 import type { AdvanceCalculation } from '../api/advanceSettings';
 import { parseCzechNumber } from '../utils/number';
@@ -89,6 +92,7 @@ export function SaldoPage() {
           Každý dům má jeden čistý zůstatek (přeplatek v jedné složce pokryje nedoplatek v jiné).
           Kladné = nedoplatek, záporné = přeplatek. Rozpad na vodu/elektřinu/společný je informativní.
         </p>
+        <HelpNote sectionId="saldoLive" />
       </div>
 
       {msg && (
@@ -185,8 +189,8 @@ function SaldoTable({
               <th className="text-right px-3 py-3 bg-accent-light border-l border-border">Voda</th>
               <th className="text-right px-3 py-3 bg-warning-light border-l border-border">Elektřina</th>
               <th className="text-right px-3 py-3 bg-surface-sunken border-l border-border">Společný</th>
-              <th className="text-right px-3 py-3 border-l border-border">Úpravy</th>
-              <th className="text-right px-4 py-3 bg-success-light border-l border-border font-bold">Čistý zůstatek</th>
+              <th className="text-right px-3 py-3 border-l border-border">Úpravy <HelpTerm id="upravy" /></th>
+              <th className="text-right px-4 py-3 bg-success-light border-l border-border font-bold">Čistý zůstatek <HelpTerm id="cistyZustatek" /></th>
             </tr>
           </thead>
           <tbody>
@@ -414,6 +418,8 @@ function PaymentForm({
   return (
     <div className="bg-surface-raised border border-border rounded-2xl p-6 shadow-card space-y-4">
       <h2 className="text-lg font-semibold">Zaznamenat platbu / úpravu</h2>
+      <HelpNote sectionId="paymentTypes" />
+      <HelpDisclosure sectionId="paymentTypes" />
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
@@ -517,8 +523,6 @@ function PaymentForm({
           </button>
         )}
       </div>
-      {kind === 'payout' && <p className="text-xs text-text-muted">Výplata vrací domu přeplatek — sníží jeho kredit (saldo jde k nule).</p>}
-      {kind === 'opening' && <p className="text-xs text-text-muted">Jednorázové nastartování zůstatku domu při zavádění systému. Nevstupuje do vyúčtování.</p>}
     </div>
   );
 }

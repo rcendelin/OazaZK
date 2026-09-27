@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { getAdvanceSettings, updateAdvanceSettings, calculateAdvances } from '../api/advanceSettings';
 import { getHouses } from '../api/houses';
 import { Spinner } from '../components/Spinner';
+import { HelpDisclosure } from '../components/help/HelpDisclosure';
 import type { AdvanceSettingsData, AdvanceCalculation, HouseAdvanceOverride } from '../api/advanceSettings';
 import type { House } from '../types';
 import { parseCzechNumber } from '../utils/number';
@@ -178,6 +179,7 @@ export function AdvancesPage() {
               <p className="text-xs font-medium text-text-secondary uppercase">Rozdělení ztráty na síti</p>
               <p className="text-xl font-bold mt-1">{lossMethodLabel(settings?.lossAllocationMethod)}</p>
               <p className="text-xs text-text-muted mt-0.5">Používá se pro vyúčtování i saldo domácností.</p>
+              <HelpDisclosure sectionId="lossMethod" />
             </div>
           </div>
         ) : form && (
