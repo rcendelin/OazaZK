@@ -84,6 +84,9 @@ se sekce přejmenuje na verzi s datem.
   nebo jeden dům) s nápovědou, seznam, detail se snímkem salda a porovnáním s dneškem (rozdíl červeně), export pro účetní
   (XLSX/CSV; roční závěrka k 31. 12. za celý rok) a zrušení poslední mezizávěrky s důvodem. Nápověda „Jak zadat
   počáteční stavy“ v průvodci Počáteční stavy.
+- **Převod domu (T03, část C).** Administrace → Počáteční stavy → Převod domu: náhled dopadů (závěrečné saldo původního
+  vlastníka, návrh stavu vodoměru z odečtů, co brání převodu) a převod — mezizávěrka domu den před předáním, ukončení
+  období vlastnictví, nový vlastník od data předání s vlastním stavem vodoměru a nulovým podílem ve fondu (nebo vkladem).
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

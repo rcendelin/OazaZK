@@ -23,6 +23,7 @@ import type { House, WaterMeter } from '../../types';
 import { formatIsoDay } from '../../utils/date';
 import { parseCzechNumber } from '../../utils/number';
 import { HelpDisclosure } from '../../components/help/HelpDisclosure';
+import { HouseTransferSection } from './HouseTransferSection';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
@@ -180,6 +181,8 @@ export function OpeningBalancesPage() {
         })}
         {data.components.length === 0 && <p className="px-3 py-2 text-sm text-text-muted">Nejdřív založte nákladové složky.</p>}
       </Section>
+
+      <HouseTransferSection houses={activeHouses} onDone={refetch} />
     </div>
   );
 }

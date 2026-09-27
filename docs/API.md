@@ -235,6 +235,15 @@ Nový model (T08). Id mezizávěrky `{datum}|{All|House}|{dům nebo -}` se v URL
 
 Po mezizávěrce se pravidla, účast, náklady, počáteční stavy, **odečty** (ruční zadání, oprava, přesun i import — 409 / chyba importu) a **platby** do data řezu nemění. Úprava nebo smazání platby s datem do řezu vrací 409; nová platba (záloha, doplatek, výplata, i z bankovního importu) s datem do řezu se zaúčtuje k prvnímu dni po řezu — záloha za uzavřený měsíc jako doplatek — a původní datum je v poznámce. Náklad, jehož období do řezu zasahuje, se zaúčtuje jako opravný záznam k prvnímu dni po řezu (`reason` povinný, odpověď nese `postingDate`).
 
+## Převod domu — `HouseTransferFunctions.cs`
+
+Nový model (T03, R7). Nový vlastník nedědí historii.
+
+| Metoda | Cesta | Přístup | Popis |
+|--------|-------|---------|-------|
+| GET | `/houses/{id}/transfer-preview?date=` | Admin | Náhled: původní vlastník, datum mezizávěrky (den před předáním), jeho závěrečné saldo (platby, náklady), vodoměr a návrh jeho stavu z odečtů, `problems` (co brání převodu). |
+| POST | `/houses/{id}/transfer` | Admin | `{ transferDate, newOwnerName, newOwnerContact?, meterValue?, meterIsEstimate, meterSource?, fundShare (výchozí 0), updateHouseContact, reason? }` → mezizávěrka domu k `transferDate − 1`, ukončení období vlastnictví, nové období od `transferDate`, počáteční stavy nového vlastníka (fond, stav vodoměru jako odečet), volitelně nový kontakt domu. Vše v auditu. |
+
 ## Systém — `SystemFunctions.cs`
 
 | Metoda | Cesta | Přístup | Popis |
