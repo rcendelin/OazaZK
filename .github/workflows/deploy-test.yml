@@ -82,6 +82,7 @@ jobs:
           VITE_ENTRA_CLIENT_ID: ${{ secrets.TEST_ENTRA_CLIENT_ID }}
           VITE_ENTRA_TENANT_ID: ${{ secrets.TEST_ENTRA_TENANT_ID }}
           VITE_API_BASE_URL: ${{ secrets.TEST_API_BASE_URL }}
+          VITE_ENVIRONMENT: test
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4

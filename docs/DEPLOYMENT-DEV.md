@@ -10,7 +10,7 @@
 |-----------|--------|--------|------|
 | **DEV** | `develop` | `oaza-dev.cendelinovi.cz` | Vývoj, testování |
 | TEST | `release/*` | `oaza-test.cendelinovi.cz` | UAT (později) |
-| PROD | `main` | `oaza.cendelinovi.cz` | Produkce (později) |
+| PROD | `master` | `oaza.cendelinovi.cz` | Produkce (později) |
 
 ---
 
@@ -288,7 +288,7 @@ Jdi na https://github.com/rcendelin/OazaZK/settings/secrets/actions a přidej:
 
 ### 7.3 Vytvoř DEV workflow
 
-Potřebuješ nový workflow soubor, který deployuje z `develop` větve. Aktuální `deploy.yml` je pro `main` (PROD).
+Potřebuješ nový workflow soubor, který deployuje z `develop` větve. Aktuální `deploy.yml` je pro `master` (PROD).
 
 Vytvoř soubor `.github/workflows/deploy-dev.yml` (viz krok 8).
 
@@ -639,7 +639,7 @@ npm run dev
 swa start http://localhost:5173 --api-location http://localhost:7071
 ```
 
-`local.settings.json` v `api/src/Oaza.Functions/` je již nakonfigurovaný pro Azurite (`UseDevelopmentStorage=true`).
+`local.settings.json` není v repozitáři (je v `.gitignore`) — vytvoř ho z `api/src/Oaza.Functions/local.settings.json.example`, který je nastavený pro Azurite (`UseDevelopmentStorage=true`). Podrobnosti: [LOKALNI-VYVOJ.md](LOKALNI-VYVOJ.md).
 
 ---
 
@@ -651,7 +651,7 @@ Až bude DEV ověřený, vytvoříme analogicky:
 |-----------|---------------|---------|-----------|-----|--------|
 | DEV | rg-oaza-dev | stoazadev | func-oaza-dev | swa-oaza-dev | develop |
 | TEST | rg-oaza-test | stoazatest | func-oaza-test | swa-oaza-test | release/* |
-| PROD | rg-oaza-prod | stoaza | func-oaza-prod | swa-oaza-prod | main |
+| PROD | rg-oaza-prod | stoaza | func-oaza-prod | swa-oaza-prod | master |
 
 Každé prostředí bude mít:
 - Vlastní Resource Group

@@ -1,0 +1,6 @@
+# Výpočetní logika, jejíž pokrytí řádků musí být v CI ≥ 90 % (X6).
+# Glob vůči cestě od api/ (např. src/Oaza.Application/UseCases/X.cs). Nové výpočty (T02–T08) sem přidávat.
+src/Oaza.Domain/Services/*.cs
+src/Oaza.Application/UseCases/Calculate*.cs
+src/Oaza.Application/UseCases/CloseBillingPeriodUseCase.cs
+src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs

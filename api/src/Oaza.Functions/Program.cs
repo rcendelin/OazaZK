@@ -44,6 +44,8 @@ var host = new HostBuilder()
 
         // Auth services
         services.AddSingleton<IJwtService, JwtService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<Oaza.Application.Audit.IAuditLogger, Oaza.Application.Audit.AuditLogger>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
         // Infrastructure: Table Storage, Blob Storage, all repositories, email

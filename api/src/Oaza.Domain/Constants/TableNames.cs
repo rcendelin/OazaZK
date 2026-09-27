@@ -15,4 +15,5 @@ public static class TableNames
     public const string DocumentVersions = "DocumentVersions";
     public const string BankAccountMappings = "BankAccountMappings";
     public const string BankTransactions = "BankTransactions";
+    public const string AuditLog = "AuditLog";
 }
