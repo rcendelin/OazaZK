@@ -4,6 +4,7 @@ import { msalInstance } from './auth/msalConfig';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import { EnvironmentBanner } from './components/EnvironmentBanner';
 import { LoginPage } from './pages/LoginPage';
 import { MagicLinkVerifyPage } from './pages/MagicLinkVerifyPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -25,6 +26,7 @@ function App() {
   return (
     <MsalProvider instance={msalInstance}>
       <AuthProvider>
+        <EnvironmentBanner />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
