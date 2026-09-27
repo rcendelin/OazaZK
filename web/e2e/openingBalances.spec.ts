@@ -8,7 +8,7 @@ const meters = [
   { id: 'm1', meterNumber: 'V-001', name: '', type: 'Individual', houseId: 'h1', houseName: 'RD1', radioAddress: null, installationDate: '2020-01-01T00:00:00Z' },
 ];
 const components = [
-  { id: 'c1', name: 'Elektřina – vodárna', code: 'ELEKTRINA_VODARNA', startDate: '2023-11-01', allocationBasis: 'CostEntries', active: true, note: null, currentMethod: 'Equal', currentParticipants: 4 },
+  { id: 'c1', name: 'Elektřina – vodárna', code: 'ELEKTRINA_VODARNA', startDate: '2023-11-01', allocationBasis: 'CostEntries', waterRole: 'None', active: true, note: null, currentMethod: 'Equal', currentParticipants: 4 },
 ];
 
 test('opening balances: meter value suggested from readings (S8) is saved as an estimate', async ({ page }) => {

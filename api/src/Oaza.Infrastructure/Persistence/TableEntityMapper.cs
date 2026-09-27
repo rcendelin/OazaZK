@@ -526,6 +526,7 @@ public static class TableEntityMapper
             { "Code", component.Code },
             { "StartDate", ToIsoDay(component.StartDate) },
             { "AllocationBasis", component.AllocationBasis.ToString() },
+            { "WaterRole", component.WaterRole.ToString() },
             { "Active", component.Active },
             { "Note", component.Note },
         };
@@ -540,6 +541,7 @@ public static class TableEntityMapper
             Code = entity.GetString("Code") ?? string.Empty,
             StartDate = GetIsoDay(entity, "StartDate") ?? DateOnly.MinValue,
             AllocationBasis = Enum.TryParse<AllocationBasis>(entity.GetString("AllocationBasis"), out var basis) ? basis : AllocationBasis.CostEntries,
+            WaterRole = Enum.TryParse<WaterRole>(entity.GetString("WaterRole"), out var waterRole) ? waterRole : WaterRole.None,
             Active = entity.GetBoolean("Active") ?? true,
             Note = entity.GetString("Note"),
         };

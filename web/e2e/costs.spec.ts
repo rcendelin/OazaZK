@@ -3,7 +3,7 @@ import { adminUser, mockApi, navigate, signInAsAdmin } from './mockApi';
 
 const component = {
   id: 'c-vodarna', name: 'Elektřina – vodárna', code: 'ELEKTRINA_VODARNA', startDate: '2023-11-01',
-  allocationBasis: 'CostEntries', active: true, note: null, currentMethod: 'Equal', currentParticipants: 4,
+  allocationBasis: 'CostEntries', waterRole: 'None', active: true, note: null, currentMethod: 'Equal', currentParticipants: 4,
 };
 const advance = {
   id: 'e1', componentId: 'c-vodarna', componentName: 'Elektřina – vodárna', type: 'Advance', periodFrom: '2023-11-01', periodTo: '2023-11-30',

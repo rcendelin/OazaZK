@@ -18,6 +18,10 @@ public class CostComponent
     public DateOnly StartDate { get; set; }
 
     public AllocationBasis AllocationBasis { get; set; }
+
+    /// <summary>For metered components: water PVK (consumption) or water losses (T05). At most one component per role.</summary>
+    public WaterRole WaterRole { get; set; }
+
     public bool Active { get; set; } = true;
     public string? Note { get; set; }
 }

@@ -15,12 +15,14 @@ import {
   getCostComponents,
   getSegments,
   methodLabels,
+  waterRoleLabels,
 } from '../../api/costComponents';
 import type {
   AllocationBasis,
   AllocationMethod,
   AllocationSegment,
   CostComponent,
+  WaterRole,
   CostComponentDetail,
   Participation,
 } from '../../api/costComponents';
@@ -107,7 +109,7 @@ export function CostComponentsPage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{c.code}</td>
                   <td className="px-4 py-3">{formatIsoDay(c.startDate)}</td>
-                  <td className="px-4 py-3">{basisLabels[c.allocationBasis]}</td>
+                  <td className="px-4 py-3">{basisLabels[c.allocationBasis]}{c.waterRole !== 'None' && ` · ${waterRoleLabels[c.waterRole]}`}</td>
                   <td className="px-4 py-3">{c.currentMethod ? methodLabels[c.currentMethod] : '—'}</td>
                   <td className="px-4 py-3 text-right">{c.currentParticipants}</td>
                 </tr>
@@ -131,6 +133,7 @@ function CreateComponentForm({ onCreated }: { onCreated: (c: CostComponent) => v
   const [startDate, setStartDate] = useState('2023-11-01');
   const [basis, setBasis] = useState<AllocationBasis>('CostEntries');
   const [method, setMethod] = useState<AllocationMethod>('Equal');
+  const [waterRole, setWaterRole] = useState<WaterRole>('None');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -140,7 +143,7 @@ function CreateComponentForm({ onCreated }: { onCreated: (c: CostComponent) => v
     setBusy(true);
     setErrors([]);
     try {
-      onCreated(await createCostComponent({ name, code, startDate, allocationBasis: basis, method, note: note || undefined }));
+      onCreated(await createCostComponent({ name, code, startDate, allocationBasis: basis, waterRole: basis === 'Metered' ? waterRole : 'None', method, note: note || undefined }));
     } catch (err) {
       setErrors(reasons(err));
     } finally {
@@ -178,6 +181,22 @@ function CreateComponentForm({ onCreated }: { onCreated: (c: CostComponent) => v
             <option value="Metered">{basisLabels.Metered}</option>
           </select>
         </label>
+        {basis === 'Metered' && (
+          <label className="text-sm text-text-secondary">
+            <span className="mb-1 block">Role ve vyúčtování vody</span>
+            <select
+              value={waterRole}
+              onChange={(e) => {
+                const next = e.target.value as WaterRole;
+                setWaterRole(next);
+                if (next === 'Losses') setMethod('Equal');
+              }}
+              className={inputCls}
+            >
+              {(['None', 'Consumption', 'Losses'] as WaterRole[]).map((r) => <option key={r} value={r}>{waterRoleLabels[r]}</option>)}
+            </select>
+          </label>
+        )}
         <label className="text-sm text-text-secondary">
           <span className="mb-1 block">Metoda rozpočtu</span>
           <select value={method} onChange={(e) => setMethod(e.target.value as AllocationMethod)} className={inputCls}>

@@ -128,9 +128,15 @@ public partial class CostComponentsUseCase
             errors.Add("Kód složky smí obsahovat jen písmena A–Z, číslice a podtržítko (např. VODA_PVK).");
         if (request.StartDate == default)
             errors.Add("Datum začátku účtování je povinné.");
+        if (request.WaterRole != WaterRole.None && request.AllocationBasis != AllocationBasis.Metered)
+            errors.Add("Roli ve vyúčtování vody může mít jen složka účtovaná podle odečtů.");
         ThrowIfAny(errors);
 
         var existing = await _components.GetAllComponentsAsync();
+        if (request.WaterRole != WaterRole.None && existing.Any(c => c.WaterRole == request.WaterRole))
+            throw new AppException(request.WaterRole == WaterRole.Consumption
+                ? "Složka pro vodu PVK už existuje."
+                : "Složka pro ztráty vody už existuje.", 409);
         if (existing.Any(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase)))
             throw new AppException($"Složka s kódem {code} už existuje.", 409);
 
@@ -141,6 +147,7 @@ public partial class CostComponentsUseCase
             Code = code,
             StartDate = request.StartDate,
             AllocationBasis = request.AllocationBasis,
+            WaterRole = request.WaterRole,
             Active = true,
             Note = Clean(request.Note),
         };
@@ -359,6 +366,7 @@ public partial class CostComponentsUseCase
             Code = c.Code,
             StartDate = c.StartDate,
             AllocationBasis = c.AllocationBasis,
+            WaterRole = c.WaterRole,
             Active = c.Active,
             Note = c.Note,
             CurrentMethod = rules.FirstOrDefault(r => AllocationSegments.IsActive(r.ValidFrom, r.ValidTo, today))?.Method,
@@ -388,7 +396,7 @@ public partial class CostComponentsUseCase
 
     private static CostComponent Copy(CostComponent c) => new()
     {
-        Id = c.Id, Name = c.Name, Code = c.Code, StartDate = c.StartDate, AllocationBasis = c.AllocationBasis, Active = c.Active, Note = c.Note,
+        Id = c.Id, Name = c.Name, Code = c.Code, StartDate = c.StartDate, AllocationBasis = c.AllocationBasis, WaterRole = c.WaterRole, Active = c.Active, Note = c.Note,
     };
 
     private static ComponentAllocationRule Copy(ComponentAllocationRule r) => new()
