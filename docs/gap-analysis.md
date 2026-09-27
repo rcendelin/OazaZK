@@ -1,7 +1,7 @@
 # Gap analýza T01–T14 (T00)
 
-Co ze zadání existuje, co chybí a jak se přechází. Podrobný checklist po úkolech je v `TASK.md`
-(lokální pracovní soubor); tady je souhrn. Stav k 27. 9. 2026.
+Co ze zadání existuje, co chybí a jak se přechází. Zadání je v `docs/ZADANI.md`, podrobný checklist po úkolech
+se vede v přehledu úkolů mimo repozitář (artefakt „Portál Oáza – přehled úkolů k implementaci“); tady je souhrn. Stav k 27. 9. 2026.
 
 **Migrace dat:** žádná. Produkční data neexistují, platí jen nový model a testovací instance se přeseeduje
 (rozhodnutí X2, [open-questions.md](open-questions.md)). „Migrace“ níže znamená, který starý kód nový nahradí.

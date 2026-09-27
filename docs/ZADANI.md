@@ -4,7 +4,7 @@
 > **Cíl:** doplnit portál o funkce potřebné pro start ostrého provozu: počáteční stavy, nákladové složky s účastí domů, saldo domu, vyúčtování s mezizávěrkami, pokladna a oddělený fond.
 > **Způsob práce:** tasky jsou seřazené podle závislostí. Každý task má akceptační kritéria a testy, které musí projít, než se pokračuje dalším.
 >
-> Rozhodnutí, která zadání upřesňují nebo mění (X1 znaménko, X2 jen nový model, X5 data, T09 oprávnění), jsou v `docs/open-questions.md`. Stav tasků je v `TASK.md` a `docs/gap-analysis.md`.
+> Rozhodnutí, která zadání upřesňují nebo mění (X1 znaménko, X2 jen nový model, X5 data, T09 oprávnění), jsou v `docs/open-questions.md`. Stav tasků je v `docs/gap-analysis.md`.
 
 ---
 

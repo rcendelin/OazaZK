@@ -17,6 +17,7 @@ using Oaza.Domain.Enums;
 using Oaza.Domain.Helpers;
 using Oaza.Domain.Interfaces;
 using Oaza.Functions.Attributes;
+using Oaza.Domain.Time;
 
 namespace Oaza.Functions.Endpoints;
 
@@ -27,6 +28,7 @@ public class ReadingFunctions
     private readonly IWaterMeterRepository _meterRepository;
     private readonly IHouseRepository _houseRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
+    private readonly IClock _clock;
     private readonly ILogger<ReadingFunctions> _logger;
 
     private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
@@ -43,6 +45,7 @@ public class ReadingFunctions
         IWaterMeterRepository meterRepository,
         IHouseRepository houseRepository,
         IBillingPeriodRepository billingPeriodRepository,
+        IClock clock,
         ILogger<ReadingFunctions> logger)
     {
         _importUseCase = importUseCase ?? throw new ArgumentNullException(nameof(importUseCase));
@@ -50,6 +53,7 @@ public class ReadingFunctions
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -694,7 +698,7 @@ public class ReadingFunctions
             }
             else
             {
-                dateTo = DateTime.UtcNow;
+                dateTo = PragueClock.AsUtcMidnight(_clock.Today);
             }
 
             if (!string.IsNullOrEmpty(fromParam) && DateTime.TryParse(fromParam, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFrom))
