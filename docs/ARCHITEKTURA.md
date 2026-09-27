@@ -145,7 +145,7 @@ Všechny funkce mají `AuthorizationLevel.Anonymous` (bez function keys) — **o
 | Platby | vlastní dům | všechny domy (jen čtení) | vše + zápis plateb |
 | Hospodaření | záznamy a souhrny | + export PDF/XLSX, fond, přílohy | + přidávání záznamů |
 | Dokumenty | čtení a stažení | čtení a stažení | + nahrávání, verze, mazání |
-| Administrace (domy, uživatelé, vodoměry) | — | — | ✔ |
+| Administrace (domy, uživatelé, vodoměry, import počátečních dat) | — | — | ✔ |
 
 \* Účetní obvykle nemá přiřazený dům, API mu proto v `GET /readings` vrací jen data vlastního domu (tj. nic) a UI zobrazí jen hlavní vodoměr.
 
@@ -190,6 +190,7 @@ Pozor: některá data jsou pro všechny přihlášené bez omezení — seznam d
 | `/voda` | Voda a ztráty (T05): intervaly mezi odečty hlavního vodoměru, ztráta, cena z faktur, metoda ztrát, náklady domů, rozdíl proti fakturám | Admin, Accountant |
 | `/naklady` | Náklady (T06): záznamy po složkách, rozpad na domy, přidání nákladu a opakované zálohy (zápis jen Admin) | Admin, Accountant |
 | `/admin/opening-balances` | Počáteční stavy (T03): start účtování, stavy vodoměrů s návrhem z odečtů, podíly ve fondu, kredity složek s náhledem | Admin |
+| `/admin/seed-import` | Import počátečních dat (T13): nahrání CSV šablon, zkouška nanečisto s reportem (MD/XLSX), zápis | Admin |
 | `/admin/audit` | Audit změn (X4) | Admin |
 
 ### Nápověda v UI (`web/src/content/help.ts`)
