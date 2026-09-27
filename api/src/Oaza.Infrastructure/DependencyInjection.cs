@@ -44,6 +44,9 @@ public static class DependencyInjection
         services.AddSingleton<IBankAccountMappingRepository, BankAccountMappingRepository>();
         services.AddSingleton<IBankTransactionRepository, BankTransactionRepository>();
         services.AddSingleton<IAuditLogRepository, AuditLogRepository>();
+        services.AddSingleton<ICostComponentRepository, CostComponentRepository>();
+        services.AddSingleton<IComponentAllocationRuleRepository, ComponentAllocationRuleRepository>();
+        services.AddSingleton<IParticipationRepository, ParticipationRepository>();
 
         // Blob Storage service
         services.AddSingleton<IBlobStorageService, BlobStorageService>();

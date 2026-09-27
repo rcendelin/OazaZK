@@ -499,4 +499,105 @@ public static class TableEntityMapper
             HouseOverrides = overrides,
         };
     }
+
+    // ───────────────────── Calendar days (X5) ─────────────────────
+    // DateOnly is stored as a "yyyy-MM-dd" string: sortable, no time zone.
+
+    public static string? ToIsoDay(DateOnly? day) =>
+        day?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    public static DateOnly? GetIsoDay(TableEntity entity, string key) =>
+        DateOnly.TryParseExact(entity.GetString(key), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day
+            : null;
+
+    private static string? ToInvariant(decimal? value) => value?.ToString(CultureInfo.InvariantCulture);
+
+    private static decimal? GetDecimal(TableEntity entity, string key) =>
+        decimal.TryParse(entity.GetString(key), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : null;
+
+    // ───────────────────── CostComponent (T02) ─────────────────────
+
+    public static TableEntity ToTableEntity(CostComponent component)
+    {
+        return new TableEntity(PartitionKeys.CostComponent, component.Id)
+        {
+            { "Name", component.Name },
+            { "Code", component.Code },
+            { "StartDate", ToIsoDay(component.StartDate) },
+            { "AllocationBasis", component.AllocationBasis.ToString() },
+            { "Active", component.Active },
+            { "Note", component.Note },
+        };
+    }
+
+    public static CostComponent ToCostComponent(TableEntity entity)
+    {
+        return new CostComponent
+        {
+            Id = entity.RowKey,
+            Name = entity.GetString("Name") ?? string.Empty,
+            Code = entity.GetString("Code") ?? string.Empty,
+            StartDate = GetIsoDay(entity, "StartDate") ?? DateOnly.MinValue,
+            AllocationBasis = Enum.TryParse<AllocationBasis>(entity.GetString("AllocationBasis"), out var basis) ? basis : AllocationBasis.CostEntries,
+            Active = entity.GetBoolean("Active") ?? true,
+            Note = entity.GetString("Note"),
+        };
+    }
+
+    // ───────────────────── ComponentAllocationRule (T02) ─────────────────────
+    // PK = component id, RK = rule id
+
+    public static TableEntity ToTableEntity(ComponentAllocationRule rule)
+    {
+        return new TableEntity(rule.ComponentId, rule.Id)
+        {
+            { "ValidFrom", ToIsoDay(rule.ValidFrom) },
+            { "ValidTo", ToIsoDay(rule.ValidTo) },
+            { "Method", rule.Method.ToString() },
+            { "RatioSource", rule.RatioSource },
+            { "Reason", rule.Reason },
+        };
+    }
+
+    public static ComponentAllocationRule ToComponentAllocationRule(TableEntity entity)
+    {
+        return new ComponentAllocationRule
+        {
+            Id = entity.RowKey,
+            ComponentId = entity.PartitionKey,
+            ValidFrom = GetIsoDay(entity, "ValidFrom") ?? DateOnly.MinValue,
+            ValidTo = GetIsoDay(entity, "ValidTo"),
+            Method = Enum.TryParse<AllocationMethod>(entity.GetString("Method"), out var method) ? method : AllocationMethod.Equal,
+            RatioSource = entity.GetString("RatioSource"),
+            Reason = entity.GetString("Reason"),
+        };
+    }
+
+    // ───────────────────── Participation (T02) ─────────────────────
+    // PK = component id, RK = participation id
+
+    public static TableEntity ToTableEntity(Participation participation)
+    {
+        return new TableEntity(participation.ComponentId, participation.Id)
+        {
+            { "HouseId", participation.HouseId },
+            { "ValidFrom", ToIsoDay(participation.ValidFrom) },
+            { "ValidTo", ToIsoDay(participation.ValidTo) },
+            { "Weight", ToInvariant(participation.Weight) },
+        };
+    }
+
+    public static Participation ToParticipation(TableEntity entity)
+    {
+        return new Participation
+        {
+            Id = entity.RowKey,
+            ComponentId = entity.PartitionKey,
+            HouseId = entity.GetString("HouseId") ?? string.Empty,
+            ValidFrom = GetIsoDay(entity, "ValidFrom") ?? DateOnly.MinValue,
+            ValidTo = GetIsoDay(entity, "ValidTo"),
+            Weight = GetDecimal(entity, "Weight"),
+        };
+    }
 }

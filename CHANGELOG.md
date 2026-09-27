@@ -38,6 +38,9 @@ se sekce přejmenuje na verzi s datem.
 - **Nákladové složky – doménový model (T02, část A).** Entity `CostComponent`, `ComponentAllocationRule` a `Participation`
   s efektivním datováním, výpočet úseků, ve kterých je rozpočet konstantní (`AllocationSegments`), a validace:
   nepřekrývání účasti a pravidel, `PERCENT` = 100 % v každém dni (hláška s datem a součtem), zákaz změny za mezizávěrkou.
+- **Nákladové složky – API (T02, část B).** Tabulky `CostComponents`, `ComponentAllocationRules`, `Participations`
+  a endpointy `/cost-components…`: založení složky (s prvním pravidlem), změna metody od data s povinným důvodem,
+  přidání, ukončení a smazání účasti, výpis úseků. Čtou Admin a Accountant, zapisuje jen Admin, každá změna jde do auditu.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

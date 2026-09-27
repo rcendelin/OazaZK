@@ -16,4 +16,7 @@ public static class TableNames
     public const string BankAccountMappings = "BankAccountMappings";
     public const string BankTransactions = "BankTransactions";
     public const string AuditLog = "AuditLog";
+    public const string CostComponents = "CostComponents";
+    public const string ComponentAllocationRules = "ComponentAllocationRules";
+    public const string Participations = "Participations";
 }
