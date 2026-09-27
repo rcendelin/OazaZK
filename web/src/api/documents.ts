@@ -11,10 +11,12 @@ export const uploadDocument = async (
   name: string,
   category: string,
   getToken: () => Promise<string | null>,
+  componentId?: string,
 ): Promise<DocumentResponse> => {
   const token = await getToken();
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-  const url = `${baseUrl}/documents?name=${encodeURIComponent(name)}&category=${encodeURIComponent(category)}`;
+  const url = `${baseUrl}/documents?name=${encodeURIComponent(name)}&category=${encodeURIComponent(category)}`
+    + (componentId ? `&componentId=${encodeURIComponent(componentId)}` : '');
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -60,6 +62,15 @@ export const downloadDocument = async (
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+
+export interface UnaccountedDocument {
+  document: DocumentResponse;
+  componentName: string | null;
+}
+
+/** Invoices in Documents without a cost entry (T11). */
+export const getUnaccountedDocuments = (): Promise<UnaccountedDocument[]> =>
+  apiClient.get<UnaccountedDocument[]>('/documents/unaccounted');
 
 export const deleteDocument = (id: string): Promise<void> =>
   apiClient.delete(`/documents/${encodeURIComponent(id)}`);

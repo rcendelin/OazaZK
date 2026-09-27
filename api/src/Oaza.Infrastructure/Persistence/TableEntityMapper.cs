@@ -374,7 +374,8 @@ public static class TableEntityMapper
             { "FileSizeBytes", document.FileSizeBytes },
             { "ContentType", document.ContentType },
             { "UploadedAt", document.UploadedAt },
-            { "UploadedBy", document.UploadedBy }
+            { "UploadedBy", document.UploadedBy },
+            { "ComponentId", document.ComponentId }
         };
     }
 
@@ -389,7 +390,8 @@ public static class TableEntityMapper
             FileSizeBytes = entity.GetInt64("FileSizeBytes") ?? 0,
             ContentType = entity.GetString("ContentType") ?? string.Empty,
             UploadedAt = entity.GetDateTimeOffset("UploadedAt")?.UtcDateTime ?? DateTime.MinValue,
-            UploadedBy = entity.GetString("UploadedBy") ?? string.Empty
+            UploadedBy = entity.GetString("UploadedBy") ?? string.Empty,
+            ComponentId = entity.GetString("ComponentId")
         };
     }
 

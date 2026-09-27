@@ -116,9 +116,10 @@ Formát souborů a validační pravidla: [VYUCTOVANI.md §7](VYUCTOVANI.md#7-imp
 
 | Metoda | Cesta | Přístup | Popis |
 |--------|-------|---------|-------|
-| GET | `/documents?category=` | přihlášený | Seznam (kategorie `stanovy`, `zapisy`, `smlouvy`, `ostatni`). |
-| POST | `/documents?name=&category=` | Admin | Raw tělo souboru, `Content-Type` = typ souboru (PDF, DOCX, XLSX, JPEG, PNG), max 20 MB. |
+| GET | `/documents?category=` | přihlášený | Seznam (kategorie `stanovy`, `zapisy`, `smlouvy`, `faktury`, `ostatni`). |
+| POST | `/documents?name=&category=&componentId=` | Admin | Raw tělo souboru, `Content-Type` = typ souboru (PDF, DOCX, XLSX, JPEG, PNG), max 20 MB. Kategorie `faktury` (T11) jen PDF a obrázky, volitelně s nákladovou složkou `componentId`. Pravidla v `DocumentUploadRules`. |
 | GET | `/documents/{id}/download` | přihlášený | Stažení aktuální verze. |
+| GET | `/documents/unaccounted` | Admin, Accountant | Faktury a vyúčtování (kategorie `faktury`), na které zatím neodkazuje žádný nákladový záznam (T11), s názvem přiřazené složky. |
 | DELETE | `/documents/{id}` | Admin | Smaže dokument (historie verzí v úložišti zůstává). |
 | POST | `/documents/{id}/versions` | Admin | Nová verze; drží se posledních 10. |
 | GET | `/documents/{id}/versions` | přihlášený | Historie verzí. |

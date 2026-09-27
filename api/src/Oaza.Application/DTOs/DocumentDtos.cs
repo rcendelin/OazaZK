@@ -7,7 +7,8 @@ public record DocumentResponse(
     long FileSizeBytes,
     string ContentType,
     DateTime UploadedAt,
-    string UploadedBy);
+    string UploadedBy,
+    string? ComponentId = null);
 
 public class UploadDocumentRequest
 {

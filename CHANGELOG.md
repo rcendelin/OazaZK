@@ -98,6 +98,10 @@ se sekce přejmenuje na verzi s datem.
   zaplatil a kdo ne, příspěvky, výdaje (i placené předem) a vyrovnání; zůstatek fondu. Trvalé upozornění „Fond mimo
   účetnictví spolku – peníze nejsou na účtu spolku“. Data fondu se nikdy nedostanou do salda, mezizávěrek, pokladny
   ani exportů pro účetní.
+- **Podklady od správkyně (T11).** V Dokumentech nová kategorie „Faktury a vyúčtování“ (jen PDF a obrázky) a hromadné
+  nahrání více souborů najednou s přiřazením nákladové složky; u faktury tlačítko „Vytvořit náklad“, které otevře Náklady
+  s předvyplněnou složkou i dokladem. V Nákladech přehled „Dokumenty bez zaúčtování“ — dokument z něj zmizí, jakmile
+  k němu vznikne náklad.
 
 ### Opraveno
 - **„Dnes“ ve formulářích a PDF** už v noci mezi půlnocí a 1:00 (v létě 2:00) nenabízí včerejšek: výchozí datum

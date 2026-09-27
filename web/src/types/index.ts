@@ -286,6 +286,8 @@ export interface DocumentResponse {
   contentType: string;
   uploadedAt: string;
   uploadedBy: string;
+  /** Invoices (T11): the cost component the document belongs to. */
+  componentId?: string | null;
 }
 
 // Document version types

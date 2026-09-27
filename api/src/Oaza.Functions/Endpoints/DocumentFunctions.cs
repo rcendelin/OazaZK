@@ -4,6 +4,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
+using Oaza.Application.Documents;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
 using Oaza.Application.Interfaces;
@@ -22,6 +23,7 @@ public class DocumentFunctions
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentVersionRepository _documentVersionRepository;
     private readonly IBlobStorageService _blobStorageService;
+    private readonly ICostComponentRepository _componentRepository;
     private readonly ILogger<DocumentFunctions> _logger;
 
     private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
@@ -36,7 +38,7 @@ public class DocumentFunctions
         "image/png"
     };
 
-    private static readonly string[] AllowedCategories = { "stanovy", "zapisy", "smlouvy", "ostatni" };
+    private static readonly string[] AllowedCategories = DocumentUploadRules.Categories;
 
     private static readonly HashSet<string> AllowedCategoriesSet =
         new(AllowedCategories, StringComparer.OrdinalIgnoreCase);
@@ -51,8 +53,10 @@ public class DocumentFunctions
         IDocumentRepository documentRepository,
         IDocumentVersionRepository documentVersionRepository,
         IBlobStorageService blobStorageService,
+        ICostComponentRepository componentRepository,
         ILogger<DocumentFunctions> logger)
     {
+        _componentRepository = componentRepository ?? throw new ArgumentNullException(nameof(componentRepository));
         _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
         _documentVersionRepository = documentVersionRepository ?? throw new ArgumentNullException(nameof(documentVersionRepository));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
@@ -116,6 +120,7 @@ public class DocumentFunctions
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var name = queryParams["name"];
             var category = queryParams["category"];
+            var componentId = string.IsNullOrWhiteSpace(queryParams["componentId"]) ? null : queryParams["componentId"];
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(category))
                 return await WriteErrorResponseAsync(req, 400, "Název a kategorie jsou povinné parametry.");
@@ -135,20 +140,13 @@ public class DocumentFunctions
             // Determine content type from Content-Type header
             var contentType = req.Headers.GetValues("Content-Type")?.FirstOrDefault() ?? "application/octet-stream";
 
-            // Validate content type
-            if (!AllowedContentTypes.Contains(contentType))
-                return await WriteErrorResponseAsync(req, 400, $"Typ souboru '{contentType}' není povolen.");
+            // Category, size and type rules (T11: invoices are PDF or images only)
+            if (DocumentUploadRules.Check(category, contentType, bodyBytes.Length) is { } problem)
+                return await WriteErrorResponseAsync(req, 400, problem);
+            if (componentId is not null && await _componentRepository.GetAsync(PartitionKeys.CostComponent, componentId) is null)
+                return await WriteErrorResponseAsync(req, 400, "Nákladová složka neexistuje.");
 
-            // Determine file extension from content type
-            var extension = contentType switch
-            {
-                "application/pdf" => ".pdf",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => ".docx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
-                "image/jpeg" => ".jpg",
-                "image/png" => ".png",
-                _ => ".bin"
-            };
+            var extension = DocumentUploadRules.Extension(contentType);
 
             var documentId = Guid.NewGuid().ToString();
             var fileName = Path.GetFileName(name) + extension; // Sanitize name
@@ -167,6 +165,7 @@ public class DocumentFunctions
                 ContentType = contentType,
                 UploadedAt = DateTime.UtcNow,
                 UploadedBy = user.Id,
+                ComponentId = componentId,
             };
 
             await _documentRepository.UpsertAsync(document);
