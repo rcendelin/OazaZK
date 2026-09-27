@@ -53,7 +53,7 @@ Konvence:
 - Každý endpoint vrací DTO, nikdy doménovou entitu. JSON je camelCase.
 - Validace přes FluentValidation → 400 s polem `errors` (viz [API.md](API.md#chyby)).
 - Peníze jsou vždy `decimal`. V Table Storage se ukládají jako **řetězec v invariant kultuře** (`G29`), aby nedošlo ke ztrátě přesnosti.
-- Jednodušší logika žije přímo v endpointech; složitější výpočty mají vlastní use case (`CalculateSettlementUseCase`, `CloseBillingPeriodUseCase`, `CalculateHouseSaldoUseCase`, `ImportReadingsUseCase`, …).
+- Jednodušší logika žije přímo v endpointech; složitější výpočty mají vlastní use case (`CostEntriesUseCase`, `WaterSettlementUseCase`, `HouseLedgerUseCase`, `InterimClosingsUseCase`, `ImportReadingsUseCase`, …).
 
 ---
 
@@ -67,10 +67,7 @@ Konvence:
 | `Houses` | `House` | `HOUSE` | GUID | `IsActive`, `DissolveOverpayment` |
 | `WaterMeters` | `WaterMeter` | `METER` | GUID | `Type` Main/Individual, `MeterNumber`, `RadioAddress`, `Name` |
 | `MeterReadings` | `MeterReading` | ID vodoměru | invertovaný timestamp (`DateTime.MaxValue.Ticks − ticks`) | nejnovější odečty první |
-| `BillingPeriods` | `BillingPeriod` | `PERIOD` | GUID | součet faktur se neukládá |
-| `SupplierInvoices` | `SupplierInvoice` | `INVOICE` | GUID | řádky faktury jako JSON (`LineItemsJson`) |
 | `AdvancePayments` | `AdvancePayment` | ID domu | viz níže | zálohy, doplatky, výplaty, počáteční stavy |
-| `Settlements` | `Settlement` | ID období | ID domu | snapshot při uzavření období |
 | `Documents` | `Document` | kategorie (`stanovy`, `zapisy`, `smlouvy`, `ostatni`) | GUID | |
 | `DocumentVersions` | `DocumentVersion` | ID dokumentu | číslo verze (`D3`, např. `004`) | posledních 10 verzí |
 | `FinancialRecords` | `FinancialRecord` | rok `YYYY` | GUID | příjmy/výdaje spolku |
@@ -95,7 +92,6 @@ Protože Table Storage nemá JOINy ani cizí klíče, integritu vztahů (dům �
 | Kontejner | Cesta | Obsah |
 |-----------|-------|-------|
 | `documents` | `{kategorie}/{docId}/{název}{přípona}`, verze `{kategorie}/{docId}/v{n}/…` | dokumenty spolku (max 20 MB; PDF, DOCX, XLSX, JPG, PNG) |
-| `invoices` | `{invoiceId}/faktura-{yyyy}-{MM}.pdf` | PDF faktur dodavatele vody |
 | `finance` | `{recordId}/faktura.pdf` | PDF příloh finančních záznamů |
 | `settlements` | `{periodId}/{houseId}.pdf` | vygenerovaná PDF vyúčtování (cache) |
 
@@ -146,9 +142,7 @@ Všechny funkce mají `AuthorizationLevel.Anonymous` (bez function keys) — **o
 | Odečty — přehled | vlastní vodoměr + hlavní | hlavní vodoměr* | vše, vč. ztráty |
 | Odečty — seznam, oprava, import | — | — | ✔ |
 | Zálohy — nastavení a výpočet | vlastní dům | všechny domy (jen čtení) | čtení i úpravy |
-| Saldo a platby | vlastní dům | všechny domy (jen čtení) | vše + zápis plateb |
-| Vyúčtování | uzavřená období, vlastní dům, PDF | jako člen | správa období, výpočet, uzavření, PDF/ZIP, faktury za vodu |
-| Přehled faktur | — | ✔ | ✔ |
+| Platby | vlastní dům | všechny domy (jen čtení) | vše + zápis plateb |
 | Hospodaření | záznamy a souhrny | + export PDF/XLSX, fond, přílohy | + přidávání záznamů |
 | Dokumenty | čtení a stažení | čtení a stažení | + nahrávání, verze, mazání |
 | Administrace (domy, uživatelé, vodoměry) | — | — | ✔ |
@@ -184,9 +178,7 @@ Pozor: některá data jsou pro všechny přihlášené bez omezení — seznam d
 | `/readings` | Odečty | přihlášení |
 | `/readings/list`, `/readings/import` | Seznam / import odečtů | Admin |
 | `/advances` | Zálohy | přihlášení |
-| `/saldo` | Saldo a platby | přihlášení |
-| `/billing` | Vyúčtování | přihlášení |
-| `/prehled-faktur` | Přehled faktur | Účetní, Admin |
+| `/saldo` | Platby | přihlášení |
 | `/documents` | Dokumenty | přihlášení |
 | `/finance` | Hospodaření | přihlášení |
 | `/jak-to-funguje` | Nápověda a slovník pojmů | přihlášení |
@@ -222,9 +214,8 @@ Odesílá `AcsEmailService` (Azure Communication Services), sdílená ACS resour
 | Pozvánka | `POST /users` | nový uživatel |
 | Připomínka odečtu | timer `0 0 8 1 * *` (1. den v měsíci 8:00 UTC) nebo ručně | všichni uživatelé se zapnutými notifikacemi |
 | Nové odečty importovány | ručně `POST /notifications/send` (`import_completed`) | členové se zapnutými notifikacemi |
-| Vyúčtování uzavřeno | ručně `POST /notifications/send` (`settlement_closed`) | členové se zapnutými notifikacemi |
 
-Import ani uzavření období notifikace automaticky **neposílají**. Selhání odeslání se loguje a nepřeruší operaci.
+Import notifikace automaticky **neposílá**. Selhání odeslání se loguje a nepřeruší operaci.
 
 ---
 

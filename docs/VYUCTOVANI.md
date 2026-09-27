@@ -1,10 +1,12 @@
-# Vyúčtování vody, zálohy a saldo — jak to počítá kód
+# Zálohy, platby, saldo a odečty — jak to počítá kód
 
 > **Zdroj pravdy je kód.** Tento dokument popisuje chování tak, jak je implementováno (stav větve `develop`, září 2026). Odkazy vedou do `api/src/`. Když se kód změní, aktualizuj i tento soubor.
 >
-> Uživatelsky orientované vysvětlení stejných pojmů je v aplikaci na stránce **Jak to funguje** (`/jak-to-funguje`, obsah v `web/src/content/help.ts`).
+> Uživatelsky orientované vysvětlení stejných pojmů je v aplikaci na stránce **Jak to funguje** (`/jak-to-funguje`, obsah v `web/src/content/help.ts`). Zadání nového výpočetního modelu (T02–T11) je v [ZADANI.md](ZADANI.md), rozhodnutí v [open-questions.md](open-questions.md).
 
 Zkratky: **UC** = `Oaza.Application/UseCases/`, **EP** = `Oaza.Functions/Endpoints/`.
+
+> **Starý model vyúčtování je odstraněn (X2, 27. 9. 2026).** Zúčtovací období (`BillingPeriod`), uložená vyúčtování (`Settlement`) a jejich PDF, faktury za vodu (`SupplierInvoice`), přehled faktur, staré saldo `GET /advances/saldo` a ceník záloh (cena vody, elektřina, koeficienty, společný základ, metoda ztrát) už v kódu nejsou. Náhradou jsou nákladové složky a náklady (`/naklady`), voda a ztráty (`/voda`), saldo domu (`/saldo-domu`) a mezizávěrky (`/mezizaverky`). **Platby domů zůstaly beze změny.** Staré tabulky ve storage (`BillingPeriods`, `SupplierInvoices`, `Settlements`) kód nečte; produkční data neexistují, nic se nemigruje.
 
 ---
 
@@ -12,166 +14,51 @@ Zkratky: **UC** = `Oaza.Application/UseCases/`, **EP** = `Oaza.Functions/Endpoin
 
 | Pojem | Význam |
 |-------|--------|
-| **Hlavní vodoměr** | `WaterMeter.Type = Main`, bez `HouseId`. Měří celkový odběr sdružení. Použije se první nalezený. |
+| **Hlavní vodoměr** | `WaterMeter.Type = Main`, bez `HouseId`. Měří celkový odběr sdružení. |
 | **Domovní vodoměr** | `WaterMeter.Type = Individual` s `HouseId`. |
-| **Ztráta** | Hlavní vodoměr − Σ domovní vodoměry (únik v síti, nepřesnost měření). |
-| **Zúčtovací období** | `BillingPeriod` s `DateFrom`–`DateTo`, stav `Open` / `Closed`. |
+| **Ztráta** | Hlavní vodoměr − Σ domovní vodoměry v intervalu mezi odečty hlavního vodoměru (T05). |
 | **Záloha** | `AdvancePayment` typu `Advance` — jedna na dům a měsíc (RowKey `YYYY-MM`). |
 | **Doplatek** | `AdvancePayment` typu `Doplatek` — libovolná jednorázová platba, může být víc za měsíc. |
 | **Výplata přeplatku** | `AdvancePayment` typu `Payout` — vrácení peněz domu. |
-| **Počáteční zůstatek** | `AdvancePayment` typu `OpeningBalance` — jednorázový vstupní stav (+ nedoplatek, − přeplatek). |
 | **Složky platby** | Každá záloha/doplatek se dělí na `WaterAmount` / `ElectricityAmount` / `CommonAmount` (`Amount` = součet). |
-| **Společný fond** | Naspořené společné příspěvky mínus společné výdaje (viz §6). |
+| **Podíl na fondu** | `OpeningBalance` typu `FundShare` (T03) — počáteční stav domu v saldu. Starý `PaymentType.OpeningBalance` saldo ignoruje. |
 
-Znaménková konvence všude: **kladné = nedoplatek (dům dluží), záporné = přeplatek**.
-
----
-
-## 2. Výpočet vyúčtování
-
-`GET /billing-periods/{id}/calculate?method=Equal|ProportionalToConsumption` — pouze náhled, nic neukládá.
-Implementace: `UC/CalculateSettlementUseCase.cs`.
-
-### 2.1 Spotřeba vodoměru za období
-
-Pro hlavní i každý domovní vodoměr (`GetMeterConsumptionAsync`):
-
-- **počáteční odečet** = poslední odečet s `ReadingDate ≤ DateFrom`; pokud žádný není, použije se **nejstarší odečet vůbec**,
-- **koncový odečet** = poslední odečet s `ReadingDate ≤ DateTo`; pokud není → chyba,
-- `spotřeba = konec − začátek`; záporná spotřeba → chyba,
-- odečty po `DateTo` se nepoužijí, nic se neinterpoluje.
-
-> Prakticky: aby vyúčtování sedělo, musí existovat odečet **přesně k datu začátku a konce** období (nebo těsně před ním).
-
-### 2.2 Domy a ztráta
-
-1. Do výpočtu vstupují jen **aktivní domy** (`House.IsActive`).
-2. Dům bez domovního vodoměru nebo s chybou v odečtech se **tiše vynechá** (jen záznam v logu) — nedostane řádek vyúčtování a jeho voda se projeví ve ztrátě.
-3. `ztráta = spotřeba_hlavní − Σ spotřeba_domů`; záporná ztráta se ořízne na 0.
-4. Rozpočet ztráty (`AllocateLoss`):
-   - **Equal** — `ztráta / n`, kde *n* = počet domů **se spotřebou**,
-   - **ProportionalToConsumption** — `ztráta × c_i / Σc` (při Σc = 0 se použije Equal).
-
-> **Pozor na výchozí metodu:** endpointy `calculate` i `close` mají výchozí metodu **`Equal`**, pokud ji klient nepošle. Nastavení `AdvanceSettings.LossAllocationMethod` (výchozí `ProportionalToConsumption`) se používá jen pro saldo a výpočet záloh (§4, §5). UI metodu posílá explicitně.
-
-### 2.3 Částka faktur za období
-
-`SumInvoiceCostForPeriod` prochází **všechny** faktury dodavatele (`SupplierInvoice`):
-
-- faktura **s řádky** (`InvoiceLineItem`): sečtou se řádky, jejichž `DateFrom` leží v `[DateFrom, DateTo]` období, každý jako `AmountExclVat × (1 + VatRatePercent/100)`. `DateTo` řádku se ignoruje, nic se nekrátí poměrem;
-- **starší faktura bez řádků**: použije se `Amount`, pokud první den měsíce `Year/Month` leží v období.
-
-Součet faktur se v `BillingPeriod` **neukládá** — vždy se počítá.
-
-### 2.4 Rozpočet na domy
-
-Pro každý dům *i*:
-
-```
-podíl_i %          = (c_i + ztráta_i) / (Σc + ztráta) × 100          (při nule: 100 / počet domů)
-CalculatedAmount_i = round(podíl_i × faktury_celkem, 2)
-zálohy na vodu_i   = Σ WaterAmount záloh a doplatků s EffectiveDate v období
-Balance_i          = round(CalculatedAmount_i − zálohy na vodu_i, 2)  (jen voda!)
-
-měsíců             = (rok2 − rok1) × 12 + (měsíc2 − měsíc1) + 1       (kalendářní měsíce, min. 1)
-ElectricityCharge_i = round(MonthlyElectricityCost × koeficient_i / 100 × měsíců, 2)
-CommonCharge_i      = round(MonthlyCommonBaseFee × měsíců, 2)
-```
-
-- `EffectiveDate` zálohy = 1. den jejího měsíce; doplatku = `PaymentDate`. Výplaty a počáteční zůstatky do vyúčtování **nevstupují**.
-- Elektřina a společné poplatky jsou **rozpočtové** (měsíční sazba × počet měsíců podle **aktuálního** nastavení), ne skutečné náklady. Pro ně se `Balance` nepočítá — vypořádání řeší saldo (§5).
-- Zaokrouhlení: m³ na 3 desetinná místa, podíl na 2 (jen pro zobrazení), peníze na 2. Součet `CalculatedAmount` se může od součtu faktur lišit o haléře — zbytek se nerozpočítává.
+Znaménková konvence salda (X1): **kladné = přeplatek, záporné = nedoplatek (dům dluží)**.
 
 ---
 
-## 3. Uzavření období
+## 2. Platby
 
-`POST /billing-periods/{id}/close` (Admin), tělo:
-
-```json
-{
-  "lossAllocationMethod": "Equal | ProportionalToConsumption",
-  "fundDrawAmount": 0,
-  "applyNewWaterPrice": false,
-  "newWaterPriceValidFrom": "2026-01-01"
-}
-```
-
-Implementace: `UC/CloseBillingPeriodUseCase.cs`. Postup:
-
-1. Spočítá vyúčtování (§2); období musí být `Open`.
-2. **Čerpání z fondu** (`fundDrawAmount > 0`, `ApplyFundDrawAsync`):
-   - částka nesmí přesáhnout zůstatek fondu (§6),
-   - každému **aktivnímu** domu zapíše doplatek `round(částka / n, 2)` do složky voda s `IsFundTransfer = true`, datem `DateTo` a deterministickým RowKey `FUND-{periodId}` (opakování přepíše, neduplikuje),
-   - zapíše jeden výdaj `FinancialRecord` (Id `fund-{periodId}`, kategorie `fond-voda`) na celou částku,
-   - vyúčtování se přepočítá, takže `Balance` už doplatky z fondu zahrnuje.
-3. **Nová cena vody** (`applyNewWaterPrice = true`, vyžaduje `newWaterPriceValidFrom`):
-   `cena = round(faktury_celkem / (Σc + ztráta), 2)` → zapíše se do `AdvanceSettings.WaterPricePerM3` a `WaterPriceValidFrom`.
-4. Uloží `Settlement` pro každý dům z výpočtu (snapshot).
-5. Nastaví `Status = Closed`.
-
-Náhled čerpání fondu i nové ceny počítá frontend z existujících endpointů (`/calculate`, `/finance/fund`, `/advance-settings`).
-
-### Co uzavření zamyká
-
-Uzavření je **nevratné** (neexistuje endpoint pro znovuotevření). Zámky se kontrolují podle data:
-
-| Operace | Zamčeno? |
-|---------|----------|
-| Úprava / smazání faktury, nahrání přílohy | ano (podle měsíce hlavičky faktury) |
-| Oprava odečtu (`PUT /readings/...`) | ano (podle původního data) |
-| Úprava / smazání měsíční zálohy | ano |
-| Úprava období (`PUT /billing-periods/{id}`) | ano (409) |
-| Doplatky, výplaty, počáteční zůstatky | **ne** — záměrně, platby po uzavření se promítnou do salda |
-| Import / ruční zadání odečtu | **ne** (viz §8) |
-
-### PDF vyúčtování
-
-`GET /billing-periods/{id}/settlements/{houseId}/pdf` a ZIP všech `GET /billing-periods/{id}/pdf` — jen pro uzavřená období. PDF se ukládá do blobu `settlements/{periodId}/{houseId}.pdf` a při dalším požadavku se vrací z cache. Obsahuje **jen vodu** (spotřeba, ztráta, podíl, částka, zálohy, přeplatek/doplatek). Implementace `UC/GenerateSettlementPdfUseCase.cs`.
+Platby zadává admin na stránce **Platby** (`/saldo`) nebo je načte z bankovního výpisu (`/advances/import`). Endpointy viz [API.md](API.md#zálohy-a-platby--advancefunctionscs). Mezizávěrka (T08) platby zamyká: úprava nebo smazání platby v uzavřeném období → 409, nová platba s datem v uzavřeném období se zaúčtuje na první otevřený den (záloha za uzavřený měsíc se stane doplatkem) a původní datum je v poznámce (`Domain/Helpers/ClosedPeriodPayments`).
 
 ---
 
-## 4. Výpočet doporučených záloh
+## 3. Doporučené zálohy
 
-`GET /advance-settings/calculate` (Member vidí jen svůj dům). Implementace přímo v `EP/AdvanceSettingsFunctions.cs`.
+`GET /advance-settings/calculate` (člen vidí jen svůj dům) — `UC/CalculatePrescribedAdvancesUseCase.cs`, UI `/advances`.
 
-1. **Průměrná měsíční spotřeba** každého vodoměru z posledních 4 odečtů: `(poslední − první) / max(1, dní / 30)`, min. 0. Při < 2 odečtech = 0.
-2. `měsíční ztráta = max(0, hlavní − Σ domy)`, rozpočtená podle `AdvanceSettings.LossAllocationMethod` mezi **všechny aktivní domy**.
-3. Doporučení (zaokrouhleno na celé Kč):
-   ```
-   voda      = round((c_i + ztráta_i) × WaterPricePerM3, 0)
-   elektřina = round(MonthlyElectricityCost × koeficient_i / 100, 0)
-   společné  = MonthlyCommonBaseFee
-   ```
-4. Pokud má dům v `HouseOverrides` **ruční přepis**, použijí se všechny tři složky z přepisu.
+1. **Období:** posledních 12 měsíců před dneškem (Europe/Prague) — `[dnes − 12 měsíců, dnes − 1 den]`.
+2. **Náklady domu** v tomto období vezme `LedgerCostCollector` (stejný zdroj jako saldo domu, T07) a rozdělí je na tři složky:
+   - **voda** = voda PVK podle spotřeby + podíl na ztrátách,
+   - **elektřina** = náklady složek, jejichž kód začíná `ELEKTRINA` (např. `ELEKTRINA_VODARNA`),
+   - **společné** = náklady všech ostatních složek.
+   Kredity u dodavatele (T03) se nezapočítávají — jsou jednorázovým počátečním stavem, ne průběžným nákladem.
+3. **Doporučení** každé složky = `max(0, round(náklady ÷ 12, 0))` (celé Kč, zaokrouhlení od nuly).
+4. Pokud má dům v `AdvanceSettings.HouseOverrides` **ruční přepis**, použijí se všechny tři složky z přepisu (`actual`); jinak `actual = recommended`.
 
-Nastavení (`PUT /advance-settings`, Admin): pokud jsou zadány koeficienty elektřiny, jejich součet musí být 100 (tolerance ±0,1).
-
----
-
-## 5. Saldo domu
-
-`GET /advances/saldo[?houseId=]` — implementace `UC/CalculateHouseSaldoUseCase.cs`, UI `/saldo`.
-
-Saldo je **jedno čisté číslo na dům**; rozpad na vodu / elektřinu / společné je jen analytický (peníze jsou zaměnitelné).
-
-- **Předpis (charges) za období:**
-  - uzavřené období → uložený snapshot `Settlement` (`CalculatedAmount`, `ElectricityCharge`, `CommonCharge`),
-  - otevřené období → živý přepočet (§2) s metodou z `AdvanceSettings`; pokud výpočet selže (např. chybí odečet), období se v saldu neprojeví.
-- **Zaplaceno:** vždy živě z plateb. Zálohy a doplatky se přiřadí prvnímu období, do kterého padne jejich `EffectiveDate`; ostatní jsou **Nezařazené platby** (zaplaceno bez předpisu).
-- **Čisté úpravy:** výplaty (`Payout`, kladná částka) a počáteční zůstatky (`OpeningBalance`, se znaménkem).
-
-```
-ComponentSaldo = round(Σ období (předpis − zaplaceno) za vodu + elektřinu + společné, 2)
-TotalSaldo     = round(ComponentSaldo + Σ čisté úpravy, 2)
-```
-
-**„Vystačí ~N měsíců"** — jen při přeplatku (`TotalSaldo < 0`) a pokud má dům ruční přepis záloh:
-`N = round(|TotalSaldo| / Σ složek přepisu, 1)`. Příznak `House.DissolveOverpayment` („rozpouštět přeplatek") je informativní.
+`actual` používá i import bankovního výpisu k rozpoznání a rozdělení pravidelné zálohy. Nastavení `PUT /advance-settings` (Admin) ukládá jen přepisy; záporná částka → 400.
 
 ---
 
-## 6. Společný fond
+## 4. Saldo domu a společný fond
+
+Saldo domu počítá nový model: `GET /ledger/houses/{houseId}` a přehled `GET /ledger/overview` (`Oaza.Application/Ledger/HouseLedgerUseCase.cs`, UI `/saldo-domu`):
+
+```
+saldo = podíl na fondu (FundShare) + platby − výplaty − náklady domu (T06) − voda a ztráty (T05) + kredity (T03)
+```
+
+Náklady se rozpočítávají po úsecích a měsících podle pravidel složek (T02, T06); kontrolní řádek přehledu porovná rozpočtenou částku složky se součtem přes domy. Mezizávěrka (T08) uloží snímek salda a zamkne období.
 
 `GET /finance/fund` (Admin, Accountant) — `UC/GetFundBalanceUseCase.cs`:
 
@@ -180,15 +67,15 @@ FundBalance = Σ CommonAmount všech záloh a doplatků (všech domů)
             − Σ výdajů FinancialRecord s kategorií mimo {voda, elektro}
 ```
 
-Příjmové záznamy se nezapočítávají. Výdaj `fond-voda` z čerpání při uzavření fond snižuje.
+Příjmové záznamy se nezapočítávají.
 
 ---
 
-## 7. Import odečtů
+## 5. Import odečtů
 
 Dvoukrokový proces: **náhled → potvrzení**. Nic se neukládá, dokud admin nepotvrdí. Implementace `UC/ImportReadingsUseCase.cs`, `EP/ReadingFunctions.cs`.
 
-### 7.1 Excel (`POST /readings/import`, max 5 MB)
+### 5.1 Excel (`POST /readings/import`, max 5 MB)
 
 Čte se první list, **data jsou po sloupcích**:
 
@@ -202,11 +89,11 @@ Dvoukrokový proces: **náhled → potvrzení**. Nic se neukládá, dokud admin 
 - Vodoměr: shoda s `MeterNumber` (bez ohledu na velikost písmen), jinak první vodoměr, jehož číslo je **podřetězcem** buňky.
 - Hodnota: stav vodoměru v m³ (kumulativní); české formáty `1 542,7` jsou podporované.
 
-### 7.2 Schránka (`POST /readings/import/clipboard`)
+### 5.2 Schránka (`POST /readings/import/clipboard`)
 
 Tělo `{ "text": "...", "readingDate": "2026-02-01" }`. Text oddělený tabulátory (export z odečítacího software), první řádek hlavička se sloupci **`Address`** a **`Value 1`** (případně `Value`). Vodoměr se páruje podle `WaterMeter.RadioAddress`, jinak `MeterNumber`. Všechny řádky dostanou jedno datum `readingDate`.
 
-### 7.3 Validace
+### 5.3 Validace
 
 | Chyby (blokují potvrzení) | Varování (neblokují) |
 |---------------------------|----------------------|
@@ -215,10 +102,10 @@ Tělo `{ "text": "...", "readingDate": "2026-02-01" }`. Text oddělený tabulát
 | odečet pro stejný vodoměr a **stejný kalendářní měsíc** už existuje (v DB nebo v dávce) | anomálie: spotřeba > 2× průměr posledních 7 odečtů |
 | hodnota nižší než předchozí odečet v DB | |
 
-### 7.4 Potvrzení
+### 5.4 Potvrzení
 
 `POST /readings/import/confirm { readings: [{ meterId, readingDate, value }] }`. **Bezstavové:** klient pošle odečty
-z náhledu a server je znovu ověří stejnými pravidly jako náhled (§7.3) proti aktuálním datům. Náhled se na serveru
+z náhledu a server je znovu ověří stejnými pravidly jako náhled (§5.3) proti aktuálním datům. Náhled se na serveru
 neukládá, takže nezáleží na tom, která instance Functions potvrzení obslouží.
 
 - Celá dávka se ověří **před prvním zápisem** — když cokoli neprojde, neuloží se nic.
@@ -230,7 +117,7 @@ neukládá, takže nezáleží na tom, která instance Functions potvrzení obsl
 | žádné odečty, neznámý vodoměr, duplicita v dávce, záporná spotřeba | 400 |
 | mezitím přibyl jiný odečet ve stejném měsíci | 409 |
 
-### 7.5 Odhad odečtu (T04)
+### 5.5 Odhad odečtu (T04)
 
 `GET /readings/estimate?meterId=&date=` spočítá stav vodoměru k libovolnému dni (např. počáteční stav pro nového majitele).
 Počítá se po celých dnech, výsledek na 3 desetinná místa (0,001 m³ = 1 litr), zaokrouhlení od nuly.
@@ -248,17 +135,7 @@ Ruční zadání odhadu vyžaduje popis. Kód: `Oaza.Domain.Services.ReadingEsti
 
 ---
 
-## 8. Známá omezení a nekonzistence
+## 6. Známá omezení
 
-Zjištěno při sepisování dokumentace. Nejde o dokumentační chyby, ale o chování kódu, které stojí za pozdější opravu:
-
-1. **Dvě pravidla pro „faktury v období".** Vyúčtování sčítá řádky faktur podle `DateFrom` (§2.3), ale seznam období (součty), odpověď při vytvoření/úpravě období, PDF („Celková faktura dodavatele") a zámek faktur používají měsíc hlavičky faktury (`Year/Month` = nejstarší řádek) a `Amount`. U faktur přes více měsíců se čísla mohou lišit.
-2. **Výchozí metoda ztráty.** `calculate`/`close` mají výchozí `Equal`, saldo pro otevřené období používá `AdvanceSettings.LossAllocationMethod` (výchozí proporcionální).
-3. **Neúplný zámek uzavřeného období.** Import a ruční zadání odečtu ani přesun odečtu na nové datum (`PUT` s `newDate`) nekontrolují uzavřené *zúčtovací* období. Mezizávěrky nového modelu (T08) je kontrolují.
-4. **Uzavření není atomické.** Zápisy plateb, výdaje, ceny, vyúčtování a stavu jsou oddělené. Při opakování po částečném selhání už zapsaný výdaj `fund-{periodId}` snižuje zůstatek fondu, takže kontrola zůstatku může nové čerpání odmítnout.
-5. **Čerpání z fondu** jde všem aktivním domům (i těm, které vyúčtování vynechalo) a kvůli zaokrouhlení se Σ doplatků může o haléře lišit od výdaje. Smazání doplatku `FUND-…` výdaj neodstraní.
-6. ~~**Session importu je v paměti.**~~ Opraveno (X7): potvrzení je bezstavové (§7.4).
-7. ~~**Potvrzení importu není atomické.**~~ Opraveno (X7): dávka se ověří celá před prvním zápisem, opakování je idempotentní (§7.4).
-8. **Období se mohou překrývat** — validátor překryv nekontroluje.
-9. ~~**Nápověda k Excel importu na stránce Vodoměry je obráceně.**~~ Opraveno (X7, PR #6). `web/src/pages/admin/MetersPage.tsx` uvádí „vodoměry jako záhlaví sloupců, sloupec A = datum", parser ale čte data v řádku 1 a čísla vodoměrů ve sloupci A (§7.1).
-10. **Opačné znaménko na dashboardu.** Karta „Stav účtu" člena zobrazuje `−TotalSaldo` (kladné = přeplatek), stránka Saldo používá konvenci kladné = nedoplatek.
+1. **Doporučení záloh neřeší nový dům.** Dům bez nákladů v posledních 12 měsících (např. nově připojený) má doporučení 0 Kč — admin mu nastaví ruční přepis.
+2. **Rozdělení na složky podle kódu.** Elektřina se pozná jen podle prefixu kódu složky `ELEKTRINA`; složka s jiným kódem spadne do „společné“.

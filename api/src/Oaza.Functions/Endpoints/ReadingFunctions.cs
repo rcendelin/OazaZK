@@ -28,7 +28,6 @@ public class ReadingFunctions
     private readonly IMeterReadingRepository _readingRepository;
     private readonly IWaterMeterRepository _meterRepository;
     private readonly IHouseRepository _houseRepository;
-    private readonly IBillingPeriodRepository _billingPeriodRepository;
     private readonly IClock _clock;
     private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<ReadingFunctions> _logger;
@@ -46,7 +45,6 @@ public class ReadingFunctions
         IMeterReadingRepository readingRepository,
         IWaterMeterRepository meterRepository,
         IHouseRepository houseRepository,
-        IBillingPeriodRepository billingPeriodRepository,
         IClock clock,
         IClosingBoundary closingBoundary,
         ILogger<ReadingFunctions> logger)
@@ -55,7 +53,6 @@ public class ReadingFunctions
         _readingRepository = readingRepository ?? throw new ArgumentNullException(nameof(readingRepository));
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
-        _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _closingBoundary = closingBoundary ?? throw new ArgumentNullException(nameof(closingBoundary));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -435,15 +432,6 @@ public class ReadingFunctions
                 throw new NotFoundException("MeterReading", $"{meterId}/{date}");
             }
 
-            // Check if reading falls in a closed billing period
-            var allPeriods = await _billingPeriodRepository.GetByPartitionKeyAsync(PartitionKeys.Period);
-            var inClosedPeriod = allPeriods.Any(p =>
-                p.Status == BillingPeriodStatus.Closed &&
-                readingDate >= p.DateFrom && readingDate <= p.DateTo);
-            if (inClosedPeriod)
-            {
-                return await WriteErrorResponseAsync(req, 409, "Odečet nelze upravit v uzavřeném zúčtovacím období.");
-            }
             var closedMessage = await ClosedMessageAsync(readingDate)
                 ?? (request.NewDate is { } movedTo ? await ClosedMessageAsync(movedTo) : null);
             if (closedMessage is not null)

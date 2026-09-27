@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Community portal for a small neighborhood association ("Oáza Zadní Kopanina") in Prague. 8 households, up to 15 users. Primary function: shared water supply management — monthly meter readings, billing settlements, advance payments. Secondary: shared document storage and basic financial overview.
+Community portal for a small neighborhood association ("Oáza Zadní Kopanina") in Prague. 8 households, up to 15 users. Primary function: shared water supply management — monthly meter readings, cost allocation and house saldo, advance payments. Secondary: shared document storage and basic financial overview.
 
 **Domain:** `oaza.cendelinovi.cz`
 **Operator:** Single-person ops (Rosťa Čendelín)
@@ -125,10 +125,7 @@ All entities use Azure Table Storage. No relational DB, no JOINs — all aggrega
 | House | `HOUSE` | GUID | All houses in one partition |
 | WaterMeter | `METER` | GUID | All meters in one partition |
 | MeterReading | meter GUID | inverted timestamp (`DateTime.MaxValue.Ticks - readingDate.Ticks`) | Query latest readings per meter efficiently, newest first |
-| BillingPeriod | `PERIOD` | GUID | All periods in one partition |
-| SupplierInvoice | `INVOICE` | GUID | All invoices in one partition, filter by date in app layer |
-| AdvancePayment | house GUID | `YYYY-MM` (e.g. `2026-03`) | Query all payments for a house, filter by date range for billing |
-| Settlement | period GUID | house GUID | All settlements for a period in one partition |
+| AdvancePayment | house GUID | `YYYY-MM` (e.g. `2026-03`) | Query all payments for a house, filter by date range |
 | Document | category string (e.g. `stanovy`, `zapisy`) | GUID | Query by category |
 | FinancialRecord | `YYYY` (year) | GUID | Query by year |
 
@@ -186,31 +183,6 @@ public class MeterReading
     public string ImportedBy { get; set; }     // FK to User
 }
 
-// Oaza.Domain/Entities/BillingPeriod.cs
-public class BillingPeriod
-{
-    public string Id { get; set; }
-    public string Name { get; set; }           // e.g. "2. pololetí 2025"
-    public DateTime DateFrom { get; set; }
-    public DateTime DateTo { get; set; }
-    public BillingPeriodStatus Status { get; set; } // Open, Closed
-    // Total invoice amount is NOT stored — computed as SUM(SupplierInvoice.Amount) for this period
-}
-
-// Oaza.Domain/Entities/SupplierInvoice.cs
-public class SupplierInvoice
-{
-    public string Id { get; set; }
-    public int Year { get; set; }
-    public int Month { get; set; }             // Invoice period (YYYY-MM)
-    public string InvoiceNumber { get; set; }
-    public DateTime IssuedDate { get; set; }
-    public DateTime DueDate { get; set; }
-    public decimal Amount { get; set; }        // CZK
-    public decimal ConsumptionM3 { get; set; } // m³ per invoice
-    public string? AttachmentBlobName { get; set; }
-}
-
 // Oaza.Domain/Entities/AdvancePayment.cs
 public class AdvancePayment
 {
@@ -219,19 +191,6 @@ public class AdvancePayment
     public int Month { get; set; }             // YYYY-MM
     public decimal Amount { get; set; }        // CZK
     public DateTime PaymentDate { get; set; }
-}
-
-// Oaza.Domain/Entities/Settlement.cs
-public class Settlement
-{
-    public string PeriodId { get; set; }       // FK to BillingPeriod
-    public string HouseId { get; set; }        // FK to House
-    public decimal ConsumptionM3 { get; set; }
-    public decimal SharePercent { get; set; }
-    public decimal CalculatedAmount { get; set; }  // CZK
-    public decimal TotalAdvances { get; set; }     // CZK
-    public decimal Balance { get; set; }           // Negative = overpayment, positive = underpayment
-    public decimal LossAllocatedM3 { get; set; }   // Loss allocated to this house
 }
 
 // Oaza.Domain/Entities/Document.cs
@@ -268,9 +227,7 @@ public enum UserRole { Admin, Member, Accountant }
 public enum AuthMethod { EntraId, MagicLink }
 public enum MeterType { Main, Individual }
 public enum ReadingSource { Import, Manual }
-public enum BillingPeriodStatus { Open, Closed }
 public enum FinancialRecordType { Income, Expense }
-public enum LossAllocationMethod { Equal, ProportionalToConsumption }
 ```
 
 ### Implementation additions (beyond the initial spec)
@@ -278,11 +235,9 @@ public enum LossAllocationMethod { Equal, ProportionalToConsumption }
 The code has grown past this document; the following exist in the implementation but were not in the original data model / endpoint tables:
 
 - **`DocumentVersion`** entity + `DocumentVersions` table + repository — per-document version history (keeps the last 10 versions). PartitionKey = documentId, RowKey = zero-padded version number. Endpoints: `POST/GET /documents/{id}/versions`, `GET /documents/{id}/versions/{version}/download`.
-- **`AdvanceSettings`** singleton entity (PartitionKey `SETTINGS`, RowKey `advances`, table `AdvanceSettings`) — advance-payment pricing: water price/validity, monthly electricity cost + per-house coefficients, common base fee, per-house overrides, and a `LossAllocationMethod`. Endpoints: `GET/PUT /advance-settings`, `GET /advance-settings/calculate` (admins/accountants see all houses; members see only their own). Loaded via `IAdvanceSettingsRepository`.
-- **Component-split payments + per-house saldo.** `AdvancePayment` carries a 3-way split `WaterAmount`/`ElectricityAmount`/`CommonAmount` (+ `Amount`=sum), a `PaymentType` and a `Note`. `PaymentType` = `Advance`/`Doplatek` (component-split, fed into the water settlement) + `Payout`/`OpeningBalance` (net-level, NEVER seen by settlement — `GetByHouseAndPeriodAsync` filters to Advance+Doplatek). A **doplatek** is ad-hoc/repeatable (RowKey `D-{invertedTicks}-{guid}`); a regular advance is one-per-house-per-month (`YYYY-MM`); **payout** (`V-…`, refund of přeplatek, `Amount`>0) and **opening balance** (`O-…`, one-time seed, SIGNED `Amount`: +=nedoplatek, −=přeplatek) are net-level. `Settlement` extended with `ElectricityCharge`/`ElectricityAdvances`/`CommonCharge`/`CommonAdvances`; `TotalAdvances` is now WATER advances only.
-  - **Saldo: one net balance per house is the spine** (`TotalSaldo = ComponentSaldo + NetAdjustments`; +=nedoplatek, −=přeplatek); per-component voda/elektřina/společný is an analytical breakdown (money is fungible). Period-based: charges locked per period (closed=snapshot, open=live preview), paid recomputed live (post-close doplatky/payouts count); payments outside any period = "Nezařazené platby". `House.DissolveOverpayment` flag + "vystačí ~N měsíců" = |přeplatek| ÷ prescribed monthly (override sum). Endpoints: `POST /advances/doplatek`|`/payout`|`/opening-balance`, `DELETE /advances/{houseId}/{rowKey}`, `GET /advances/saldo`, `GET /finance/fund` (admin/accountant: Σ common contributions − Σ expenses mimo voda/elektro, via `GetFundBalanceUseCase`). UI: `web/src/pages/SaldoPage.tsx` (`/saldo`). See `CalculateHouseSaldoUseCase`.
-- **Fund draw + water-price carry-forward at settlement close.** `POST /billing-periods/{id}/close` optionally accepts `fundDrawAmount` (drawn from the common fund, split evenly across active houses as one auto-generated doplatek each — `AdvancePayment.IsFundTransfer=true`, deterministic `RowKey = "FUND-{periodId}"` so a retry overwrites instead of duplicating — plus one `FinancialRecord` expense, category `fond-voda`, deterministic `Id = "fund-{periodId}"`) and `applyNewWaterPrice`/`newWaterPriceValidFrom` (carries the period's realized invoice price/m³, incl. loss, forward into `AdvanceSettings.WaterPricePerM3`/`WaterPriceValidFrom`). Both are computed live in the frontend preview from data the existing `/calculate` + `/finance/fund` + `/advance-settings` endpoints already return — no new preview endpoint. See `CloseBillingPeriodUseCase.ApplyFundDrawAsync`/`ApplyNewWaterPriceAsync` and `docs/superpowers/specs/2026-07-18-vodni-fond-a-cena-design.md`.
-- **Received-invoices overview + FinancialRecord attachments.** A read-only unified view of all received invoices — water `SupplierInvoice` **plus** expense `FinancialRecord`s — via `GET /invoices/all?year=&category=` (Admin/Accountant), backed by `GetReceivedInvoicesUseCase` which joins both tables into `ReceivedInvoiceResponse` (`Source` `voda`/`ostatni`, `CountsTowardWaterSettlement`, `AttachmentDownloadPath`). The two entities stay **structurally separate** — the join is read-only and never feeds settlement, keeping the "BillingPeriod total = SUM(SupplierInvoice.Amount)" rule intact. `FinancialRecord` now supports PDF attachments: `POST`/`GET /finance/{id}/attachment` (blob container `finance`). Invoice/overview year filtering matches on **`IssuedDate.Year`** (document date), and both the overview and the "Faktury za vodu" list derive their year options from real data, so a multi-year invoice is always findable (`SupplierInvoiceRepository.GetByYearAsync` filters by `IssuedDate.Year`; settlement is unaffected — it matches per line-item `DateFrom`). UI: `web/src/pages/InvoicesOverviewPage.tsx` (`/prehled-faktur`, Admin/Accountant). See `docs/superpowers/specs/2026-07-18-prehled-faktur-design.md`.
+- **Old billing model removed (X2, 27. 9. 2026).** `BillingPeriod`, `Settlement` (+ PDFs), `SupplierInvoice`, the received-invoices overview, `CalculateHouseSaldoUseCase` (`GET /advances/saldo`) and the advance pricing (water price, electricity + coefficients, common base fee, loss method) are gone — replaced by the new model below. Payments stay. Old storage tables are no longer read; nothing is migrated.
+- **`AdvanceSettings`** singleton entity (PartitionKey `SETTINGS`, RowKey `advances`, table `AdvanceSettings`) — only per-house `HouseOverrides` now. `CalculatePrescribedAdvancesUseCase`: recommended advance = house's costs from `LedgerCostCollector` over `[today − 12 months, today − 1]` ÷ 12 (water + losses → water, component code prefix `ELEKTRINA` → electricity, rest → common; credits excluded; whole Kč, ≥ 0); actual = override or recommended. Endpoints: `GET/PUT /advance-settings`, `GET /advance-settings/calculate` (members only their own house).
+- **Component-split payments.** `AdvancePayment` carries a 3-way split `WaterAmount`/`ElectricityAmount`/`CommonAmount` (+ `Amount`=sum), a `PaymentType` and a `Note`. `PaymentType` = `Advance` (one per house per month, RowKey `YYYY-MM`) / `Doplatek` (RowKey `D-{invertedTicks}-{guid}`) / `Payout` (`V-…`, refund, `Amount`>0) / `OpeningBalance` (`O-…`, legacy — ignored by the ledger, replaced by FundShare; UI no longer offers it). Endpoints: `POST /advances/doplatek`|`/payout`|`/opening-balance`, `DELETE /advances/{houseId}/{rowKey}`, `GET /finance/fund` (admin/accountant: Σ common contributions − Σ expenses mimo voda/elektro, via `GetFundBalanceUseCase`). UI: `web/src/pages/SaldoPage.tsx` („Platby“, `/saldo`). `FinancialRecord` supports PDF attachments: `POST`/`GET /finance/{id}/attachment` (blob container `finance`).
 - **Bank statement import (Fio CSV).** `POST /bank-import/preview` (raw CSV body, ≤1 MB, saves nothing) + **stateless** `POST /bank-import/confirm` (client sends final per-row decisions; server re-validates — deliberately no `IImportSessionCache`), Admin only. `FioCsvParser` reads columns **by index** (the export has two `Poznámka` columns), UTF-8/cp1250, checks Σ against „Suma příjmů/výdajů". **Houses are matched only by counter-account**: `BankAccountMapping` (table `BankAccountMappings`, PK `MAP`, RK normalized account `{prefix-}{number}_{bank}` via `BankAccountNumber`; many accounts → one house), managed in Správa domácností (`GET/POST/DELETE /bank-accounts`) and learned on confirm. Processed movements go to `BankTransaction` (table `BankTransactions`, PK own account key, RK Fio „ID operace", `Imported`/`Ignored`) → re-uploads never duplicate. Suggestion: prescribed amount for a month without an advance → `Advance` (RowKey `YYYY-MM`), „doplat" in the message or anything else → `Doplatek`; split = prescribed or proportional (water takes the rounding remainder). Imported payments carry `BankOwnAccountKey`/`BankTransactionId` (`AdvanceResponse.IsFromBank` → „Z banky" badge); deleting such a payment also deletes its `BankTransaction`. Prescribed advances now come from `CalculatePrescribedAdvancesUseCase` (shared with `GET /advance-settings/calculate`). UI: `web/src/pages/BankImportPage.tsx` (`/advances/import`). See `docs/superpowers/specs/2026-09-27-import-bankovniho-vypisu-design.md`.
 - **Reading estimates (T04).** `MeterReading.IsEstimate` + `EstimateNote` (additive; old rows = physical readings). `Oaza.Domain.Services.ReadingEstimator` — exact / linear interpolation by whole days / nearest-before / nearest-after / none, 3 decimals. `GET /readings/estimate` (Admin), UI mark `EstimateMark` (≈). Estimates are always saved with a note.
 - **Audit log (X4). `AuditLogEntry` in table `AuditLog` (PK = UTC month `yyyy-MM`, RK = inverted ticks + id, append-only via `AddEntity`); old/new values are JSON snapshots. Every new-model use case (T02, T03, T05, T08, T09, T10) must call `IAuditLogger.LogAsync(entityType, entityId, AuditActions.*, old, new, actor, reason)` after a successful write — `Correction` requires a reason. Read: `GET /audit-log` (Admin), UI `/admin/audit`.
@@ -298,7 +253,7 @@ The code has grown past this document; the following exist in the implementation
 - **Off-book fund (T10, O4).** Feature flag `OFF_BOOK_FUND_ENABLED` (app setting, default off → every `/off-book-funds` endpoint 404s, `/features` tells the frontend; `FeatureFlags` built in `Program.cs`). Tables `OffBookFunds` (PK `FUND`) and `OffBookFundRecords` (PK fund id; `FundRecord.Kind` = Call/Contribution/Expense/Settlement). **Isolation:** only `Oaza.Application.OffBookFunds.OffBookFundUseCase` may depend on `IOffBookFundRepository` (a reflection test enforces it) — never read the fund from the ledger, closings, cash book or exports. UI `/fond` (`OffBookFundPage.tsx`) with a permanent warning; menu item only when the flag is on. Old-model writes respect closings too: readings (`ReadingFunctions`, `ImportReadingsUseCase` validation) are rejected up to the cut; payments (`AdvanceFunctions`, `ImportBankStatementUseCase`) use `Domain/Helpers/ClosedPeriodPayments` — edits/deletes of closed payments → 409, new late payments are booked on the first open day (an advance for a closed month becomes a doplatek) with the original date in the note.
 - **`User`** stores the magic-link token **hashed** (`MagicLinkTokenHash`, SHA-256) plus rate-limit/lockout counters (see above).
 - **`WaterMeter.Name`** — optional display label.
-- **Extra endpoints:** `DELETE /users/{id}`, `GET /readings/all`, `GET /finance/balance`, `GET /invoices/all`, `POST`/`GET /finance/{id}/attachment`, `POST /seed` (gated by `ENABLE_SEED`).
+- **Extra endpoints:** `DELETE /users/{id}`, `GET /readings/all`, `GET /finance/balance`, `POST`/`GET /finance/{id}/attachment`, `POST /seed` (gated by `ENABLE_SEED`).
 - **Email** is Azure Communication Services (not SendGrid).
 
 ## API endpoints
@@ -307,7 +262,7 @@ All endpoints are Azure Functions HTTP triggers under `/api/`, all with `Authori
 
 **The authoritative endpoint list is `docs/API.md`** (method, route, role, scoping, body shape). Update it whenever you add or change an endpoint.
 
-Settlement, close-period, saldo, advance and fund formulas plus import validation rules are documented **as implemented** in `docs/VYUCTOVANI.md` — read it before touching `CalculateSettlementUseCase`, `CloseBillingPeriodUseCase`, `CalculateHouseSaldoUseCase` or `ImportReadingsUseCase`. Its §8 lists known inconsistencies (e.g. invoice line-item vs header-month rule, `Equal` default for loss method in calculate/close).
+Advance recommendation, payments, fund formulas plus import validation rules are documented **as implemented** in `docs/VYUCTOVANI.md` — read it before touching `CalculateSettlementUseCase`, `CloseBillingPeriodUseCase`, `CalculateHouseSaldoUseCase` or `ImportReadingsUseCase`. Its §8 lists known inconsistencies (e.g. invoice line-item vs header-month rule, `Equal` default for loss method in calculate/close).
 
 Magic link: 15 min expiry, max 3 requests per email per hour, 5 failed verifications → token invalidated. JWT claims: `sub`, `email`, `role`, `houseId`, `authMethod`; 24h expiry.
 
@@ -360,7 +315,7 @@ Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admit
 - **Naming:** PascalCase for public members, camelCase for private fields with underscore prefix (`_tableClient`)
 - **Async everywhere:** All I/O operations are async, suffix with `Async`
 - **Repository pattern:** `IRepository<T>` in Domain, `TableStorageRepository<T>` in Infrastructure
-- **Use cases:** One class per use case in Application layer (e.g. `ImportReadingsUseCase`, `CalculateSettlementUseCase`)
+- **Use cases:** One class per use case in Application layer (e.g. `ImportReadingsUseCase`, `CostEntriesUseCase`)
 - **DTOs:** Separate Request/Response DTOs, never expose domain entities in API
 - **Validation:** FluentValidation validators per request DTO
 - **Error handling:** Throw `AppException(message, statusCode)` / `NotFoundException`; each endpoint catches and writes `{ "error": … }` (validation: `{ error, errors: [{field, message}] }`). There is no global exception middleware.
@@ -395,14 +350,13 @@ Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admit
 ```
 Resource Group:     rg-oaza-prod
 Storage Account:    stoaza (Table Storage + Blob Storage)
-  Table names:      Users, Houses, WaterMeters, MeterReadings, BillingPeriods,
-                    SupplierInvoices, AdvancePayments, Settlements, Documents,
+  Table names:      Users, Houses, WaterMeters, MeterReadings, AdvancePayments, Documents,
                     DocumentVersions, FinancialRecords, AdvanceSettings, AuditLog,
                     CostComponents, ComponentAllocationRules, Participations,
                     OwnershipPeriods, OpeningBalances, CostEntries, InterimClosings, CashBook,
                     OffBookFunds, OffBookFundRecords,
                     BankAccountMappings, BankTransactions
-  Blob containers:  documents, invoices, settlements, finance
+  Blob containers:  documents, finance
 Functions App:      func-oaza-prod
 Static Web App:     swa-oaza-prod
 ```
@@ -412,10 +366,6 @@ Static Web App:     swa-oaza-prod
 ```
 documents/
   {category}/{documentId}/{filename}        # Uploaded association documents
-invoices/
-  {invoiceId}/{filename}                    # Supplier invoice attachments
-settlements/
-  {periodId}/{houseId}.pdf                  # Generated settlement PDFs
 finance/
   {recordId}/{filename}                     # Financial record attachments
 ```
@@ -439,15 +389,15 @@ ENABLE_SEED=true            # only on DEV/local — enables anonymous POST /api/
 
 ## Key business rules
 
-1. **BillingPeriod total is computed, not stored.** Settlement sums invoice line items whose `DateFrom` falls within the period (× (1 + VAT)); legacy invoices without line items fall back to header Year/Month + `Amount`. Never write a total into BillingPeriod entity. (Some list/PDF totals still use the header-month rule — see `docs/VYUCTOVANI.md` §8.)
+1. **Costs are allocated, not stored per house.** A house's share is always computed from cost entries, component rules and participations (T02, T06) — never write per-house totals.
 
-2. **Advance payments are per-month, not per-period.** Regular advances use PartitionKey=houseId, RowKey=YYYY-MM (doplatek/payout/opening balance/fund use their own RowKey prefixes). At settlement time, SUM water components of Advance+Doplatek whose effective date falls within the billing period.
+2. **Advance payments are per-month.** Regular advances use PartitionKey=houseId, RowKey=YYYY-MM (doplatek/payout/opening balance/fund use their own RowKey prefixes). The ledger books an advance on the 1st day of its month, other payments on their payment date.
 
-3. **Loss on water network.** Difference between main meter consumption and sum of individual meters. Must be allocated to houses — configurable method (equal split or proportional to consumption). Always show loss explicitly in UI.
+3. **Loss on water network.** Difference between main meter consumption and sum of individual meters per interval between main meter readings (T05). Allocated by the losses component rule. Always show loss explicitly in UI.
 
 4. **Excel import is two-step.** First call parses and validates (returns preview + warnings). Second call confirms and saves. Never auto-save on upload.
 
-5. **Closing a billing period is irreversible.** Once closed, Settlement entities are written and the period is locked. Readings and invoices within the period can no longer be modified. (Intended behaviour — the lock currently has gaps, e.g. reading import/manual create/date-move; see `docs/VYUCTOVANI.md` §3 and §8.)
+5. **Interim closings lock the past.** Up to the last closed day nothing may change (costs → corrections in the open period, readings/payments → 409 or booked after the cut, T08). Only the latest closing can be deleted.
 
 6. **One user = one house** (except Admin who can see all houses).
 

@@ -21,8 +21,6 @@ public class ImportBankStatementUseCaseTests
     private readonly Mock<IBankAccountMappingRepository> _mappingRepo = new();
     private readonly Mock<IBankTransactionRepository> _txRepo = new();
     private readonly Mock<IAdvanceSettingsRepository> _settingsRepo = new();
-    private readonly Mock<IWaterMeterRepository> _meterRepo = new();
-    private readonly Mock<IMeterReadingRepository> _readingRepo = new();
     private readonly List<BankAccountMapping> _mappings = new();
     private readonly List<BankTransaction> _processed = new();
     private readonly Dictionary<string, List<AdvancePayment>> _payments = new();
@@ -43,15 +41,13 @@ public class ImportBankStatementUseCaseTests
                 WaterAdvance = 1000m, ElectricityAdvance = 200m, CommonAdvance = 300m,
             }),
         });
-        _meterRepo.Setup(r => r.GetByPartitionKeyAsync(PartitionKeys.Meter)).ReturnsAsync(new List<WaterMeter>());
 
         _mappingRepo.Setup(r => r.GetAllMappingsAsync()).ReturnsAsync(() => _mappings.ToList());
         _txRepo.Setup(r => r.GetByAccountAsync(OwnKey)).ReturnsAsync(() => _processed.ToList());
         _advanceRepo.Setup(r => r.GetByHouseIdAsync(It.IsAny<string>()))
             .ReturnsAsync((string houseId) => _payments.GetValueOrDefault(houseId)?.ToList() ?? new List<AdvancePayment>());
 
-        var prescribed = new CalculatePrescribedAdvancesUseCase(
-            _settingsRepo.Object, _houseRepo.Object, _meterRepo.Object, _readingRepo.Object);
+        var prescribed = TestSupport.PrescribedAdvances.WithoutCosts(_settingsRepo.Object, _houseRepo.Object);
         _sut = new ImportBankStatementUseCase(
             _houseRepo.Object, _advanceRepo.Object, _mappingRepo.Object, _txRepo.Object,
             prescribed, NullLogger<ImportBankStatementUseCase>.Instance);
@@ -252,7 +248,7 @@ public class ImportBankStatementUseCaseTests
     [Fact]
     public async Task Confirm_AdvanceForAMonthClosedByAnInterimClosing_IsBookedAfterTheCut()
     {
-        var prescribed = new CalculatePrescribedAdvancesUseCase(_settingsRepo.Object, _houseRepo.Object, _meterRepo.Object, _readingRepo.Object);
+        var prescribed = TestSupport.PrescribedAdvances.WithoutCosts(_settingsRepo.Object, _houseRepo.Object);
         var closed = new ImportBankStatementUseCase(
             _houseRepo.Object, _advanceRepo.Object, _mappingRepo.Object, _txRepo.Object,
             prescribed, NullLogger<ImportBankStatementUseCase>.Instance, new TestSupport.ClosedUntil(new DateOnly(2026, 8, 31)));

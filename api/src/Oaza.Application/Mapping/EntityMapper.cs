@@ -35,33 +35,6 @@ public static class EntityMapper
         };
     }
 
-    public static InvoiceResponse ToResponse(SupplierInvoice invoice)
-    {
-        return new InvoiceResponse
-        {
-            Id = invoice.Id,
-            Year = invoice.Year,
-            Month = invoice.Month,
-            InvoiceNumber = invoice.InvoiceNumber,
-            IssuedDate = invoice.IssuedDate,
-            DueDate = invoice.DueDate,
-            Amount = invoice.Amount,
-            ConsumptionM3 = invoice.ConsumptionM3,
-            VatRatePercent = invoice.VatRatePercent,
-            AttachmentBlobName = invoice.AttachmentBlobName,
-            LineItems = invoice.LineItems.Select(li => new InvoiceLineItemDto
-            {
-                DateFrom = li.DateFrom,
-                DateTo = li.DateTo,
-                StartReading = li.StartReading,
-                EndReading = li.EndReading,
-                ConsumptionM3 = li.ConsumptionM3,
-                UnitPrice = li.UnitPrice,
-                AmountExclVat = li.AmountExclVat,
-            }).ToList(),
-        };
-    }
-
     public static AdvanceResponse ToResponse(AdvancePayment payment, string? houseName = null)
     {
         return new AdvanceResponse
@@ -81,38 +54,6 @@ public static class EntityMapper
             IsFromBank = payment.BankTransactionId is not null,
             RowKey = payment.RowKey,
         };
-    }
-
-    public static BillingPeriodResponse ToResponse(BillingPeriod period, decimal? totalInvoiceAmount = null)
-    {
-        return new BillingPeriodResponse
-        {
-            Id = period.Id,
-            Name = period.Name,
-            DateFrom = period.DateFrom,
-            DateTo = period.DateTo,
-            Status = period.Status.ToString(),
-            TotalInvoiceAmount = totalInvoiceAmount,
-        };
-    }
-
-    public static SettlementResponse ToResponse(Settlement settlement, string houseName)
-    {
-        return new SettlementResponse(
-            PeriodId: settlement.PeriodId,
-            HouseId: settlement.HouseId,
-            HouseName: houseName,
-            ConsumptionM3: settlement.ConsumptionM3,
-            SharePercent: settlement.SharePercent,
-            CalculatedAmount: settlement.CalculatedAmount,
-            TotalAdvances: settlement.TotalAdvances,
-            Balance: settlement.Balance,
-            LossAllocatedM3: settlement.LossAllocatedM3,
-            ElectricityCharge: settlement.ElectricityCharge,
-            ElectricityAdvances: settlement.ElectricityAdvances,
-            CommonCharge: settlement.CommonCharge,
-            CommonAdvances: settlement.CommonAdvances
-        );
     }
 
     public static DocumentResponse ToResponse(Document document)

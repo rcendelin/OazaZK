@@ -234,7 +234,7 @@ export function BankImportPage() {
               Importovat další výpis
             </button>
             <Link to="/saldo" className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50">
-              Saldo a platby
+              Platby
             </Link>
             <Link to="/advances" className="rounded-xl border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-sunken/50">
               Zálohy

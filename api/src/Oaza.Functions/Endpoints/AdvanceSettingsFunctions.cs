@@ -49,7 +49,6 @@ public class AdvanceSettingsFunctions
             // Members may not see other households' per-house pricing details.
             if (user.Role == UserRole.Member)
             {
-                settings.ElectricityCoefficients = new Dictionary<string, decimal>();
                 settings.HouseOverrides = new Dictionary<string, HouseAdvanceOverride>();
             }
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
@@ -75,22 +74,13 @@ public class AdvanceSettingsFunctions
             if (settings is null)
                 return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
 
-            // Ensure collections are never null
-            settings.ElectricityCoefficients ??= new Dictionary<string, decimal>();
             settings.HouseOverrides ??= new Dictionary<string, HouseAdvanceOverride>();
-            settings.LossAllocationMethod ??= "ProportionalToConsumption";
-
-            if (settings.ElectricityCoefficients.Count > 0)
-            {
-                var sum = settings.ElectricityCoefficients.Values.Sum();
-                if (Math.Abs(sum - 100m) > 0.1m)
-                    return await WriteErrorResponseAsync(req, 400,
-                        $"Koeficienty elektřiny musí dát dohromady 100%. Aktuální součet: {sum:F1}%.");
-            }
+            if (settings.HouseOverrides.Values.Any(o => o is null || o.WaterAdvance < 0 || o.ElectricityAdvance < 0 || o.CommonAdvance < 0))
+                return await WriteErrorResponseAsync(req, 400, "Zálohy nesmí být záporné.");
 
             var tableClient = _tableServiceClient.GetTableClient("AdvanceSettings");
             await tableClient.CreateIfNotExistsAsync();
-            await tableClient.UpsertEntityAsync(TableEntityMapper.ToTableEntity(settings));
+            await tableClient.UpsertEntityAsync(TableEntityMapper.ToTableEntity(settings), TableUpdateMode.Replace);
 
             _logger.LogInformation("Advance settings updated.");
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, settings);
@@ -112,7 +102,6 @@ public class AdvanceSettingsFunctions
         {
             var user = GetAuthenticatedUser(context);
             var prescribed = await _calculatePrescribedAdvancesUseCase.CalculateAsync();
-            var settings = prescribed.Settings;
 
             // Members only see their own household; admins and accountants see every house.
             var canSeeAllHouses = user.Role is UserRole.Admin or UserRole.Accountant;
@@ -122,31 +111,18 @@ public class AdvanceSettingsFunctions
                 {
                     houseId = h.HouseId,
                     houseName = h.HouseName,
-                    avgMonthlyM3 = Math.Round(h.AvgMonthlyM3, 1),
-                    lossShareM3 = Math.Round(h.LossShareM3, 1),
-                    totalWaterM3 = Math.Round(h.TotalWaterM3, 1),
-                    sharePercent = Math.Round(h.Share * 100, 1),
-                    electricityCoefficient = h.ElectricityCoefficient,
-                    recommended = new { water = h.Recommended.Water, electricity = h.Recommended.Electricity, common = h.Recommended.Common, total = h.Recommended.Total },
-                    actual = new { water = h.Actual.Water, electricity = h.Actual.Electricity, common = h.Actual.Common, total = h.Actual.Total },
+                    costsInPeriod = Split(h.CostsInPeriod),
+                    recommended = Split(h.Recommended),
+                    actual = Split(h.Actual),
                     hasOverride = h.HasOverride,
                 })
                 .ToList();
 
             var result = new
             {
-                settings = new
-                {
-                    settings.WaterPricePerM3,
-                    settings.WaterPriceValidFrom,
-                    settings.WaterPriceValidTo,
-                    settings.MonthlyElectricityCost,
-                    settings.MonthlyCommonBaseFee,
-                    settings.LossAllocationMethod,
-                },
-                mainMeterMonthlyM3 = Math.Round(prescribed.MainMeterMonthlyM3, 1),
-                totalIndividualMonthlyM3 = Math.Round(prescribed.TotalIndividualMonthlyM3, 1),
-                monthlyLossM3 = Math.Round(prescribed.MonthlyLossM3, 1),
+                from = prescribed.Period.From.ToString("yyyy-MM-dd"),
+                to = prescribed.Period.To.ToString("yyyy-MM-dd"),
+                months = prescribed.Months,
                 houses,
             };
 
@@ -159,6 +135,9 @@ public class AdvanceSettingsFunctions
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
         }
     }
+
+    private static object Split(AdvanceSplit s) =>
+        new { water = s.Water, electricity = s.Electricity, common = s.Common, total = s.Total };
 
     private async Task<AdvanceSettings> LoadSettingsAsync()
     {

@@ -1,5 +1,5 @@
 import { apiClient } from './client.ts';
-import type { AdvancePayment, HouseSaldo } from '../types/index.ts';
+import type { AdvancePayment } from '../types/index.ts';
 
 export interface CreateAdvanceInput {
   houseId: string;
@@ -34,14 +34,6 @@ export interface CreatePayoutInput {
   note?: string;
 }
 
-export interface CreateOpeningBalanceInput {
-  houseId: string;
-  amount: number; // > 0 magnitude
-  isOverpayment: boolean; // true = přeplatek (credit), false = nedoplatek (debt)
-  paymentDate: string; // ISO
-  note?: string;
-}
-
 export const getAdvances = (houseId: string, year: number): Promise<AdvancePayment[]> =>
   apiClient.get<AdvancePayment[]>(
     `/advances?houseId=${encodeURIComponent(houseId)}&year=${encodeURIComponent(String(year))}`,
@@ -72,14 +64,5 @@ export const createDoplatek = (data: CreateDoplatekInput): Promise<AdvancePaymen
 export const createPayout = (data: CreatePayoutInput): Promise<AdvancePayment> =>
   apiClient.post<AdvancePayment>('/advances/payout', data);
 
-export const createOpeningBalance = (data: CreateOpeningBalanceInput): Promise<AdvancePayment> =>
-  apiClient.post<AdvancePayment>('/advances/opening-balance', data);
-
 export const deletePayment = (houseId: string, rowKey: string): Promise<void> =>
   apiClient.delete(`/advances/${encodeURIComponent(houseId)}/${encodeURIComponent(rowKey)}`);
-
-/** Per-house saldo (water / electricity / common base). Omit houseId for all houses (admin). */
-export const getSaldo = (houseId?: string): Promise<HouseSaldo[]> =>
-  apiClient.get<HouseSaldo[]>(
-    `/advances/saldo${houseId ? `?houseId=${encodeURIComponent(houseId)}` : ''}`,
-  );
