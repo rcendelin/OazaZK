@@ -119,6 +119,11 @@ se sekce přejmenuje na verzi s datem.
   nákladové složky a účast domů, voda a ztráty (správce a účetní vidí aktuální metodu ztrát), přeplatek vodárny,
   mezizávěrky a převod domu, pokladna; slovník rozšířen o tyto pojmy. V průvodci počátečními stavy, u převodu domu
   a u nové mezizávěrky je u každého kroku ikona „?“ s vysvětlením.
+- **Release checklist a záloha dat (T14).** `docs/release-checklist.md`: postup vydání na TEST a PROD včetně zálohy
+  storage, kontroly pruhu prostředí a oprávnění členů, smoke testu a rollbacku. Nástroj `api/tools/Oaza.StorageBackup`
+  zazálohuje a obnoví všechny tabulky a soubory účtu; obnova vyžaduje potvrzení názvem účtu.
+- **Demo data pro školení (T14).** `seed/demo/` — fiktivní, ale realistický rok a půl provozu (8 domů, převod domu,
+  kredit vodárny, vyúčtování, změna metody ztrát) k nahrání přes Import počátečních dat.
 
 ### Odebráno
 - **Starý model vyúčtování (X2).** Stránky Vyúčtování a Přehled faktur, zúčtovací období, uložená vyúčtování a jejich

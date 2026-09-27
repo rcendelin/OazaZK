@@ -13,6 +13,9 @@ spuštěním. Tlačítko **Zapsat** zapíše data jen tehdy, když zkouška nem�
   začátek účtování složky, mezizávěrky. Každý zápis je v auditu.
 - **Vzorová data v `samples/`** jsou fiktivní scénáře S2 a S3 ze zadání. Testy (`SeedImportUseCaseTests`) na nich
   ověřují salda.
+- **Demo data v `demo/`** jsou realistická, ale fiktivní data pro školení na TEST: 8 domů, převod domu 6 k 15. 3. 2025,
+  kredit vodárny se zálohami, vyúčtování osvětlení, pojištění a údržba, změna metody ztrát od 2026. Odečty vody
+  k nim nejsou, ty se na školení zadají přes Import odečtů. Test hlídá, že demo data jdou naimportovat bez chyb.
 
 ## Formát
 

@@ -1,0 +1,7 @@
+code;name;start_date;allocation_basis;water_role;method;ratio_source;note
+VODA_PVK;Voda PVK;2023-11-01;odecty;spotreba;;;faktury PVK s m³
+ZTRATY_VODY;Ztráty vody;2023-11-01;odecty;ztraty;rovne;;metoda podle O1 (výchozí rovným dílem)
+ELEKTRINA_VODARNA;Elektřina – vodárna;2023-11-01;naklady;;rovne;;4 domy na vodárně
+OSVETLENI;Osvětlení cesty;2023-11-01;naklady;;rovne;;
+UDRZBA;Údržba společných ploch;2023-11-01;naklady;;rovne;;
+POJISTENI;Pojištění odpovědnosti;2023-11-01;naklady;;rovne;;

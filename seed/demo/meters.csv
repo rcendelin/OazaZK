@@ -1,0 +1,10 @@
+meter_number;name;type;house;installation_date;radio_address
+DEMO-H;Hlavní vodoměr;hlavni;;2019-05-01;
+DEMO-01;Vodoměr Dům 1;domovni;Dům 1 – Ukázkovi;2019-05-01;
+DEMO-02;Vodoměr Dům 2;domovni;Dům 2 – Vzoroví;2019-05-01;
+DEMO-03;Vodoměr Dům 3;domovni;Dům 3 – Testovací;2019-05-01;
+DEMO-04;Vodoměr Dům 4;domovni;Dům 4 – Fiktivní;2019-05-01;
+DEMO-05;Vodoměr Dům 5;domovni;Dům 5 – Smyšlení;2019-05-01;
+DEMO-06;Vodoměr Dům 6;domovni;Dům 6 – Příkladní;2019-05-01;
+DEMO-07;Vodoměr Dům 7;domovni;Dům 7 – Modeloví;2019-05-01;
+DEMO-08;Vodoměr Dům 8;domovni;Dům 8 – Cviční;2019-05-01;
