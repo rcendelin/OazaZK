@@ -450,6 +450,21 @@ public class ImportReadingsUseCaseTests
     }
 
     [Fact]
+    public async Task ConfirmImportAsync_ReadingInAPeriodClosedByAnInterimClosing_IsRejected_NothingSaved()
+    {
+        var meters = new List<WaterMeter> { _mainMeter, _houseMeter1 };
+        SetupMeters(meters);
+        SetupEmptyReadings(meters);
+        var closed = new ImportReadingsUseCase(_readingRepoMock.Object, _meterRepoMock.Object, _loggerMock.Object,
+            new TestSupport.ClosedUntil(new DateOnly(2026, 1, 31)));
+
+        var act = () => closed.ConfirmImportAsync(Confirm(("meter-main", 1, 100m), ("meter-house1", 2, 30m)), "user-1");
+
+        (await act.Should().ThrowAsync<Exceptions.AppException>()).Which.Message.Should().Contain("spadá do uzavřeného období (mezizávěrka k 31.1.2026)");
+        _readingRepoMock.Verify(r => r.UpsertAsync(It.IsAny<MeterReading>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ConfirmImportAsync_Empty_Throws()
     {
         var act = () => _useCase.ConfirmImportAsync(new ConfirmImportRequest(), "user-1");

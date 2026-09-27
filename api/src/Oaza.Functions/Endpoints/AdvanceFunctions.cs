@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Application.Mapping;
 using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
@@ -25,6 +26,7 @@ public class AdvanceFunctions
     private readonly IBillingPeriodRepository _billingPeriodRepository;
     private readonly IBankTransactionRepository _bankTransactionRepository;
     private readonly CalculateHouseSaldoUseCase _calculateHouseSaldoUseCase;
+    private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<AdvanceFunctions> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -39,8 +41,10 @@ public class AdvanceFunctions
         IBillingPeriodRepository billingPeriodRepository,
         IBankTransactionRepository bankTransactionRepository,
         CalculateHouseSaldoUseCase calculateHouseSaldoUseCase,
+        IClosingBoundary closingBoundary,
         ILogger<AdvanceFunctions> logger)
     {
+        _closingBoundary = closingBoundary ?? throw new ArgumentNullException(nameof(closingBoundary));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
@@ -147,15 +151,7 @@ public class AdvanceFunctions
                 return await WriteErrorResponseAsync(req, 404, $"Domácnost '{request.HouseId}' nebyla nalezena.");
             }
 
-            // Check for duplicate (same house, same year-month)
             var rowKey = PaymentRowKeys.Advance(request.Year, request.Month);
-            var existing = await _advanceRepository.GetAsync(request.HouseId, rowKey);
-            if (existing is not null)
-            {
-                return await WriteErrorResponseAsync(req, 409,
-                    $"Zálohová platba pro domácnost '{house.Name}' za {request.Year}-{request.Month:D2} již existuje.");
-            }
-
             var payment = new AdvancePayment
             {
                 HouseId = request.HouseId,
@@ -169,6 +165,16 @@ public class AdvanceFunctions
                 Type = PaymentType.Advance,
                 RowKey = rowKey,
             };
+
+            // A month closed by an interim closing: booked as an extra payment on the first open day (T08).
+            var shifted = ClosedPeriodPayments.BookAfterClosing(payment, await _closingBoundary.GetLastClosedDayAsync(request.HouseId));
+
+            // Check for duplicate (same house, same year-month)
+            if (!shifted && await _advanceRepository.GetAsync(request.HouseId, rowKey) is not null)
+            {
+                return await WriteErrorResponseAsync(req, 409,
+                    $"Zálohová platba pro domácnost '{house.Name}' za {request.Year}-{request.Month:D2} již existuje.");
+            }
 
             await _advanceRepository.UpsertAsync(payment);
 
@@ -212,6 +218,10 @@ public class AdvanceFunctions
             if (inClosedPeriod)
             {
                 return await WriteErrorResponseAsync(req, 409, "Zálohu nelze upravit v uzavřeném zúčtovacím období.");
+            }
+            if (ClosedPeriodPayments.IsClosed(existing, await _closingBoundary.GetLastClosedDayAsync(houseId)))
+            {
+                return await WriteErrorResponseAsync(req, 409, "Zálohu nelze upravit — měsíc je uzavřený mezizávěrkou.");
             }
 
             var request = await JsonSerializer.DeserializeAsync<UpdateAdvanceRequest>(req.Body, JsonOptions);
@@ -297,6 +307,7 @@ public class AdvanceFunctions
                 RowKey = PaymentRowKeys.Doplatek(paymentDate),
             };
 
+            ClosedPeriodPayments.BookAfterClosing(payment, await _closingBoundary.GetLastClosedDayAsync(request.HouseId));
             await _advanceRepository.UpsertAsync(payment);
 
             _logger.LogInformation("Doplatek recorded for house {HouseId} ({RowKey}).",
@@ -353,6 +364,7 @@ public class AdvanceFunctions
                 RowKey = $"V-{InvertedTimestamp.FromDateTime(paymentDate)}-{Guid.NewGuid():N}"[..40],
             };
 
+            ClosedPeriodPayments.BookAfterClosing(payment, await _closingBoundary.GetLastClosedDayAsync(request.HouseId));
             await _advanceRepository.UpsertAsync(payment);
             _logger.LogInformation("Payout recorded for house {HouseId} ({RowKey}).", payment.HouseId, payment.RowKey);
 
@@ -454,6 +466,11 @@ public class AdvanceFunctions
                 {
                     return await WriteErrorResponseAsync(req, 409, "Zálohu nelze smazat v uzavřeném zúčtovacím období.");
                 }
+            }
+
+            if (ClosedPeriodPayments.IsClosed(existing, await _closingBoundary.GetLastClosedDayAsync(houseId)))
+            {
+                return await WriteErrorResponseAsync(req, 409, "Platbu nelze smazat — je v období uzavřeném mezizávěrkou.");
             }
 
             await _advanceRepository.DeleteAsync(houseId, rowKey);

@@ -254,7 +254,7 @@ Zjištěno při sepisování dokumentace. Nejde o dokumentační chyby, ale o ch
 
 1. **Dvě pravidla pro „faktury v období".** Vyúčtování sčítá řádky faktur podle `DateFrom` (§2.3), ale seznam období (součty), odpověď při vytvoření/úpravě období, PDF („Celková faktura dodavatele") a zámek faktur používají měsíc hlavičky faktury (`Year/Month` = nejstarší řádek) a `Amount`. U faktur přes více měsíců se čísla mohou lišit.
 2. **Výchozí metoda ztráty.** `calculate`/`close` mají výchozí `Equal`, saldo pro otevřené období používá `AdvanceSettings.LossAllocationMethod` (výchozí proporcionální).
-3. **Neúplný zámek uzavřeného období.** Import a ruční zadání odečtu ani přesun odečtu na nové datum (`PUT` s `newDate`) nekontrolují uzavřené období.
+3. **Neúplný zámek uzavřeného období.** Import a ruční zadání odečtu ani přesun odečtu na nové datum (`PUT` s `newDate`) nekontrolují uzavřené *zúčtovací* období. Mezizávěrky nového modelu (T08) je kontrolují.
 4. **Uzavření není atomické.** Zápisy plateb, výdaje, ceny, vyúčtování a stavu jsou oddělené. Při opakování po částečném selhání už zapsaný výdaj `fund-{periodId}` snižuje zůstatek fondu, takže kontrola zůstatku může nové čerpání odmítnout.
 5. **Čerpání z fondu** jde všem aktivním domům (i těm, které vyúčtování vynechalo) a kvůli zaokrouhlení se Σ doplatků může o haléře lišit od výdaje. Smazání doplatku `FUND-…` výdaj neodstraní.
 6. ~~**Session importu je v paměti.**~~ Opraveno (X7): potvrzení je bezstavové (§7.4).

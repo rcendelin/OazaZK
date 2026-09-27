@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
 using Oaza.Domain.Constants;
@@ -29,6 +30,7 @@ public class ReadingFunctions
     private readonly IHouseRepository _houseRepository;
     private readonly IBillingPeriodRepository _billingPeriodRepository;
     private readonly IClock _clock;
+    private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<ReadingFunctions> _logger;
 
     private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
@@ -46,6 +48,7 @@ public class ReadingFunctions
         IHouseRepository houseRepository,
         IBillingPeriodRepository billingPeriodRepository,
         IClock clock,
+        IClosingBoundary closingBoundary,
         ILogger<ReadingFunctions> logger)
     {
         _importUseCase = importUseCase ?? throw new ArgumentNullException(nameof(importUseCase));
@@ -54,6 +57,7 @@ public class ReadingFunctions
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _closingBoundary = closingBoundary ?? throw new ArgumentNullException(nameof(closingBoundary));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -294,6 +298,11 @@ public class ReadingFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
+            if (await ClosedMessageAsync(request.ReadingDate) is { } closedMessage)
+            {
+                return await WriteErrorResponseAsync(req, 409, closedMessage);
+            }
+
             // Verify meter exists
             var meter = await _meterRepository.GetAsync(PartitionKeys.Meter, request.MeterId);
             if (meter is null)
@@ -434,6 +443,12 @@ public class ReadingFunctions
             if (inClosedPeriod)
             {
                 return await WriteErrorResponseAsync(req, 409, "Odečet nelze upravit v uzavřeném zúčtovacím období.");
+            }
+            var closedMessage = await ClosedMessageAsync(readingDate)
+                ?? (request.NewDate is { } movedTo ? await ClosedMessageAsync(movedTo) : null);
+            if (closedMessage is not null)
+            {
+                return await WriteErrorResponseAsync(req, 409, closedMessage);
             }
 
             // Check for negative consumption after correction
@@ -996,4 +1011,10 @@ public class ReadingFunctions
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
             new { error = "Formulář obsahuje chyby.", errors });
     }
+
+    /// <summary>Readings up to an interim closing are fixed (T08); returns the reason, or null when the day is open.</summary>
+    private async Task<string?> ClosedMessageAsync(DateTime readingDate) =>
+        await _closingBoundary.GetLastClosedDayAsync() is { } closed && DateOnly.FromDateTime(readingDate) <= closed
+            ? $"Odečet ke dni {readingDate:d.M.yyyy} spadá do období uzavřeného mezizávěrkou k {closed:d.M.yyyy}."
+            : null;
 }

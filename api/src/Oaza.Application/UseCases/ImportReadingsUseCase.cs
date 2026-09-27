@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
@@ -14,6 +15,7 @@ public class ImportReadingsUseCase
 {
     private readonly IMeterReadingRepository _readingRepository;
     private readonly IWaterMeterRepository _meterRepository;
+    private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<ImportReadingsUseCase> _logger;
 
     private static readonly CultureInfo CzechCulture = new("cs-CZ");
@@ -21,8 +23,10 @@ public class ImportReadingsUseCase
     public ImportReadingsUseCase(
         IMeterReadingRepository readingRepository,
         IWaterMeterRepository meterRepository,
-        ILogger<ImportReadingsUseCase> logger)
+        ILogger<ImportReadingsUseCase> logger,
+        IClosingBoundary? closingBoundary = null)
     {
+        _closingBoundary = closingBoundary ?? new NoClosingBoundary();
         _readingRepository = readingRepository ?? throw new ArgumentNullException(nameof(readingRepository));
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -34,6 +38,7 @@ public class ImportReadingsUseCase
     /// </summary>
     public async Task<ImportPreviewResponse> ParseAndValidateAsync(Stream excelStream, string importedBy)
     {
+        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
         var errors = new List<ImportValidationMessage>();
         var warnings = new List<ImportValidationMessage>();
         var previewRows = new List<ImportPreviewRow>();
@@ -187,7 +192,7 @@ public class ImportReadingsUseCase
 
                 // Validate (duplicate / negative / anomaly) — shared with the clipboard import.
                 if (!TryValidateReading(meter, readingDate, value, existingReadings,
-                        seenMeterDates, rowNum, errors, warnings))
+                        seenMeterDates, rowNum, errors, warnings, lastClosed))
                 {
                     continue;
                 }
@@ -261,6 +266,7 @@ public class ImportReadingsUseCase
     /// <returns>Number of readings written by this call.</returns>
     public async Task<int> ConfirmImportAsync(ConfirmImportRequest request, string importedBy)
     {
+        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
         if (request.Readings.Count == 0)
         {
             throw new AppException("Nejsou žádné odečty k importu.");
@@ -297,7 +303,7 @@ public class ImportReadingsUseCase
 
             conflict |= existing.Any(r => r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);
 
-            if (!TryValidateReading(meter, readingDate, item.Value, existing, seenMeterDates, null, errors, warnings))
+            if (!TryValidateReading(meter, readingDate, item.Value, existing, seenMeterDates, null, errors, warnings, lastClosed))
             {
                 continue;
             }
@@ -340,6 +346,7 @@ public class ImportReadingsUseCase
     public async Task<ImportPreviewResponse> ParseClipboardAndValidateAsync(
         string pastedText, DateTime readingDate, string importedBy)
     {
+        var lastClosed = await _closingBoundary.GetLastClosedDayAsync();
         var errors = new List<ImportValidationMessage>();
         var warnings = new List<ImportValidationMessage>();
         var previewRows = new List<ImportPreviewRow>();
@@ -456,7 +463,7 @@ public class ImportReadingsUseCase
             }
 
             if (!TryValidateReading(meter, readingDate, value, existingReadingsByMeter[meter.Id],
-                    seenMeterDates, rowNum, errors, warnings))
+                    seenMeterDates, rowNum, errors, warnings, lastClosed))
             {
                 continue;
             }
@@ -514,8 +521,22 @@ public class ImportReadingsUseCase
         HashSet<(string meterId, DateTime date)> seenMeterDates,
         int? rowNum,
         List<ImportValidationMessage> errors,
-        List<ImportValidationMessage> warnings)
+        List<ImportValidationMessage> warnings,
+        DateOnly? lastClosed = null)
     {
+        // Interim closing (T08): readings up to the cut are fixed.
+        if (lastClosed is { } closed && DateOnly.FromDateTime(readingDate) <= closed)
+        {
+            errors.Add(new ImportValidationMessage
+            {
+                Type = "error",
+                Message = $"Odečet vodoměru '{meter.MeterNumber}' ke dni {readingDate:d.M.yyyy} spadá do uzavřeného období (mezizávěrka k {closed:d.M.yyyy}).",
+                Row = rowNum,
+                MeterId = meter.Id
+            });
+            return false;
+        }
+
         // Duplicate check: same meter + same MONTH in DB (one reading per meter per month).
         var duplicate = existingReadings.FirstOrDefault(r =>
             r.ReadingDate.Year == readingDate.Year && r.ReadingDate.Month == readingDate.Month);

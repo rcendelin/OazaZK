@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Oaza.Application.BankImport;
 using Oaza.Application.DTOs;
+using Oaza.Application.Interfaces;
 using Oaza.Application.Exceptions;
 using Oaza.Domain.Constants;
 using Oaza.Domain.Entities;
@@ -27,6 +28,7 @@ public class ImportBankStatementUseCase
     private readonly IBankAccountMappingRepository _mappingRepository;
     private readonly IBankTransactionRepository _transactionRepository;
     private readonly CalculatePrescribedAdvancesUseCase _prescribedAdvancesUseCase;
+    private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<ImportBankStatementUseCase> _logger;
 
     public ImportBankStatementUseCase(
@@ -35,8 +37,10 @@ public class ImportBankStatementUseCase
         IBankAccountMappingRepository mappingRepository,
         IBankTransactionRepository transactionRepository,
         CalculatePrescribedAdvancesUseCase prescribedAdvancesUseCase,
-        ILogger<ImportBankStatementUseCase> logger)
+        ILogger<ImportBankStatementUseCase> logger,
+        IClosingBoundary? closingBoundary = null)
     {
+        _closingBoundary = closingBoundary ?? new NoClosingBoundary();
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
         _advanceRepository = advanceRepository ?? throw new ArgumentNullException(nameof(advanceRepository));
         _mappingRepository = mappingRepository ?? throw new ArgumentNullException(nameof(mappingRepository));
@@ -398,6 +402,9 @@ public class ImportBankStatementUseCase
                 BankOwnAccountKey = ownKey,
                 BankTransactionId = id,
             };
+
+            // A payment dated in a period closed by an interim closing is booked on the first open day (T08).
+            ClosedPeriodPayments.BookAfterClosing(payment, await _closingBoundary.GetLastClosedDayAsync(payment.HouseId));
 
             // Payment first, then the processed-movement record: if the write fails in
             // between, the movement shows up as New again on the next upload.
