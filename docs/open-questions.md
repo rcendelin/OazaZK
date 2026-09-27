@@ -1,6 +1,6 @@
 # Rozhodnutí, rizika a otevřené otázky (T00)
 
-Stav k 27. 9. 2026.
+Stav k 27. 9. 2026 (O1–O4 aktualizováno po dokončení T01–T14).
 
 ## Rozhodnutí z 27. 9. 2026
 
@@ -54,8 +54,8 @@ Znění podle zadání (`docs/ZADANI.md` §2.2). Všechny se implementují jako 
 
 | Id | Otázka | Požadavek na implementaci | Default | Souvisí | Stav |
 |---|---|---|---|---|---|
-| O1 | Ztráty vody lineárně, nebo poměrově? Rozhodne hlasování. | Přepínač per složka, efektivně datovaný, s auditem. | `EQUAL` (návrh Jindry) | T02, T05 | otevřená |
-| O2 | Jak rozdělit přeplatek za elektřinu vodárny (cca 20 tis. Kč)? | Kredit složky se zadá jako počáteční stav. Metodu i okruh domů lze nastavit. | 4 domy, `EQUAL` | T03 | otevřená |
-| O3 | Elektřina vodárny podle plateb, nebo podle elektroměru? | Složka podporuje obojí. Pro vodárnu se nastaví „podle nákladových záznamů“ (zálohy + vyúčtování). | podle záznamů | T02, T06 | otevřená |
-| O4 | Oddělený fond: právní a daňové řešení | Feature flag, default vypnuto. | `OFF` | T10 | otevřená |
+| O1 | Ztráty vody lineárně, nebo poměrově? Rozhodne hlasování. | Přepínač per složka, efektivně datovaný, s auditem. | `EQUAL` (návrh Jindry) | T02, T05 | připraveno — čeká na hlasování. Zadá se v Nákladové složky → Ztráty vody → „Změna metody“ (od data, s důvodem hlasování); aktuální metodu ukazuje Voda a ztráty i Jak to funguje. |
+| O2 | Jak rozdělit přeplatek za elektřinu vodárny (cca 20 tis. Kč)? | Kredit složky se zadá jako počáteční stav. Metodu i okruh domů lze nastavit. | 4 domy, `EQUAL` | T03 | připraveno — čeká na rozhodnutí. Kredit se zadá v Počáteční stavy → Kredit složky u dodavatele (záporně, s náhledem rozdělení); okruh domů = účast ve složce, metoda = pravidlo složky. |
+| O3 | Elektřina vodárny podle plateb, nebo podle elektroměru? | Složka podporuje obojí. Pro vodárnu se nastaví „podle nákladových záznamů“ (zálohy + vyúčtování). | podle záznamů | T02, T06 | připraveno — čeká na rozhodnutí. Složka „podle nákladových záznamů“ (zálohy a vyúčtování, výchozí), nebo „podle odečtů“ při elektroměru — volba při založení složky, změna metody od data. |
+| O4 | Oddělený fond: právní a daňové řešení | Feature flag, default vypnuto. | `OFF` | T10 | připraveno — čeká na právní a daňové posouzení. Zapíná se app settingem `OFF_BOOK_FUND_ENABLED=true` (výchozí vypnuto); fond je oddělený od salda, závěrek i exportů. |
 | O5 | Členské příspěvky vs. odpracování | **Neimplementovat** (zadání §5). | – | – | mimo rozsah |
