@@ -1,7 +1,7 @@
 # Changelog
 
 Všechny podstatné změny portálu. Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/).
-Záznam se doplňuje v každém PR, které dokončuje task z `TASK.md` (sekce **Nevydáno**). Při nasazení na PROD
+Záznam se doplňuje v každém PR, které dokončuje task ze zadání `docs/ZADANI.md` (sekce **Nevydáno**). Při nasazení na PROD
 se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]

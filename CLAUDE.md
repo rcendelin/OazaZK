@@ -377,7 +377,7 @@ Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admit
 - **Branch strategy:** `develop` → DEV (`deploy-dev.yml` → `func-oaza-dev`); `release/**` → TEST (`deploy-test.yml` → `func-oaza-test`); `master` → PROD (`deploy.yml` → `func-oaza-prod`). All three share the same Azure tenant/subscription (differ by resource group `rg-oaza-{dev,test,prod}`) and use the unified `Azure/login` + `AZURE_CREDENTIALS` + `az config-zip` deploy; the domain (`cendelinovi.cz`) and the ACS email service are shared. See `docs/DEPLOYMENT-TEST-PROD.md`.
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
-- **CHANGELOG.md:** every PR that completes a `TASK.md` item adds a line under `## [Nevydáno]` (Czech, user-facing wording)
+- **CHANGELOG.md:** every PR that completes a task from `docs/ZADANI.md` (status: `docs/gap-analysis.md`) adds a line under `## [Nevydáno]` (Czech, user-facing wording)
 - **No force push to master**
 
 ## Azure resource naming
