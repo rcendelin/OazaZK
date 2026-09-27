@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { Spinner } from '../components/Spinner';
+import { ReasonConfirmDialog } from '../components/ReasonConfirmDialog';
 import { ApiError } from '../api/client';
 import { getCostComponents, methodLabels } from '../api/costComponents';
 import type { CostComponent } from '../api/costComponents';
@@ -18,14 +19,17 @@ import {
   getCostEntryAllocation,
   paidFromLabels,
   periodicityLabels,
+  updateCostEntry,
 } from '../api/costEntries';
 import type { AdvancePeriodicity, CostEntry, CostEntryAllocation, CostEntryType, PaidFrom } from '../api/costEntries';
 import type { DocumentResponse } from '../types';
 import { formatIsoDay, shiftIsoDate, todayIso } from '../utils/date';
-import { parseCzechNumber } from '../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
+/** Editable form of a number: plain digits with a decimal comma. */
+const inputNumber = (value: number) => String(value).replace('.', ',');
 const kc = (v: number) => `${v.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kč`;
 const types: CostEntryType[] = ['Advance', 'Settlement', 'OneOff'];
 const payments: PaidFrom[] = ['Bank', 'SupplierCredit', 'Cash', 'Other'];
@@ -120,17 +124,22 @@ function ComponentCosts({ component, isAdmin, prefillDocument, onChanged }: {
   const { data: documents } = useApi<DocumentResponse[]>(useCallback(() => getDocuments(), []));
   const [openId, setOpenId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<string[]>([]);
+  const [editing, setEditing] = useState<CostEntry | null>(null);
+  const [deleting, setDeleting] = useState<CostEntry | null>(null);
   const { getAccessToken } = useAuth();
 
   const total = (entries ?? []).reduce((sum, e) => sum + e.amount, 0);
   const quantity = (entries ?? []).reduce((sum, e) => sum + (e.quantityM3 ?? 0), 0);
   const documentName = (id: string | null) => documents?.find((d) => d.id === id)?.name ?? null;
 
-  const remove = async (entry: CostEntry) => {
+  const remove = async (entry: CostEntry, reason: string | undefined) => {
+    setDeleting(null);
     setRowErrors([]);
     try {
-      await deleteCostEntry(component.id, entry.id);
+      await deleteCostEntry(component.id, entry.id, reason);
+      if (editing?.id === entry.id) setEditing(null);
       refetch();
+      onChanged();
     } catch (err) {
       setRowErrors(reasons(err));
     }
@@ -185,7 +194,8 @@ function ComponentCosts({ component, isAdmin, prefillDocument, onChanged }: {
                   documentName={documentName(e.documentId)}
                   onToggle={() => setOpenId(openId === e.id ? null : e.id)}
                   onDownload={() => e.documentId && void downloadDocument(e.documentId, documentName(e.documentId) ?? 'doklad.pdf', getAccessToken)}
-                  onDelete={isAdmin && !e.locked ? () => void remove(e) : undefined}
+                  onEdit={isAdmin && !e.locked ? () => setEditing(e) : undefined}
+                  onDelete={isAdmin && !e.locked ? () => setDeleting(e) : undefined}
                 />
               ))}
               {entries && entries.length === 0 && (
@@ -208,6 +218,21 @@ function ComponentCosts({ component, isAdmin, prefillDocument, onChanged }: {
         </div>
       )}
 
+      {isAdmin && editing && (
+        <EntryForm key={editing.id} componentId={component.id} metered={metered} documents={documents ?? []} entry={editing}
+          onSaved={() => { setEditing(null); refetch(); onChanged(); }} onCancel={() => setEditing(null)} />
+      )}
+
+      {deleting && (
+        <ReasonConfirmDialog
+          title="Smazat náklad?"
+          message={`Opravdu smazat záznam „${entryTypeLabels[deleting.type]}“ ${formatIsoDay(deleting.periodFrom)} – ${formatIsoDay(deleting.periodTo)} (${kc(deleting.amount)})?`}
+          confirmLabel="Smazat"
+          onConfirm={(reason) => void remove(deleting, reason)}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
+
       {isAdmin && (
         <div className="grid gap-4 lg:grid-cols-2">
           <EntryForm componentId={component.id} metered={metered} documents={documents ?? []} initialDocumentId={prefillDocument} onSaved={() => { refetch(); onChanged(); }} />
@@ -218,19 +243,28 @@ function ComponentCosts({ component, isAdmin, prefillDocument, onChanged }: {
   );
 }
 
-function EntryRows({ entry: e, metered, open, documentName, onToggle, onDownload, onDelete }: {
+function EntryRows({ entry: e, metered, open, documentName, onToggle, onDownload, onEdit, onDelete }: {
   entry: CostEntry;
   metered: boolean;
   open: boolean;
   documentName: string | null;
   onToggle: () => void;
   onDownload: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
 }) {
   return (
     <>
       <tr className="align-top hover:bg-surface-sunken/50">
-        <td className="whitespace-nowrap px-3 py-2">{formatIsoDay(e.periodFrom)} – {formatIsoDay(e.periodTo)}</td>
+        <td className="whitespace-nowrap px-3 py-2">
+          {formatIsoDay(e.periodFrom)} – {formatIsoDay(e.periodTo)}
+          {e.postingDate && (
+            <p className="text-xs text-warning" title="Období zasahuje do uzavřeného období — náklad se zaúčtoval jako oprava v prvním otevřeném dni.">
+              oprava, zaúčtováno {formatIsoDay(e.postingDate)}
+            </p>
+          )}
+          {e.note && <p className="max-w-[16rem] whitespace-normal text-xs text-text-muted">{e.note}</p>}
+        </td>
         <td className="px-3 py-2">{entryTypeLabels[e.type]}</td>
         <td className="whitespace-nowrap px-3 py-2 text-right">{kc(e.amount)}</td>
         {metered && <td className="px-3 py-2 text-right">{e.quantityM3?.toLocaleString('cs-CZ') ?? '—'}</td>}
@@ -247,6 +281,7 @@ function EntryRows({ entry: e, metered, open, documentName, onToggle, onDownload
               {open ? 'Skrýt rozpad' : 'Rozpad na domy'}
             </button>
           )}
+          {onEdit && <button type="button" onClick={onEdit} className="ml-3 text-xs font-medium text-accent hover:text-accent-hover">Upravit</button>}
           {onDelete && <button type="button" onClick={onDelete} className="ml-3 text-xs font-medium text-text-muted hover:text-danger">Smazat</button>}
         </td>
       </tr>
@@ -298,44 +333,68 @@ function Allocation({ entry }: { entry: CostEntry }) {
   );
 }
 
-function EntryForm({ componentId, metered, documents, initialDocumentId, onSaved }: {
+/** „Přidat náklad“, or „Upravit náklad“ with `entry`. */
+function EntryForm({ componentId, metered, documents, initialDocumentId, entry, onSaved, onCancel }: {
   componentId: string;
   metered: boolean;
   documents: DocumentResponse[];
   initialDocumentId?: string;
+  entry?: CostEntry;
   onSaved: () => void;
+  onCancel?: () => void;
 }) {
-  const [type, setType] = useState<CostEntryType>(metered ? 'OneOff' : 'Settlement');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [amount, setAmount] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [paidFrom, setPaidFrom] = useState<PaidFrom>('Bank');
-  const [documentId, setDocumentId] = useState(initialDocumentId ?? '');
-  const [note, setNote] = useState('');
+  const [type, setType] = useState<CostEntryType>(entry?.type ?? (metered ? 'OneOff' : 'Settlement'));
+  const [from, setFrom] = useState(entry?.periodFrom ?? '');
+  const [to, setTo] = useState(entry?.periodTo ?? '');
+  const [amount, setAmount] = useState(entry ? inputNumber(entry.amount) : '');
+  const [quantity, setQuantity] = useState(entry?.quantityM3 != null ? inputNumber(entry.quantityM3) : '');
+  const [supplier, setSupplier] = useState(entry?.supplier ?? '');
+  const [paidFrom, setPaidFrom] = useState<PaidFrom>(entry?.paidFrom ?? 'Bank');
+  const [documentId, setDocumentId] = useState(entry?.documentId ?? initialDocumentId ?? '');
+  const [note, setNote] = useState(entry?.note ?? '');
+  const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
+  const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const title = entry ? 'Upravit náklad' : metered ? 'Přidat fakturu' : 'Přidat náklad';
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true);
     setErrors([]);
+    setInfo(null);
+    const parsedAmount = parseCzechNumber(amount);
+    const parsedQuantity = metered ? parseCzechNumber(quantity) : undefined;
+    if (parsedAmount === null || parsedQuantity === null) {
+      setErrors([
+        ...(parsedAmount === null ? [invalidNumberMessage('Částka (Kč)')] : []),
+        ...(parsedQuantity === null ? [invalidNumberMessage('Množství (m³)')] : []),
+      ]);
+      return;
+    }
+    setBusy(true);
     try {
-      await createCostEntry(componentId, {
+      const body = {
         type,
         periodFrom: from,
         periodTo: to || from,
-        amount: parseCzechNumber(amount),
-        quantityM3: metered ? parseCzechNumber(quantity) : undefined,
+        amount: parsedAmount,
+        quantityM3: parsedQuantity,
         supplier: supplier || undefined,
         paidFrom,
         documentId: documentId || undefined,
         note: note || undefined,
-      });
-      setAmount('');
-      setQuantity('');
-      setNote('');
+        reason: reason.trim() || undefined,
+      };
+      const saved = entry ? await updateCostEntry(componentId, entry.id, body) : await createCostEntry(componentId, body);
+      if (!entry) {
+        setAmount('');
+        setQuantity('');
+        setNote('');
+        setReason('');
+        setInfo(saved.postingDate
+          ? `Náklad uložen jako oprava — období zasahuje do uzavřeného období, zaúčtuje se k ${formatIsoDay(saved.postingDate)}.`
+          : 'Náklad uložen.');
+      }
       onSaved();
     } catch (err) {
       setErrors(reasons(err));
@@ -345,8 +404,8 @@ function EntryForm({ componentId, metered, documents, initialDocumentId, onSaved
   };
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="space-y-2 rounded-2xl border border-border bg-surface-raised p-4 shadow-card" aria-label="Přidat náklad">
-      <h2 className="font-semibold text-text-primary">{metered ? 'Přidat fakturu' : 'Přidat náklad'}</h2>
+    <form onSubmit={(e) => void submit(e)} className="space-y-2 rounded-2xl border border-border bg-surface-raised p-4 shadow-card" aria-label={entry ? 'Upravit náklad' : 'Přidat náklad'}>
+      <h2 className="font-semibold text-text-primary">{title}</h2>
       <div className="flex flex-wrap items-end gap-2">
         {!metered && (
           <label className="text-xs text-text-secondary">
@@ -395,11 +454,20 @@ function EntryForm({ componentId, metered, documents, initialDocumentId, onSaved
           <span className="mb-1 block">Poznámka</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} />
         </label>
-        <button type="submit" disabled={busy} className={primaryBtn}>Přidat</button>
+        <label className="text-xs text-text-secondary">
+          <span className="mb-1 block">Důvod (u opravy za mezizávěrkou)</span>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="např. pozdě doručená faktura" className={inputCls} />
+        </label>
+        <button type="submit" disabled={busy} className={primaryBtn}>{entry ? 'Uložit změnu' : 'Přidat'}</button>
+        {onCancel && <button type="button" onClick={onCancel} className="pb-1.5 text-xs font-medium text-text-muted hover:text-text-secondary">Zrušit</button>}
       </div>
       {!metered && type === 'Settlement' && (
         <p className="text-xs text-text-muted">Vyúčtování: doplatek zadejte kladně, přeplatek záporně.</p>
       )}
+      <p className="text-xs text-text-muted">
+        Zasahuje-li období do uzavřeného období (mezizávěrky), uloží se náklad jako oprava v prvním otevřeném dni — pak je důvod povinný.
+      </p>
+      {info && <p role="status" className="text-sm text-success">{info}</p>}
       <Errors items={errors} />
     </form>
   );
@@ -418,12 +486,14 @@ function RecurringForm({ componentId, onSaved }: { componentId: string; onSaved:
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true);
     setErrors([]);
     setInfo(null);
+    const parsedAmount = parseCzechNumber(amount);
+    if (parsedAmount === null) { setErrors([invalidNumberMessage('Částka (Kč)')]); return; }
+    setBusy(true);
     try {
       const created = await createRecurringAdvances(componentId, {
-        amount: parseCzechNumber(amount), periodicity, from, to, supplier: supplier || undefined, paidFrom,
+        amount: parsedAmount, periodicity, from, to, supplier: supplier || undefined, paidFrom,
       });
       setInfo(`Vytvořeno ${created.length} záloh.`);
       onSaved();

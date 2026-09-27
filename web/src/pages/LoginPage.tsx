@@ -6,7 +6,7 @@ import { Droplets, Mail, ArrowRight } from 'lucide-react';
 import { Spinner } from '../components/Spinner';
 
 export function LoginPage() {
-  const { isAuthenticated, isLoading, login, loginWithMagicLink } = useAuth();
+  const { isAuthenticated, isLoading, login, loginWithMagicLink, sessionNotice } = useAuth();
   const [email, setEmail] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isMsalLoading, setIsMsalLoading] = useState(false);
@@ -103,6 +103,12 @@ export function LoginPage() {
           <p className="mt-2 text-sm text-text-secondary">
             Vyberte způsob přihlášení do portálu
           </p>
+
+          {sessionNotice && (
+            <div role="status" className="mt-6 rounded-xl bg-warning-light p-4">
+              <p className="text-sm font-medium text-warning">{sessionNotice}</p>
+            </div>
+          )}
 
           {/* Microsoft login */}
           <button

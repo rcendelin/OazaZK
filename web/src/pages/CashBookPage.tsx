@@ -13,7 +13,7 @@ import { createCashBookEntry, getCashBook, stornoCashBookEntry, typeLabels } fro
 import type { CashBook, CashBookEntry } from '../api/cashBook';
 import type { DocumentResponse } from '../types';
 import { formatIsoDay, todayIso } from '../utils/date';
-import { parseCzechNumber } from '../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
@@ -196,11 +196,13 @@ function EntryForm({ onSaved }: { onSaved: () => void }) {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true);
     setErrors([]);
+    const parsedAmount = parseCzechNumber(amount);
+    if (parsedAmount === null) { setErrors([invalidNumberMessage('Částka')]); return; }
+    setBusy(true);
     try {
       await createCashBookEntry({
-        date, type, amount: parseCzechNumber(amount), category, description,
+        date, type, amount: parsedAmount, category, description,
         counterparty: counterparty || undefined,
         hasReceipt: type === 'Deposit' ? true : hasReceipt,
         documentId: documentId || undefined,

@@ -26,6 +26,7 @@ export const uploadDocument = async (
     body: file,
   });
 
+  apiClient.reportStatus(response.status, '/documents', Boolean(token));
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Upload selhalo' }));
     throw new ApiError(response.status, error.error || 'Upload selhalo');
@@ -48,6 +49,7 @@ export const downloadDocument = async (
     },
   );
 
+  apiClient.reportStatus(response.status, '/documents', Boolean(token));
   if (!response.ok) {
     throw new ApiError(response.status, 'Stahování se nezdařilo');
   }
@@ -97,6 +99,7 @@ export const uploadDocumentVersion = async (
     body: file,
   });
 
+  apiClient.reportStatus(response.status, '/documents', Boolean(token));
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Upload selhalo' }));
     throw new ApiError(response.status, error.error || 'Upload selhalo');
@@ -120,6 +123,7 @@ export const downloadDocumentVersion = async (
     },
   );
 
+  apiClient.reportStatus(response.status, '/documents', Boolean(token));
   if (!response.ok) {
     throw new ApiError(response.status, 'Stahování se nezdařilo');
   }

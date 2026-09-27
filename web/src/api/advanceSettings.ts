@@ -43,8 +43,17 @@ export interface AdvanceCalculation {
 export const getAdvanceSettings = (): Promise<AdvanceSettingsData> =>
   apiClient.get<AdvanceSettingsData>('/advance-settings');
 
+/** Replaces the whole override map — prefer the per-house calls below (two admins would overwrite each other). */
 export const updateAdvanceSettings = (data: AdvanceSettingsData): Promise<AdvanceSettingsData> =>
   apiClient.put<AdvanceSettingsData>('/advance-settings', data);
+
+/** Sets the override of one house only (read-modify-write on the server). */
+export const setHouseAdvanceOverride = (houseId: string, data: HouseAdvanceOverride): Promise<AdvanceSettingsData> =>
+  apiClient.put<AdvanceSettingsData>(`/advance-settings/overrides/${encodeURIComponent(houseId)}`, data);
+
+/** Removes the override of one house — its advance goes back to the recommendation. */
+export const deleteHouseAdvanceOverride = (houseId: string): Promise<void> =>
+  apiClient.delete(`/advance-settings/overrides/${encodeURIComponent(houseId)}`);
 
 export const calculateAdvances = (): Promise<AdvanceCalculation> =>
   apiClient.get<AdvanceCalculation>('/advance-settings/calculate');

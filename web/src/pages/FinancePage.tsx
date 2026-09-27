@@ -15,6 +15,7 @@ import type { FundBalanceResponse } from '../api/finance';
 import { MetricCard } from '../components/MetricCard';
 import { Spinner } from '../components/Spinner';
 import { Download } from 'lucide-react';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 import type {
   FinanceResponse,
   FinanceSummaryResponse,
@@ -503,9 +504,9 @@ function AddRecordForm({ onCreated, onCancel }: AddRecordFormProps) {
     e.preventDefault();
     if (submittingRef.current) return;
 
-    const parsedAmount = parseFloat(amount.replace(/\s/g, '').replace(',', '.'));
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setFormError('Zadejte platnou částku');
+    const parsedAmount = parseCzechNumber(amount);
+    if (parsedAmount === null || parsedAmount <= 0) {
+      setFormError(parsedAmount === null ? invalidNumberMessage('Částka') : 'Částka musí být kladná.');
       return;
     }
     if (!date) {

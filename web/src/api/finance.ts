@@ -67,6 +67,7 @@ export const uploadFinanceAttachment = async (
     body: file,
   });
 
+  apiClient.reportStatus(response.status, '/finance', Boolean(token));
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Nahrání přílohy selhalo' }));
     throw new ApiError(response.status, error.error || 'Nahrání přílohy selhalo');
@@ -86,6 +87,7 @@ export const downloadFinanceAttachment = async (
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 
+  apiClient.reportStatus(response.status, '/finance', Boolean(token));
   if (!response.ok) {
     throw new ApiError(response.status, 'Stahování přílohy se nezdařilo');
   }
@@ -114,6 +116,7 @@ export const exportFinancePdf = async (
     },
   );
 
+  apiClient.reportStatus(response.status, '/finance', Boolean(token));
   if (!response.ok) {
     throw new ApiError(response.status, 'Export PDF se nezdařil');
   }
@@ -142,6 +145,7 @@ export const exportFinanceExcel = async (
     },
   );
 
+  apiClient.reportStatus(response.status, '/finance', Boolean(token));
   if (!response.ok) {
     throw new ApiError(response.status, 'Export Excel se nezdařil');
   }

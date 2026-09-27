@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileUploadZone } from '../components/FileUploadZone.tsx';
 import { Spinner } from '../components/Spinner.tsx';
+import { parseCzechNumber } from '../utils/number';
 import { HelpNote } from '../components/help/HelpNote';
 import { confirmBankImport, previewBankImport } from '../api/bankImport.ts';
 import type {
@@ -152,8 +153,8 @@ export function BankImportPage() {
   };
 
   const changePart = (id: string, field: 'waterAmount' | 'electricityAmount' | 'commonAmount', value: string) => {
-    const parsed = parseFloat(value.replace(/\s/g, '').replace(',', '.'));
-    updateRow(id, (r) => ({ ...r, [field]: Number.isNaN(parsed) ? 0 : parsed }));
+    // A number input hands over '' while cleared or invalid — that is 0 Kč of the component.
+    updateRow(id, (r) => ({ ...r, [field]: parseCzechNumber(value) ?? 0 }));
   };
 
   const toggleIgnore = (id: string) => {

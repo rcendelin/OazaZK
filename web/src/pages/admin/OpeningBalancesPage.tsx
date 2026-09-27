@@ -21,7 +21,7 @@ import {
 import type { ComponentCreditPreview, OpeningBalance, OwnershipPeriod, SaveOpeningBalance } from '../../api/openingBalances';
 import type { House, WaterMeter } from '../../types';
 import { formatIsoDay } from '../../utils/date';
-import { parseCzechNumber } from '../../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../../utils/number';
 import { HelpDisclosure } from '../../components/help/HelpDisclosure';
 import { HelpTerm } from '../../components/help/HelpTerm';
 import type { TermId } from '../../content/help';
@@ -91,8 +91,28 @@ export function OpeningBalancesPage() {
   const activeHouses = data.houses.filter((h) => h.isActive).sort((a, b) => a.name.localeCompare(b.name, 'cs'));
   const meters = [...data.meters].sort((a, b) =>
     (a.type === 'Main' ? '' : houseName(a.houseId)).localeCompare(b.type === 'Main' ? '' : houseName(b.houseId), 'cs'));
-  const find = (type: OpeningBalance['type'], match: (b: OpeningBalance) => boolean) =>
-    data.balances.find((b) => b.type === type && match(b));
+  /** The house's current ownership period: the open one, otherwise the latest. */
+  const currentPeriod = (houseId: string | null) => houseId === null ? undefined : data.periods
+    .filter((p) => p.houseId === houseId)
+    .sort((a, b) => (a.validTo === null ? 1 : 0) - (b.validTo === null ? 1 : 0) || a.validFrom.localeCompare(b.validFrom))
+    .at(-1);
+  /**
+   * Values of one target: the one of the current ownership period (editable) and earlier ones (read-only,
+   * e.g. the previous owner's before a house transfer). Targets without a period (main meter, component
+   * credit) show their latest value.
+   */
+  const balancesOf = (type: OpeningBalance['type'], match: (b: OpeningBalance) => boolean, houseId: string | null): TargetBalances => {
+    const all = data.balances.filter((b) => b.type === type && match(b)).sort((a, b) => b.date.localeCompare(a.date));
+    const period = currentPeriod(houseId);
+    const current = period ? all.find((b) => b.ownershipPeriodId === period.id) : all[0];
+    return {
+      current,
+      earlier: all.filter((b) => b !== current),
+      // A new value must fall into the current period, otherwise the API files it under the previous owner.
+      date: period && period.validFrom > date ? period.validFrom : date,
+      rowKey: period?.id ?? 'none',
+    };
+  };
   const housesWithoutPeriod = activeHouses.filter((h) => !data.periods.some((p) => p.houseId === h.id));
 
   return (
@@ -132,15 +152,15 @@ export function OpeningBalancesPage() {
 
       <Section title="Stavy vodoměrů" term="stavVodomeru" hint="m³, na tři desetinná místa. Stav se zapíše i jako odečet k datu.">
         {meters.map((m) => {
-          const existing = find('MeterReading', (b) => b.meterId === m.id);
+          const balances = balancesOf('MeterReading', (b) => b.meterId === m.id, m.type === 'Main' ? null : m.houseId);
           return (
             <BalanceRow
-              key={`${m.id}-${existing?.key ?? 'new'}`}
+              key={`${m.id}-${balances.rowKey}`}
               label={m.type === 'Main' ? `Hlavní vodoměr ${m.meterNumber}` : houseName(m.houseId)}
               sublabel={m.type === 'Main' ? undefined : `vodoměr ${m.meterNumber}`}
               unit="m³"
-              existing={existing}
-              date={date}
+              decimals={3}
+              balances={balances}
               suggest={(d) => estimateReading(m.id, d)}
               request={(v) => ({ type: 'MeterReading', meterId: m.id, ...v })}
               onSaved={refetch}
@@ -151,14 +171,14 @@ export function OpeningBalancesPage() {
 
       <Section title="Podíl ve fondu spolku" term="podilFondu" hint="Kč ke dni poslední roční závěrky. Kladná hodnota = dům má u spolku přeplatek, záporná = nedoplatek.">
         {activeHouses.map((h) => {
-          const existing = find('FundShare', (b) => b.houseId === h.id);
+          const balances = balancesOf('FundShare', (b) => b.houseId === h.id, h.id);
           return (
             <BalanceRow
-              key={`${h.id}-${existing?.key ?? 'new'}`}
+              key={`${h.id}-${balances.rowKey}`}
               label={h.name}
               unit="Kč"
-              existing={existing}
-              date={date}
+              decimals={2}
+              balances={balances}
               request={(v) => ({ type: 'FundShare', houseId: h.id, ...v })}
               onSaved={refetch}
             />
@@ -168,14 +188,14 @@ export function OpeningBalancesPage() {
 
       <Section title="Kredit složky u dodavatele" term="kreditSlozky" hint="Kč, přeplatek zadejte záporně (např. −20 000). Rozdělí se mezi domy podle metody a účasti složky k datu.">
         {data.components.filter((c) => c.allocationBasis === 'CostEntries').map((c) => {
-          const existing = find('ComponentCredit', (b) => b.componentId === c.id);
+          const balances = balancesOf('ComponentCredit', (b) => b.componentId === c.id, null);
           return (
             <BalanceRow
-              key={`${c.id}-${existing?.key ?? 'new'}`}
+              key={`${c.id}-${balances.rowKey}`}
               label={c.name}
               unit="Kč"
-              existing={existing}
-              date={date}
+              decimals={2}
+              balances={balances}
               preview={(d, v) => previewComponentCredit(c.id, d, v)}
               request={(v) => ({ type: 'ComponentCredit', componentId: c.id, ...v })}
               onSaved={refetch}
@@ -213,17 +233,29 @@ function Errors({ items }: { items: string[] }) {
 
 type RowValues = Pick<SaveOpeningBalance, 'date' | 'value' | 'isEstimate' | 'source' | 'reason'>;
 
-function BalanceRow({ label, sublabel, unit, existing, date, suggest, preview, request, onSaved }: {
+interface TargetBalances {
+  /** Value of the current ownership period (or the latest one for targets without periods). */
+  current: OpeningBalance | undefined;
+  /** Earlier values, newest first — read-only. */
+  earlier: OpeningBalance[];
+  /** Day a new value is saved to. */
+  date: string;
+  /** Stable React key part: rows keep their state (e.g. „Uloženo.“) across refetches, remount after a transfer. */
+  rowKey: string;
+}
+
+function BalanceRow({ label, sublabel, unit, decimals, balances, suggest, preview, request, onSaved }: {
   label: string;
   sublabel?: string;
   unit: string;
-  existing: OpeningBalance | undefined;
-  date: string;
+  decimals: number;
+  balances: TargetBalances;
   suggest?: (date: string) => Promise<ReadingEstimate>;
   preview?: (date: string, value: number) => Promise<ComponentCreditPreview>;
   request: (values: RowValues) => SaveOpeningBalance;
   onSaved: () => void;
 }) {
+  const existing = balances.current;
   const [value, setValue] = useState(existing ? inputNumber(existing.value) : '');
   const [source, setSource] = useState(existing?.source ?? '');
   const [isEstimate, setIsEstimate] = useState(existing?.isEstimate ?? false);
@@ -232,8 +264,15 @@ function BalanceRow({ label, sublabel, unit, existing, date, suggest, preview, r
   const [info, setInfo] = useState<string | null>(null);
   const [shares, setShares] = useState<ComponentCreditPreview | null>(null);
   const [busy, setBusy] = useState(false);
-  const rowDate = existing?.date ?? date;
+  const rowDate = existing?.date ?? balances.date;
   const locked = existing?.locked ?? false;
+
+  /** The typed value, or null after showing a Czech validation message. */
+  const parsedValue = (): number | null => {
+    const parsed = parseCzechNumber(value);
+    if (parsed === null) setErrors([invalidNumberMessage(`Hodnota (${unit})`)]);
+    return parsed;
+  };
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -249,7 +288,9 @@ function BalanceRow({ label, sublabel, unit, existing, date, suggest, preview, r
   };
 
   const save = () => run(async () => {
-    const body = request({ date: rowDate, value: parseCzechNumber(value), isEstimate, source, reason: reason || undefined });
+    const parsed = parsedValue();
+    if (parsed === null) return;
+    const body = request({ date: rowDate, value: parsed, isEstimate, source, reason: reason || undefined });
     if (existing) await updateOpeningBalance(existing.key, body);
     else await createOpeningBalance(body);
     setInfo('Uloženo.');
@@ -259,6 +300,10 @@ function BalanceRow({ label, sublabel, unit, existing, date, suggest, preview, r
   const remove = () => run(async () => {
     if (!existing) return;
     await deleteOpeningBalance(existing.key, reason || undefined);
+    setValue('');
+    setSource('');
+    setIsEstimate(false);
+    setInfo('Smazáno.');
     onSaved();
   });
 
@@ -277,7 +322,9 @@ function BalanceRow({ label, sublabel, unit, existing, date, suggest, preview, r
 
   const showPreview = () => run(async () => {
     if (!preview) return;
-    setShares(await preview(rowDate, parseCzechNumber(value)));
+    const parsed = parsedValue();
+    if (parsed === null) return;
+    setShares(await preview(rowDate, parsed));
   });
 
   return (
@@ -317,6 +364,15 @@ function BalanceRow({ label, sublabel, unit, existing, date, suggest, preview, r
           )}
         </div>
       </div>
+      {balances.earlier.length > 0 && (
+        <ul className="space-y-0.5 text-xs text-text-muted" aria-label={`Dřívější hodnoty ${label}`}>
+          {balances.earlier.map((b) => (
+            <li key={b.key}>
+              dřívější: {formatIsoDay(b.date)} — {fmtNumber(b.value, decimals)} {unit}{b.isEstimate ? ' (odhad)' : ''}{b.locked ? ' (uzavřeno)' : ''}
+            </li>
+          ))}
+        </ul>
+      )}
       {info && <p role="status" className="text-xs text-text-secondary">{info}</p>}
       {shares && (
         <table className="text-xs" aria-label={`Rozdělení ${label}`}>

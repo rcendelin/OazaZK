@@ -10,7 +10,7 @@ import { addFundRecord, createOffBookFund, getOffBookFund, getOffBookFunds } fro
 import type { FundRecordKind, OffBookFund, OffBookFundDetail } from '../api/offBookFunds';
 import type { House } from '../types';
 import { formatIsoDay, todayIso } from '../utils/date';
-import { parseCzechNumber } from '../utils/number';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
 
 const inputCls = 'border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20';
 const primaryBtn = 'rounded-xl bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50';
@@ -179,9 +179,11 @@ function RecordForm({ fund, houses, onSaved }: { fund: OffBookFundDetail; houses
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors([]);
+    const parsedAmount = parseCzechNumber(amount);
+    if (parsedAmount === null) { setErrors([invalidNumberMessage('Částka')]); return; }
     try {
       await addFundRecord(fund.fund.id, {
-        kind, date, amount: parseCzechNumber(amount), text: text || undefined,
+        kind, date, amount: parsedAmount, text: text || undefined,
         houseIds: kind === 'Call' ? active.map((h) => h.id) : undefined,
         houseId: kind === 'Contribution' ? houseId : undefined,
         callId: kind === 'Contribution' && callId ? callId : undefined,

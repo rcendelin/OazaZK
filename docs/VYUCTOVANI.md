@@ -46,7 +46,7 @@ Platby zadává admin na stránce **Platby** (`/saldo`) nebo je načte z bankovn
 3. **Doporučení** každé složky = `max(0, round(náklady ÷ 12, 0))` (celé Kč, zaokrouhlení od nuly).
 4. Pokud má dům v `AdvanceSettings.HouseOverrides` **ruční přepis**, použijí se všechny tři složky z přepisu (`actual`); jinak `actual = recommended`.
 
-`actual` používá i import bankovního výpisu k rozpoznání a rozdělení pravidelné zálohy. Nastavení `PUT /advance-settings` (Admin) ukládá jen přepisy; záporná částka → 400.
+`actual` používá i import bankovního výpisu k rozpoznání a rozdělení pravidelné zálohy. Přepis se ukládá po domech (`PUT`/`DELETE /advance-settings/overrides/{houseId}`, Admin; souběžná úprava jiného domu se nepřepíše); `PUT /advance-settings` nahradí celou mapu přepisů. Záporná částka → 400, každá změna přepisu jde do auditu.
 
 ---
 

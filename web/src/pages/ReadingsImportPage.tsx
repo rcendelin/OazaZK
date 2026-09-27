@@ -8,6 +8,7 @@ import { HelpNote } from '../components/help/HelpNote';
 import { HelpTerm } from '../components/help/HelpTerm';
 import type { ImportPreviewResponse, ImportValidationMessage, WaterMeter } from '../types/index.ts';
 import { todayIso } from '../utils/date';
+import { parseCzechNumber } from '../utils/number';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 1,
@@ -138,8 +139,8 @@ function ManualEntry() {
     const errors: string[] = [];
 
     for (const [meterId, rawValue] of entries) {
-      const value = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
-      if (isNaN(value) || value < 0) {
+      const value = parseCzechNumber(rawValue);
+      if (value === null || value < 0) {
         const meter = meters?.find((m) => m.id === meterId);
         errors.push(`Neplatná hodnota pro ${meter?.name || meterId}: ${rawValue}`);
         continue;
