@@ -26,13 +26,13 @@ fixture, která test shodí při chybě v konzoli, nezachycené výjimce, odpov�
 3. **Proměnné prostředí** (hodnoty z app settings `func-oaza-dev`; nikdy je neukládejte do repa):
    - `OAZA_LIVE_JWT_SECRET` = `JwtSecret`, `OAZA_LIVE_JWT_ISSUER` = `JwtIssuer` — pro podpis krátkodobých tokenů,
    - `OAZA_LIVE_MEMBER_HOUSE` = id domu člena,
-   - volitelně `OAZA_LIVE_APP_URL`, `OAZA_LIVE_API_URL` a `OAZA_LIVE_ENV` (`dev` / `test`; výchozí DEV).
+   - volitelně `OAZA_LIVE_APP_URL`, `OAZA_LIVE_API_URL` a `OAZA_LIVE_ENV` (`dev` / `test` / `prod`; výchozí DEV).
      Na TEST stačí sady `01`–`03` (nezapisují data) jako kontrola z release checklistu §5–6.
 4. `cd web && npx playwright test -c playwright.live.config.ts` (asi 7 minut, sériově).
 5. **Obnova:** smažte tabulky, které vznikly až během testů (nebyly v záloze), a obnovte zálohu:
    `dotnet run --project api/tools/Oaza.StorageBackup -- restore <složka> --yes stoazadev`. Pak ověřte, že nová
    záloha je shodná s původní.
 
-Na PROD sadu **nespouštějte**: zapisuje data (mezizávěrky, převody domů, pokladnu).
+Na PROD spouštějte **jen sady `01`–`03`** (smoke test po nasazení; nezapisují data), nikdy `10`–`19` — zapisují data (mezizávěrky, převody domů, pokladnu).
 
 Známé chování: API toleruje odchylku hodin 1 minutu (`ClockSkew`), proto test vypršelého přihlášení čeká 70 s.

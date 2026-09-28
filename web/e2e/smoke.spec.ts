@@ -100,3 +100,9 @@ test('bank import: unassigned payment blocks confirm until a house is picked', a
     ['t2', 'h4', 'Advance'],
   ]);
 });
+
+test('unknown address redirects instead of an empty page', async ({ page }) => {
+  await page.goto('/tahle-stranka-neexistuje');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Přihlášení' })).toBeVisible();
+});

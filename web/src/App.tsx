@@ -172,6 +172,8 @@ function App() {
               />
             </Route>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Unknown address → the dashboard (or the login page); used to render an empty page. */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

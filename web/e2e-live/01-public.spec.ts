@@ -10,7 +10,8 @@ test.describe('veřejné části a zabezpečení (bez přihlášení)', () => {
   test('přihlašovací stránka se načte s pruhem prostředí', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByText(BANNER)).toBeVisible();
+    if (BANNER) await expect(page.getByText(BANNER)).toBeVisible();
+    else await expect(page.getByRole('status').filter({ hasText: /PROSTŘEDÍ/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Microsoft/i })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Poslat přihlašovací odkaz' })).toBeVisible();

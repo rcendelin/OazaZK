@@ -6,6 +6,10 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+### Opraveno
+- **Neexistující adresa zobrazila prázdnou stránku** — teď přesměruje na přehled (nepřihlášeného na přihlášení).
+  Nalezeno smoke testem po nasazení na PROD.
+
 ## [0.9.0] – 2026-09-28
 
 První verze na testovacím prostředí (TEST) — nový výpočetní model T02–T14, živě přetestováno na DEV.
