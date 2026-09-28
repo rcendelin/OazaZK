@@ -194,6 +194,19 @@ Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-
   - TEST: `TEST_ENTRA_CLIENT_ID = 5c765254-8107-4a3b-8ac6-84a05b22d109` (redirect: `oaza-test.cendelinovi.cz` + SWA host + localhost)
   - PROD: `PROD_ENTRA_CLIENT_ID = 95e941d9-6a91-4c35-bdc4-c3321c05750d` (redirect: `oaza.cendelinovi.cz` + SWA host)
 
+### Stav k 28. 9. 2026
+
+| | TEST | PROD |
+|---|---|---|
+| RBAC deploy SP (`60bd38f2…`, Contributor) | ✔ | ☐ |
+| GitHub environment + secrety | ✔ `test` (4 secrety) | ☐ `production` (bez secretů, bez Required reviewers) |
+| DNS (Cloudflare, CNAME, *DNS only*) + doména na SWA | ✔ `oaza-test.cendelinovi.cz` (Ready, HTTPS) | ✔ `oaza.cendelinovi.cz` (Ready, HTTPS) |
+| App settings `Environment` / bez `ENABLE_SEED` | ✔ | ☐ |
+| Nasazeno | ✔ release 0.9.0 (`release/0.9`), demo data, admini z DEV | ☐ |
+
+DNS domény `cendelinovi.cz` je v **Cloudflare**; záznamy pro SWA musí být **DNS only** (šedý mráček), jinak Azure doménu
+neověří. V zóně je wildcard — konkrétní CNAME má přednost.
+
 ### Zbývá na uživatele
 
 1. **RBAC** — deploy service principal `github-oaza-dev` (**appId** `7724f095-0799-4679-aab1-cc159136d465`, objectId SP `60bd38f2-497c-434d-b71f-3d5bacd1ae22`, z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG. *(V sandboxu tohoto asistenta příkaz padal na CLI chybu „MissingSubscription" / blok klasifikátoru; ve vašem vlastním `az` shellu proběhne normálně.)*
