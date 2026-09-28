@@ -345,7 +345,7 @@ Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admit
 
 ### Git conventions
 
-- **Branch strategy:** `develop` → DEV (`deploy-dev.yml` → `func-oaza-dev`); `release/**` → TEST (`deploy-test.yml` → `func-oaza-test`); `master` → PROD (`deploy.yml` → `func-oaza-prod`). All three share the same Azure tenant/subscription (differ by resource group `rg-oaza-{dev,test,prod}`) and use the unified `Azure/login` + `AZURE_CREDENTIALS` + `az config-zip` deploy; the domain (`cendelinovi.cz`) and the ACS email service are shared. See `docs/DEPLOYMENT-TEST-PROD.md`.
+- **Branch strategy:** `develop` → DEV (`deploy-dev.yml` → `func-oaza-dev-flex`); `release/**` → TEST (`deploy-test.yml` → `func-oaza-test-flex`); `master` → PROD (`deploy.yml` → `func-oaza-prod-flex`). The old `func-oaza-{env}` (Linux Consumption, .NET 8) are stopped since 0.10.0. All three share the same Azure tenant/subscription (differ by resource group `rg-oaza-{dev,test,prod}`) and use the unified `Azure/login` + `AZURE_CREDENTIALS` + `az config-zip` deploy; the domain (`cendelinovi.cz`) and the ACS email service are shared. See `docs/DEPLOYMENT-TEST-PROD.md`.
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
 - **CHANGELOG.md:** every PR that completes a task from `docs/ZADANI.md` (status: `docs/gap-analysis.md`) adds a line under `## [Nevydáno]` (Czech, user-facing wording)
@@ -363,7 +363,7 @@ Storage Account:    stoaza (Table Storage + Blob Storage)
                     OffBookFunds, OffBookFundRecords,
                     BankAccountMappings, BankTransactions
   Blob containers:  documents, finance
-Functions App:      func-oaza-prod
+Functions App:      func-oaza-prod-flex (Flex Consumption; old func-oaza-prod stopped)
 Static Web App:     swa-oaza-prod
 ```
 

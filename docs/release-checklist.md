@@ -68,7 +68,7 @@ unset OAZA_STORAGE_CONNECTION
 ## 5. Kontrola prostředí a oprávnění
 
 - ☐ **Pruh prostředí.** Na TEST je nahoře „TESTOVACÍ PROSTŘEDÍ“, na PROD žádný pruh není.
-  `curl https://func-oaza-prod.azurewebsites.net/api/environment` vrací `prod`, u TEST `test`.
+  `curl https://func-oaza-prod-flex.azurewebsites.net/api/environment` vrací `prod`, u TEST `test`.
 - ☐ **(PROD) `ENABLE_SEED` není nastavené.** `curl -X POST …/api/seed` vrací 404.
 - ☐ **Oprávnění člena.** Přihlaste se jako člen (testovací účet s rolí Member):
   - v menu nejsou položky Náklady, Voda a ztráty, Mezizávěrky, Návod pro správce, Import z banky ani správa;
@@ -91,7 +91,7 @@ Do 15 minut po nasazení, na tom prostředí, kam se nasazovalo:
 - ☐ Voda a ztráty ukazuje intervaly a metodu ztrát. Náklady ukazují seznam a „Rozpad na domy“.
 - ☐ Dokumenty: stažení existujícího dokumentu funguje.
 - ☐ Export pro účetní z poslední mezizávěrky se stáhne (XLSX).
-- ☐ V Application Insights (`func-oaza-prod`) nejsou nové chyby 500.
+- ☐ V Application Insights (`func-oaza-prod`, sdílí ho i `func-oaza-prod-flex`) nejsou nové chyby 500.
 
 ## 7. Rollback
 
