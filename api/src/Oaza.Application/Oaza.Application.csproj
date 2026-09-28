@@ -19,4 +19,9 @@
     <ProjectReference Include="..\Oaza.Domain\Oaza.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- DejaVu Sans (Bitstream Vera / DejaVu license — free to embed and redistribute) for the PDF exports. -->
+    <EmbeddedResource Include="Pdf\Fonts\*.ttf" LogicalName="Oaza.Application.Pdf.Fonts.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

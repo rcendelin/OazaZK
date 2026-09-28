@@ -6,6 +6,11 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+### Opraveno
+- **Export přehledu hospodaření a pokladny do PDF na Flex Consumption** vracel chybu 500 — v prostředí Flex nejsou
+  systémová písma. PDF teď používá písmo DejaVu Sans vložené do aplikace (s českými znaky). Záloha storage vynechává
+  i balíčky nasazení Flex (`app-package-*`).
+
 ### Údržba
 - **.NET 10 a Flex Consumption.** API běží na .NET 10 (podpora .NET 8 končí 10. 11. 2026) v plánu Flex Consumption —
   .NET 10 na dosavadním Linux Consumption neběží a ten plán se ruší. Nové Function Apps `func-oaza-{env}-flex`,

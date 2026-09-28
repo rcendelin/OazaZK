@@ -74,6 +74,7 @@ public class StorageBackupIntegrationTests
     [InlineData("azure-webjobs-hosts", true)]
     [InlineData("function-releases", true)]
     [InlineData("scm-releases", true)]
+    [InlineData("app-package-funcoazadevflex-0313478", true)]
     [InlineData("AzureFunctionsDiagnosticEvents202609", true)]
     [InlineData("AzureWebJobsHostLogs202609", true)]
     [InlineData("documents", false)]

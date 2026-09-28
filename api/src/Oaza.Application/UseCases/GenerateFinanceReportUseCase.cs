@@ -48,19 +48,20 @@ public class GenerateFinanceReportUseCase
 
         var sortedRecords = records.OrderBy(r => r.Date).ToList();
 
+        Oaza.Application.Pdf.PdfFonts.EnsureRegistered();
         var document = new PdfDocument();
         document.Info.Title = $"Hospodaření - {year}";
         var page = document.AddPage();
         page.Size = PdfSharpCore.PageSize.A4;
         var gfx = XGraphics.FromPdfPage(page);
 
-        var fontTitle = new XFont("Arial", 18, XFontStyle.Bold);
-        var fontSubtitle = new XFont("Arial", 14, XFontStyle.Regular);
-        var fontSection = new XFont("Arial", 11, XFontStyle.Bold);
-        var fontNormal = new XFont("Arial", 10, XFontStyle.Regular);
-        var fontBold = new XFont("Arial", 10, XFontStyle.Bold);
-        var fontSmall = new XFont("Arial", 8, XFontStyle.Regular);
-        var fontDetail = new XFont("Arial", 9, XFontStyle.Regular);
+        var fontTitle = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 18, XFontStyle.Bold);
+        var fontSubtitle = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 14, XFontStyle.Regular);
+        var fontSection = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 11, XFontStyle.Bold);
+        var fontNormal = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 10, XFontStyle.Regular);
+        var fontBold = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 10, XFontStyle.Bold);
+        var fontSmall = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 8, XFontStyle.Regular);
+        var fontDetail = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 9, XFontStyle.Regular);
 
         var blue = XColor.FromArgb(30, 64, 175);
         var gray = XColor.FromArgb(107, 114, 128);
