@@ -39,3 +39,6 @@ Thumbs.db
 # Claude Code
 .claude/
 .superpowers/
+
+# Coverage results (dotnet test --collect)
+api/coverage/

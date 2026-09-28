@@ -4,27 +4,39 @@ import { msalInstance } from './auth/msalConfig';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
+import { EnvironmentBanner } from './components/EnvironmentBanner';
 import { LoginPage } from './pages/LoginPage';
 import { MagicLinkVerifyPage } from './pages/MagicLinkVerifyPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReadingsOverviewPage } from './pages/ReadingsOverviewPage';
 import { ReadingsImportPage } from './pages/ReadingsImportPage';
-import { BillingPage } from './pages/BillingPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { FinancePage } from './pages/FinancePage';
 import { HousesPage } from './pages/admin/HousesPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { MetersPage } from './pages/admin/MetersPage';
+import { AuditLogPage } from './pages/admin/AuditLogPage';
+import { CostComponentsPage } from './pages/admin/CostComponentsPage';
+import { OpeningBalancesPage } from './pages/admin/OpeningBalancesPage';
+import { SeedImportPage } from './pages/admin/SeedImportPage';
+import { CostsPage } from './pages/CostsPage';
+import { WaterPage } from './pages/WaterPage';
+import { LedgerPage } from './pages/LedgerPage';
+import { InterimClosingsPage } from './pages/InterimClosingsPage';
+import { CashBookPage } from './pages/CashBookPage';
+import { OffBookFundPage } from './pages/OffBookFundPage';
 import { ReadingsListPage } from './pages/ReadingsListPage';
 import { AdvancesPage } from './pages/AdvancesPage';
+import { BankImportPage } from './pages/BankImportPage';
 import { SaldoPage } from './pages/SaldoPage';
-import { InvoicesOverviewPage } from './pages/InvoicesOverviewPage';
 import { JakToFungujePage } from './pages/JakToFungujePage';
+import { AdminGuidePage } from './pages/AdminGuidePage';
 
 function App() {
   return (
     <MsalProvider instance={msalInstance}>
       <AuthProvider>
+        <EnvironmentBanner />
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -55,19 +67,53 @@ function App() {
                 }
               />
               <Route path="/advances" element={<AdvancesPage />} />
-              <Route path="/saldo" element={<SaldoPage />} />
-              <Route path="/billing" element={<BillingPage />} />
               <Route
-                path="/prehled-faktur"
+                path="/advances/import"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <BankImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/saldo" element={<SaldoPage />} />
+              <Route path="/saldo-domu" element={<LedgerPage />} />
+              <Route path="/pokladna" element={<CashBookPage />} />
+              <Route path="/fond" element={<OffBookFundPage />} />
+              <Route
+                path="/mezizaverky"
                 element={
                   <ProtectedRoute requiredRole="Accountant">
-                    <InvoicesOverviewPage />
+                    <InterimClosingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/voda"
+                element={
+                  <ProtectedRoute requiredRole="Accountant">
+                    <WaterPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/naklady"
+                element={
+                  <ProtectedRoute requiredRole="Accountant">
+                    <CostsPage />
                   </ProtectedRoute>
                 }
               />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/jak-to-funguje" element={<JakToFungujePage />} />
+              <Route
+                path="/navod"
+                element={
+                  <ProtectedRoute requiredRole="Accountant">
+                    <AdminGuidePage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/admin/houses"
                 element={
@@ -81,6 +127,38 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole="Admin">
                     <UsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/cost-components"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <CostComponentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/opening-balances"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <OpeningBalancesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/seed-import"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <SeedImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/audit"
+                element={
+                  <ProtectedRoute requiredRole="Admin">
+                    <AuditLogPage />
                   </ProtectedRoute>
                 }
               />

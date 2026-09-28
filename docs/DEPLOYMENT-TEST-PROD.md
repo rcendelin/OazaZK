@@ -33,7 +33,17 @@ Všechny tři workflow používají **jednotný způsob nasazení** (stejný jak
 
 ## Prerekvizity v Azure (jednorázově, per prostředí)
 
-Pro **TEST** i **PROD** vytvoř resources analogicky ke krokům 1–5 v `DEPLOYMENT-DEV.md`, jen s příslušnými názvy. Zkráceně:
+**Skript (T01):** `infra/provision.sh <dev|test|prod> [--dry-run] [--yes]` založí nebo doplní resource group,
+storage (s 14denní obnovou smazaných blobů), Functions App, Static Web App, app settings (`Environment`,
+`JwtSecret` jen poprvé, na PROD odebere `ENABLE_SEED`) a CORS. Sdílené hodnoty čte z proměnných
+`OAZA_ENTRA_TENANT_ID`, `OAZA_ENTRA_CLIENT_ID`, `OAZA_ACS_CONNECTION_STRING`, `OAZA_ACS_FROM_EMAIL`. Na PROD
+nejdřív `--dry-run`, pak `--yes`. DNS, GitHub secrety, Required reviewers a RBAC service principalu zůstávají ruční
+(skript je na konci vypíše).
+
+**Izolace dat:** každé prostředí má vlastní storage account. API to hlídá při startu (`StorageIsolation`, viz
+`LOKALNI-VYVOJ.md`) a CI to ověřuje testem se dvěma emulátory (`EnvironmentIsolationIntegrationTests`).
+
+Ručně (ekvivalent skriptu) — pro **TEST** i **PROD** analogicky ke krokům 1–5 v `DEPLOYMENT-DEV.md`, jen s příslušnými názvy. Zkráceně:
 
 ```bash
 # ---- TEST (opakuj obdobně pro PROD: rg-oaza-prod / stoaza / func-oaza-prod / swa-oaza-prod) ----
@@ -69,8 +79,11 @@ az functionapp config appsettings set --name func-oaza-test --resource-group rg-
   "EntraId__ClientId=<TEST_ENTRA_CLIENT_ID>" \
   "AzureCommunicationServices__ConnectionString=<SHARED_ACS_CONNECTION_STRING>" \
   "AzureCommunicationServices__FromEmail=<SHARED_ACS_FROM_EMAIL>" \
-  "AzureCommunicationServices__FromName=Oáza ZK TEST"
+  "AzureCommunicationServices__FromName=Oáza ZK TEST" \
+  "Environment=test"
 ```
+
+> `Environment` = `dev` / `test` / `prod` — podle něj backend hlásí prostředí (`GET /api/environment`) a UI mimo `prod` zobrazí pruh „TESTOVACÍ PROSTŘEDÍ“. Chybějící hodnota se hlásí jako `unknown` a pruh se zobrazí taky. Frontend dostává `VITE_ENVIRONMENT` při buildu z workflow; když se hodnoty neshodují, pruh varuje.
 
 > `AzureCommunicationServices__*` = **stejné hodnoty jako DEV/PROD** (sdílená ACS). `JwtSecret` naopak **vždy unikátní** per prostředí. Na PROD **nenastavuj** `ENABLE_SEED`.
 
@@ -130,7 +143,7 @@ V `Settings → Environments` vytvoř (pokud ještě nejsou): **`dev`**, **`test
 >
 > **Tenant je sdílený** → `*_ENTRA_TENANT_ID` má ve všech prostředích stejnou hodnotu (drženo jako samostatné secrety kvůli konzistenci s DEV workflow). Entra **App registration** může být per-prostředí (vlastní redirect URI na příslušnou subdoménu), nebo jedna sdílená s více redirect URIs — pak `*_ENTRA_CLIENT_ID` bude všude stejné.
 >
-> Secrety lze uložit buď na úrovni repa, nebo na příslušný **Environment** (`test` / `production`) — environment-scoped je bezpečnější, protože je zpřístupní jen job běžící v daném prostředí.
+> Secrety lze uložit buď na úrovni repa, nebo na příslušný **Environment** (`test` / `production`) — environment-scoped je bezpečnější, protože je zpřístupní jen job běžící v daném prostředí. Frontend se proto builduje až v jobu `deploy-web` (má `environment:`); `build-web` je jen kontrola lintu a buildu. Prázdný `*_API_BASE_URL` build zastaví (dřív vznikl frontend volající `/api` na SWA → 404).
 
 ---
 
@@ -181,13 +194,26 @@ Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-
   - TEST: `TEST_ENTRA_CLIENT_ID = 5c765254-8107-4a3b-8ac6-84a05b22d109` (redirect: `oaza-test.cendelinovi.cz` + SWA host + localhost)
   - PROD: `PROD_ENTRA_CLIENT_ID = 95e941d9-6a91-4c35-bdc4-c3321c05750d` (redirect: `oaza.cendelinovi.cz` + SWA host)
 
+### Stav k 28. 9. 2026
+
+| | TEST | PROD |
+|---|---|---|
+| RBAC deploy SP (`60bd38f2…`, Contributor) | ✔ | ☐ |
+| GitHub environment + secrety | ✔ `test` (4 secrety) | ☐ `production` (bez secretů, bez Required reviewers) |
+| DNS (Cloudflare, CNAME, *DNS only*) + doména na SWA | ✔ `oaza-test.cendelinovi.cz` (Ready, HTTPS) | ✔ `oaza.cendelinovi.cz` (Ready, HTTPS) |
+| App settings `Environment` / bez `ENABLE_SEED` | ✔ | ☐ |
+| Nasazeno | ✔ release 0.9.0 (`release/0.9`), demo data, admini z DEV | ☐ |
+
+DNS domény `cendelinovi.cz` je v **Cloudflare**; záznamy pro SWA musí být **DNS only** (šedý mráček), jinak Azure doménu
+neověří. V zóně je wildcard — konkrétní CNAME má přednost.
+
 ### Zbývá na uživatele
 
-1. **RBAC** — deploy service principal (objectId `7724f095-0799-4679-aab1-cc159136d465`, z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG. *(V sandboxu tohoto asistenta příkaz padal na CLI chybu „MissingSubscription" / blok klasifikátoru; ve vašem vlastním `az` shellu proběhne normálně.)*
+1. **RBAC** — deploy service principal `github-oaza-dev` (**appId** `7724f095-0799-4679-aab1-cc159136d465`, objectId SP `60bd38f2-497c-434d-b71f-3d5bacd1ae22`, z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG. *(V sandboxu tohoto asistenta příkaz padal na CLI chybu „MissingSubscription" / blok klasifikátoru; ve vašem vlastním `az` shellu proběhne normálně.)*
    ```bash
    SUB=ac40c613-8832-4e91-b6b5-75ef920d181d
    for rg in rg-oaza-test rg-oaza-prod; do
-     az role assignment create --assignee-object-id 7724f095-0799-4679-aab1-cc159136d465 \
+     az role assignment create --assignee-object-id 60bd38f2-497c-434d-b71f-3d5bacd1ae22 \
        --assignee-principal-type ServicePrincipal --role Contributor \
        --scope /subscriptions/$SUB/resourceGroups/$rg
    done

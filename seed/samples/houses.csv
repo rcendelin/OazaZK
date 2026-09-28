@@ -1,0 +1,7 @@
+name;address;contact_person;email;active
+RD A;Zadní Kopanina 901;Alena Ukázková;a@example.invalid;ano
+RD B;Zadní Kopanina 902;Bohumil Vzorový;b@example.invalid;ano
+RD C;Zadní Kopanina 903;Cyril Testovací;c@example.invalid;ano
+RD D;Zadní Kopanina 904;Dana Fiktivní;d@example.invalid;ano
+RD E;Zadní Kopanina 905;Emil Smyšlený;e@example.invalid;ano
+RD F;Zadní Kopanina 906;Františka Příkladná;f@example.invalid;ano

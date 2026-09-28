@@ -62,17 +62,9 @@ public class NotificationFunctions
                     await _notificationService.SendImportNotificationAsync(request.Year.Value, request.Month.Value);
                     break;
 
-                case "settlement_closed":
-                    if (string.IsNullOrWhiteSpace(request.PeriodId))
-                    {
-                        return await WriteErrorResponseAsync(req, 400, "Parametr 'periodId' je povinný pro notifikaci settlement_closed.");
-                    }
-                    await _notificationService.SendSettlementNotificationAsync(request.PeriodId);
-                    break;
-
                 default:
                     return await WriteErrorResponseAsync(req, 400,
-                        $"Unknown notification type '{request.Type}'. Valid types: reading_reminder, import_completed, settlement_closed.");
+                        $"Unknown notification type '{request.Type}'. Valid types: reading_reminder, import_completed.");
             }
 
             _logger.LogInformation("Notification of type '{Type}' sent by user {UserId}.", request.Type, user.Id);
@@ -82,6 +74,14 @@ public class NotificationFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {

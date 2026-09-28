@@ -44,6 +44,25 @@ var host = new HostBuilder()
 
         // Auth services
         services.AddSingleton<IJwtService, JwtService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<Oaza.Domain.Time.IClock>(sp => new Oaza.Domain.Time.PragueClock(sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<Oaza.Application.Audit.IAuditLogger, Oaza.Application.Audit.AuditLogger>();
+        services.AddSingleton<Oaza.Application.Interfaces.IClosingBoundary, Oaza.Application.Interfaces.InterimClosingBoundary>();
+        services.AddSingleton<Oaza.Application.UseCases.CostComponentsUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.OpeningBalancesUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.CostEntriesUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.WaterSettlementUseCase>();
+        services.AddSingleton<Oaza.Application.Ledger.LedgerCostCollector>();
+        services.AddSingleton<Oaza.Application.Readings.ReadingsExportUseCase>();
+        services.AddSingleton<Oaza.Application.Seed.SeedImportUseCase>();
+        services.AddSingleton<Oaza.Application.Ledger.HouseLedgerUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.InterimClosingsUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.HouseTransferUseCase>();
+        services.AddSingleton<Oaza.Application.UseCases.CashBookUseCase>();
+        services.AddSingleton(new Oaza.Application.Deployment.FeatureFlags(
+            Oaza.Application.Deployment.FeatureFlags.IsOn(context.Configuration[Oaza.Application.Deployment.FeatureFlags.OffBookFundKey])));
+        services.AddSingleton<Oaza.Application.OffBookFunds.OffBookFundUseCase>();
+        services.AddSingleton<Oaza.Application.Documents.UnaccountedDocumentsUseCase>();
         services.AddSingleton<IEntraIdTokenValidator, EntraIdTokenValidator>();
 
         // Infrastructure: Table Storage, Blob Storage, all repositories, email
@@ -72,57 +91,11 @@ var host = new HostBuilder()
                 sp.GetRequiredService<IAdvancePaymentRepository>(),
                 sp.GetRequiredService<IFinancialRecordRepository>()));
 
-        // Use cases: Unified received-invoices overview (GET /invoices/all)
-        services.AddSingleton<GetReceivedInvoicesUseCase>(sp =>
-            new GetReceivedInvoicesUseCase(
-                sp.GetRequiredService<ISupplierInvoiceRepository>(),
-                sp.GetRequiredService<IFinancialRecordRepository>()));
-
-        // Use cases: Settlement calculation
-        services.AddSingleton<CalculateSettlementUseCase>(sp =>
-            new CalculateSettlementUseCase(
-                sp.GetRequiredService<IBillingPeriodRepository>(),
-                sp.GetRequiredService<IHouseRepository>(),
-                sp.GetRequiredService<IWaterMeterRepository>(),
-                sp.GetRequiredService<IMeterReadingRepository>(),
-                sp.GetRequiredService<ISupplierInvoiceRepository>(),
-                sp.GetRequiredService<IAdvancePaymentRepository>(),
-                sp.GetRequiredService<IAdvanceSettingsRepository>(),
-                sp.GetRequiredService<ILogger<CalculateSettlementUseCase>>()));
-
-        // Use cases: Billing period close (persist settlements + lock period)
-        services.AddSingleton<CloseBillingPeriodUseCase>(sp =>
-            new CloseBillingPeriodUseCase(
-                sp.GetRequiredService<CalculateSettlementUseCase>(),
-                sp.GetRequiredService<IBillingPeriodRepository>(),
-                sp.GetRequiredService<ISettlementRepository>(),
-                sp.GetRequiredService<IHouseRepository>(),
-                sp.GetRequiredService<IAdvancePaymentRepository>(),
-                sp.GetRequiredService<IFinancialRecordRepository>(),
-                sp.GetRequiredService<IAdvanceSettingsRepository>(),
-                sp.GetRequiredService<GetFundBalanceUseCase>(),
-                sp.GetRequiredService<ILogger<CloseBillingPeriodUseCase>>()));
-
-        // Use cases: Per-house saldo (water / electricity / common base)
-        services.AddSingleton<CalculateHouseSaldoUseCase>(sp =>
-            new CalculateHouseSaldoUseCase(
-                sp.GetRequiredService<CalculateSettlementUseCase>(),
-                sp.GetRequiredService<IBillingPeriodRepository>(),
-                sp.GetRequiredService<ISettlementRepository>(),
-                sp.GetRequiredService<IHouseRepository>(),
-                sp.GetRequiredService<IAdvancePaymentRepository>(),
-                sp.GetRequiredService<IAdvanceSettingsRepository>(),
-                sp.GetRequiredService<ILogger<CalculateHouseSaldoUseCase>>()));
-
-        // Use cases: Settlement PDF generation
-        services.AddSingleton<GenerateSettlementPdfUseCase>(sp =>
-            new GenerateSettlementPdfUseCase(
-                sp.GetRequiredService<ILogger<GenerateSettlementPdfUseCase>>()));
-
         // Use cases: Finance report generation
         services.AddSingleton<GenerateFinanceReportUseCase>(sp =>
             new GenerateFinanceReportUseCase(
-                sp.GetRequiredService<ILogger<GenerateFinanceReportUseCase>>()));
+                sp.GetRequiredService<ILogger<GenerateFinanceReportUseCase>>(),
+                sp.GetRequiredService<Oaza.Domain.Time.IClock>()));
 
         services.AddSingleton<GenerateFinanceExcelUseCase>(sp =>
             new GenerateFinanceExcelUseCase(
@@ -133,8 +106,29 @@ var host = new HostBuilder()
             new ImportReadingsUseCase(
                 sp.GetRequiredService<IMeterReadingRepository>(),
                 sp.GetRequiredService<IWaterMeterRepository>(),
-                sp.GetRequiredService<IImportSessionCache>(),
-                sp.GetRequiredService<ILogger<ImportReadingsUseCase>>()));
+                sp.GetRequiredService<ILogger<ImportReadingsUseCase>>(),
+                sp.GetRequiredService<Oaza.Application.Interfaces.IClosingBoundary>(),
+                sp.GetRequiredService<Oaza.Application.Audit.IAuditLogger>()));
+
+        // Use cases: Prescribed advances + bank statement import
+        services.AddSingleton<CalculatePrescribedAdvancesUseCase>(sp =>
+            new CalculatePrescribedAdvancesUseCase(
+                sp.GetRequiredService<IAdvanceSettingsRepository>(),
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<ICostComponentRepository>(),
+                sp.GetRequiredService<Oaza.Application.Ledger.LedgerCostCollector>(),
+                sp.GetRequiredService<Oaza.Domain.Time.IClock>()));
+
+        services.AddSingleton<ImportBankStatementUseCase>(sp =>
+            new ImportBankStatementUseCase(
+                sp.GetRequiredService<IHouseRepository>(),
+                sp.GetRequiredService<IAdvancePaymentRepository>(),
+                sp.GetRequiredService<IBankAccountMappingRepository>(),
+                sp.GetRequiredService<IBankTransactionRepository>(),
+                sp.GetRequiredService<CalculatePrescribedAdvancesUseCase>(),
+                sp.GetRequiredService<ILogger<ImportBankStatementUseCase>>(),
+                sp.GetRequiredService<Oaza.Application.Interfaces.IClosingBoundary>(),
+                sp.GetRequiredService<Oaza.Application.Audit.IAuditLogger>()));
     })
     .Build();
 

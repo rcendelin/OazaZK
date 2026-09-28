@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -6,16 +6,26 @@ import {
   FileText,
   Wallet,
   Banknote,
-  Receipt,
-  ReceiptText,
+  Landmark,
   Droplets,
   List,
   Upload,
   Home,
   Users,
   Gauge,
+  History,
+  Layers,
+  Flag,
+  FileUp,
+  Coins,
+  Droplet,
+  BookOpen,
+  Lock,
+  PiggyBank,
+  Sparkles,
   Scale,
   CircleHelp,
+  ClipboardList,
   LogOut,
   Menu,
   X,
@@ -23,6 +33,9 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useApi } from '../hooks/useApi';
+import { getFeatures } from '../api/features';
+import type { Features } from '../api/features';
 
 interface NavItem {
   label: string;
@@ -30,6 +43,7 @@ interface NavItem {
   icon: ReactNode;
   adminOnly?: boolean;
   financeManager?: boolean; // visible to Admin + Accountant only
+  feature?: 'offBookFund'; // only when the feature flag is on (T10)
   children?: NavItem[];
 }
 
@@ -44,9 +58,14 @@ const navItems: NavItem[] = [
     icon: <Wallet size={iconSize} />,
     children: [
       { label: 'Zálohy', path: '/advances', icon: <Banknote size={iconSize} /> },
-      { label: 'Saldo a platby', path: '/saldo', icon: <Scale size={iconSize} /> },
-      { label: 'Vyúčtování', path: '/billing', icon: <Receipt size={iconSize} /> },
-      { label: 'Přehled faktur', path: '/prehled-faktur', icon: <ReceiptText size={iconSize} />, financeManager: true },
+      { label: 'Saldo domu', path: '/saldo-domu', icon: <BookOpen size={iconSize} /> },
+      { label: 'Platby', path: '/saldo', icon: <Scale size={iconSize} /> },
+      { label: 'Pokladna', path: '/pokladna', icon: <PiggyBank size={iconSize} /> },
+      { label: 'Oddělený fond', path: '/fond', icon: <Sparkles size={iconSize} />, feature: 'offBookFund' },
+      { label: 'Import z banky', path: '/advances/import', icon: <Landmark size={iconSize} />, adminOnly: true },
+      { label: 'Náklady', path: '/naklady', icon: <Coins size={iconSize} />, financeManager: true },
+      { label: 'Voda a ztráty', path: '/voda', icon: <Droplet size={iconSize} />, financeManager: true },
+      { label: 'Mezizávěrky', path: '/mezizaverky', icon: <Lock size={iconSize} />, financeManager: true },
     ],
   },
   {
@@ -59,18 +78,24 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Jak to funguje', path: '/jak-to-funguje', icon: <CircleHelp size={iconSize} /> },
+  { label: 'Návod pro správce', path: '/navod', icon: <ClipboardList size={iconSize} />, financeManager: true },
 ];
 
 const adminNavItems: NavItem[] = [
   { label: 'Domácnosti', path: '/admin/houses', icon: <Home size={iconSize} />, adminOnly: true },
   { label: 'Uživatelé', path: '/admin/users', icon: <Users size={iconSize} />, adminOnly: true },
   { label: 'Vodoměry', path: '/admin/meters', icon: <Gauge size={iconSize} />, adminOnly: true },
+  { label: 'Nákladové složky', path: '/admin/cost-components', icon: <Layers size={iconSize} />, adminOnly: true },
+  { label: 'Počáteční stavy', path: '/admin/opening-balances', icon: <Flag size={iconSize} />, adminOnly: true },
+  { label: 'Import počátečních dat', path: '/admin/seed-import', icon: <FileUp size={iconSize} />, adminOnly: true },
+  { label: 'Audit změn', path: '/admin/audit', icon: <History size={iconSize} />, adminOnly: true },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'Admin';
   const isAccountant = user?.role === 'Accountant';
+  const { data: features } = useApi<Features>(useCallback(() => getFeatures(), []));
   const location = useLocation();
 
   const isParentActive = (item: NavItem): boolean => {
@@ -110,7 +135,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
         {navItems
-          .filter((item) => !item.adminOnly || isAdmin)
+          .filter((item) => (!item.adminOnly || isAdmin) && (!item.financeManager || isAdmin || isAccountant))
           .map((item) => {
             const active = isParentActive(item);
             return (
@@ -132,11 +157,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 {item.children && active && (
                   <div className="mt-1 space-y-0.5">
                     {item.children
-                      .filter((child) => (!child.adminOnly || isAdmin) && (!child.financeManager || isAdmin || isAccountant))
+                      .filter((child) => (!child.adminOnly || isAdmin) && (!child.financeManager || isAdmin || isAccountant) && (!child.feature || features?.[child.feature]))
                       .map((child) => (
                         <NavLink
                           key={child.path}
                           to={child.path}
+                          end
                           className={({ isActive }) => childLinkClasses(isActive)}
                           onClick={onNavigate}
                         >

@@ -1,55 +1,59 @@
 import { apiClient } from './client.ts';
 
+/** Admin-set monthly advance of one house (Kč per component). */
 export interface HouseAdvanceOverride {
   waterAdvance: number;
   electricityAdvance: number;
   commonAdvance: number;
 }
 
+/** Only per-house overrides remain; members receive an empty map. */
 export interface AdvanceSettingsData {
-  waterPricePerM3: number;
-  waterPriceValidFrom: string;
-  waterPriceValidTo: string | null;
-  monthlyElectricityCost: number;
-  monthlyCommonBaseFee: number;
-  electricityCoefficients: Record<string, number>;
   houseOverrides: Record<string, HouseAdvanceOverride>;
-  lossAllocationMethod: string;
+}
+
+export interface AdvanceAmounts {
+  water: number;
+  electricity: number;
+  common: number;
+  total: number;
 }
 
 export interface HouseAdvanceCalc {
   houseId: string;
   houseName: string;
-  avgMonthlyM3: number;
-  lossShareM3: number;
-  totalWaterM3: number;
-  sharePercent: number;
-  electricityCoefficient: number;
-  recommended: { water: number; electricity: number; common: number; total: number };
-  actual: { water: number; electricity: number; common: number; total: number };
+  /** Costs allocated to the house by the ledger over the period. */
+  costsInPeriod: AdvanceAmounts;
+  /** costsInPeriod ÷ months, rounded to whole Kč. */
+  recommended: AdvanceAmounts;
+  /** Admin override if set, otherwise the recommendation. */
+  actual: AdvanceAmounts;
   hasOverride: boolean;
 }
 
 export interface AdvanceCalculation {
-  settings: {
-    waterPricePerM3: number;
-    waterPriceValidFrom: string;
-    waterPriceValidTo: string | null;
-    monthlyElectricityCost: number;
-    monthlyCommonBaseFee: number;
-    lossAllocationMethod: string;
-  };
-  mainMeterMonthlyM3: number;
-  totalIndividualMonthlyM3: number;
-  monthlyLossM3: number;
+  /** yyyy-MM-dd */
+  from: string;
+  /** yyyy-MM-dd */
+  to: string;
+  months: number;
   houses: HouseAdvanceCalc[];
 }
 
 export const getAdvanceSettings = (): Promise<AdvanceSettingsData> =>
   apiClient.get<AdvanceSettingsData>('/advance-settings');
 
+/** Replaces the whole override map — prefer the per-house calls below (two admins would overwrite each other). */
 export const updateAdvanceSettings = (data: AdvanceSettingsData): Promise<AdvanceSettingsData> =>
   apiClient.put<AdvanceSettingsData>('/advance-settings', data);
+
+/** Sets the override of one house only (read-modify-write on the server). */
+export const setHouseAdvanceOverride = (houseId: string, data: HouseAdvanceOverride): Promise<AdvanceSettingsData> =>
+  apiClient.put<AdvanceSettingsData>(`/advance-settings/overrides/${encodeURIComponent(houseId)}`, data);
+
+/** Removes the override of one house — its advance goes back to the recommendation. */
+export const deleteHouseAdvanceOverride = (houseId: string): Promise<void> =>
+  apiClient.delete(`/advance-settings/overrides/${encodeURIComponent(houseId)}`);
 
 export const calculateAdvances = (): Promise<AdvanceCalculation> =>
   apiClient.get<AdvanceCalculation>('/advance-settings/calculate');

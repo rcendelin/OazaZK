@@ -15,6 +15,7 @@ using Oaza.Domain.Entities;
 using Oaza.Domain.Enums;
 using Oaza.Domain.Interfaces;
 using Oaza.Functions.Attributes;
+using Oaza.Domain.Time;
 
 namespace Oaza.Functions.Endpoints;
 
@@ -27,6 +28,7 @@ public class FinanceFunctions
     private readonly GetFundBalanceUseCase _getFundBalanceUseCase;
     private readonly GenerateFinanceReportUseCase _generatePdfUseCase;
     private readonly GenerateFinanceExcelUseCase _generateExcelUseCase;
+    private readonly IClock _clock;
     private readonly ILogger<FinanceFunctions> _logger;
 
     private const long MaxAttachmentBytes = 20 * 1024 * 1024; // 20 MB
@@ -45,6 +47,7 @@ public class FinanceFunctions
         GetFundBalanceUseCase getFundBalanceUseCase,
         GenerateFinanceReportUseCase generatePdfUseCase,
         GenerateFinanceExcelUseCase generateExcelUseCase,
+        IClock clock,
         ILogger<FinanceFunctions> logger)
     {
         _financialRecordRepository = financialRecordRepository ?? throw new ArgumentNullException(nameof(financialRecordRepository));
@@ -54,6 +57,7 @@ public class FinanceFunctions
         _getFundBalanceUseCase = getFundBalanceUseCase ?? throw new ArgumentNullException(nameof(getFundBalanceUseCase));
         _generatePdfUseCase = generatePdfUseCase ?? throw new ArgumentNullException(nameof(generatePdfUseCase));
         _generateExcelUseCase = generateExcelUseCase ?? throw new ArgumentNullException(nameof(generateExcelUseCase));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -75,6 +79,14 @@ public class FinanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -118,6 +130,14 @@ public class FinanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -175,6 +195,14 @@ public class FinanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -212,6 +240,14 @@ public class FinanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -264,6 +300,14 @@ public class FinanceFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -334,6 +378,14 @@ public class FinanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -361,15 +413,19 @@ public class FinanceFunctions
             var records = await _financialRecordRepository.GetByYearAsync(year);
             var pdfBytes = _generatePdfUseCase.Generate(year, records);
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "application/pdf");
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"hospodareni-{year}.pdf\"");
-            response.Body = new MemoryStream(pdfBytes);
-            return response;
+            return await FileResponse.WriteAsync(req, pdfBytes, "application/pdf", $"hospodareni-{year}.pdf");
         }
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -398,15 +454,19 @@ public class FinanceFunctions
             var records = await _financialRecordRepository.GetByYearAsync(year);
             var excelBytes = _generateExcelUseCase.Generate(year, records);
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"hospodareni-{year}.xlsx\"");
-            response.Body = new MemoryStream(excelBytes);
-            return response;
+            return await FileResponse.WriteAsync(req, excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"hospodareni-{year}.xlsx");
         }
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -456,6 +516,14 @@ public class FinanceFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -490,15 +558,19 @@ public class FinanceFunctions
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "application/pdf");
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"faktura-{id}.pdf\"");
-            response.Body = new MemoryStream(ms.ToArray());
-            return response;
+            return await FileResponse.WriteAsync(req, ms.ToArray(), "application/pdf", $"faktura-{id}.pdf");
         }
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -523,7 +595,7 @@ public class FinanceFunctions
     private async Task<FinancialRecord?> FindFinancialRecordByIdAsync(string id)
     {
         // Search current year and a few years back
-        var currentYear = DateTime.UtcNow.Year;
+        var currentYear = _clock.Today.Year;
         for (var year = currentYear + 1; year >= currentYear - 10; year--)
         {
             var record = await _financialRecordRepository.GetAsync(year.ToString(), id);

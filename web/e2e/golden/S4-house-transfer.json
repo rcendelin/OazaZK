@@ -1,0 +1,325 @@
+{
+  "periodsBefore": [
+    {
+      "id": "A|2023-11-01",
+      "houseId": "A",
+      "houseName": "RD A",
+      "ownerName": "Vlastník A",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    {
+      "id": "B|2023-11-01",
+      "houseId": "B",
+      "houseName": "RD B",
+      "ownerName": "Vlastník B",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    {
+      "id": "C|2023-11-01",
+      "houseId": "C",
+      "houseName": "RD C",
+      "ownerName": "Vlastník C",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    {
+      "id": "D|2023-11-01",
+      "houseId": "D",
+      "houseName": "RD D",
+      "ownerName": "Vlastník D",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    }
+  ],
+  "balancesBefore": [],
+  "preview": {
+    "houseId": "B",
+    "houseName": "RD B",
+    "transferDate": "2026-03-15",
+    "closingDate": "2026-03-14",
+    "currentOwnerName": "Vlastník B",
+    "currentOwnerFrom": "2023-11-01",
+    "closingSaldo": 650.00,
+    "closingPayments": 1000,
+    "closingCosts": 350.00,
+    "meterId": "mB",
+    "meterNumber": "V-B",
+    "suggestedMeterValue": 1234.516,
+    "suggestedMeterNote": "Odhad lineární interpolací po dnech mezi odečty 1. 3. 2026 (1230 m³) a 1. 4. 2026 (1240 m³), den 14 z 31.",
+    "problems": []
+  },
+  "transfer": {
+    "closingId": "2026-03-14|House|B",
+    "closingSaldo": 650.00,
+    "newOwnershipPeriodId": "B|2026-03-15"
+  },
+  "periodsAfter": [
+    {
+      "id": "A|2023-11-01",
+      "houseId": "A",
+      "houseName": "RD A",
+      "ownerName": "Vlastník A",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    {
+      "id": "B|2023-11-01",
+      "houseId": "B",
+      "houseName": "RD B",
+      "ownerName": "Vlastník B",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": "2026-03-14"
+    },
+    {
+      "id": "B|2026-03-15",
+      "houseId": "B",
+      "houseName": "RD B",
+      "ownerName": "Noví vlastníci B",
+      "contact": "novi.b@example.cz",
+      "validFrom": "2026-03-15",
+      "validTo": null
+    },
+    {
+      "id": "C|2023-11-01",
+      "houseId": "C",
+      "houseName": "RD C",
+      "ownerName": "Vlastník C",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    },
+    {
+      "id": "D|2023-11-01",
+      "houseId": "D",
+      "houseName": "RD D",
+      "ownerName": "Vlastník D",
+      "contact": null,
+      "validFrom": "2023-11-01",
+      "validTo": null
+    }
+  ],
+  "balancesAfter": [
+    {
+      "key": "MeterReading|mB|B|2026-03-15",
+      "type": "MeterReading",
+      "houseId": "B",
+      "houseName": "RD B",
+      "componentId": null,
+      "componentName": null,
+      "meterId": "mB",
+      "meterNumber": "V-B",
+      "ownershipPeriodId": "B|2026-03-15",
+      "date": "2026-03-15",
+      "value": 1234.567,
+      "isEstimate": false,
+      "source": "předávací protokol",
+      "note": null,
+      "locked": false
+    },
+    {
+      "key": "FundShare|B|B|2026-03-15",
+      "type": "FundShare",
+      "houseId": "B",
+      "houseName": "RD B",
+      "componentId": null,
+      "componentName": null,
+      "meterId": null,
+      "meterNumber": null,
+      "ownershipPeriodId": "B|2026-03-15",
+      "date": "2026-03-15",
+      "value": 0,
+      "isEstimate": false,
+      "source": "Převod domu — nový vlastník začíná s nulovým podílem",
+      "note": null,
+      "locked": false
+    }
+  ],
+  "overview": {
+    "from": "2023-11-01",
+    "to": "2026-04-10",
+    "components": [
+      {
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "allocatedTotal": 3100.00,
+        "housesTotal": 3100.00,
+        "matches": true,
+        "warnings": []
+      }
+    ],
+    "houses": [
+      {
+        "houseId": "A",
+        "houseName": "RD A",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": 775.00
+        },
+        "saldo": -775.00
+      },
+      {
+        "houseId": "B",
+        "houseName": "RD B",
+        "opening": 0,
+        "payments": 1000,
+        "costs": {
+          "vodarna": 775.00
+        },
+        "saldo": 225.00
+      },
+      {
+        "houseId": "C",
+        "houseName": "RD C",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": 775.00
+        },
+        "saldo": -775.00
+      },
+      {
+        "houseId": "D",
+        "houseName": "RD D",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "vodarna": 775.00
+        },
+        "saldo": -775.00
+      }
+    ]
+  },
+  "ledgerNew": {
+    "houseId": "B",
+    "houseName": "RD B",
+    "from": "2026-03-15",
+    "to": "2026-04-10",
+    "ownershipPeriod": {
+      "id": "B|2026-03-15",
+      "ownerName": "Noví vlastníci B",
+      "validFrom": "2026-03-15",
+      "validTo": null
+    },
+    "ownershipPeriods": [
+      {
+        "id": "B|2023-11-01",
+        "ownerName": "Vlastník B",
+        "validFrom": "2023-11-01",
+        "validTo": "2026-03-14"
+      },
+      {
+        "id": "B|2026-03-15",
+        "ownerName": "Noví vlastníci B",
+        "validFrom": "2026-03-15",
+        "validTo": null
+      }
+    ],
+    "opening": 0,
+    "payments": 0,
+    "costs": 425.00,
+    "saldo": -425.00,
+    "items": [
+      {
+        "date": "2026-03-15",
+        "kind": "Opening",
+        "description": "Počáteční podíl ve fondu (Převod domu — nový vlastník začíná s nulovým podílem)",
+        "componentId": null,
+        "componentName": null,
+        "amount": 0,
+        "balance": 0,
+        "detail": null
+      },
+      {
+        "date": "2026-03-15",
+        "kind": "Cost",
+        "description": "Záloha 1. 3. 2026 – 31. 3. 2026 (Dodavatel elektřiny)",
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "amount": -425.00,
+        "balance": -425.00,
+        "detail": {
+          "total": 3100,
+          "segmentFrom": "2026-03-15",
+          "segmentTo": "2026-03-31",
+          "segmentDays": 17,
+          "segmentAmount": 1700.00,
+          "method": "Equal",
+          "weight": 1,
+          "totalWeight": 4,
+          "explanation": "Záloha 1. 3. 2026 – 31. 3. 2026 (Dodavatel elektřiny) 3\u00A0100,00 Kč za 31 dní; úsek 15. 3. 2026 – 31. 3. 2026 (17 dní) = 1\u00A0700,00 Kč, rovným dílem: podíl 1 z 4 = 425,00 Kč"
+        }
+      }
+    ]
+  },
+  "ledgerOld": {
+    "houseId": "B",
+    "houseName": "RD B",
+    "from": "2023-11-01",
+    "to": "2026-03-14",
+    "ownershipPeriod": {
+      "id": "B|2023-11-01",
+      "ownerName": "Vlastník B",
+      "validFrom": "2023-11-01",
+      "validTo": "2026-03-14"
+    },
+    "ownershipPeriods": [
+      {
+        "id": "B|2023-11-01",
+        "ownerName": "Vlastník B",
+        "validFrom": "2023-11-01",
+        "validTo": "2026-03-14"
+      },
+      {
+        "id": "B|2026-03-15",
+        "ownerName": "Noví vlastníci B",
+        "validFrom": "2026-03-15",
+        "validTo": null
+      }
+    ],
+    "opening": 0,
+    "payments": 1000,
+    "costs": 350.00,
+    "saldo": 650.00,
+    "items": [
+      {
+        "date": "2026-03-01",
+        "kind": "Payment",
+        "description": "Záloha 3/2026",
+        "componentId": null,
+        "componentName": null,
+        "amount": 1000,
+        "balance": 1000,
+        "detail": null
+      },
+      {
+        "date": "2026-03-01",
+        "kind": "Cost",
+        "description": "Záloha 1. 3. 2026 – 31. 3. 2026 (Dodavatel elektřiny)",
+        "componentId": "vodarna",
+        "componentName": "Elektřina – vodárna",
+        "amount": -350.00,
+        "balance": 650.00,
+        "detail": {
+          "total": 3100,
+          "segmentFrom": "2026-03-01",
+          "segmentTo": "2026-03-14",
+          "segmentDays": 14,
+          "segmentAmount": 1400.00,
+          "method": "Equal",
+          "weight": 1,
+          "totalWeight": 4,
+          "explanation": "Záloha 1. 3. 2026 – 31. 3. 2026 (Dodavatel elektřiny) 3\u00A0100,00 Kč za 31 dní; úsek 1. 3. 2026 – 14. 3. 2026 (14 dní) = 1\u00A0400,00 Kč, rovným dílem: podíl 1 z 4 = 350,00 Kč"
+        }
+      }
+    ]
+  }
+}

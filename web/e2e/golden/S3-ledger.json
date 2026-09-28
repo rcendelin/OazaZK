@@ -1,0 +1,76 @@
+{
+  "overview": {
+    "from": "2026-07-01",
+    "to": "2026-12-31",
+    "components": [
+      {
+        "componentId": "osvetleni",
+        "componentName": "Osvětlení",
+        "allocatedTotal": 1840.00,
+        "housesTotal": 1840.00,
+        "matches": true,
+        "warnings": []
+      }
+    ],
+    "houses": [
+      {
+        "houseId": "A",
+        "houseName": "RD A",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "osvetleni": 414.00
+        },
+        "saldo": -414.00
+      },
+      {
+        "houseId": "B",
+        "houseName": "RD B",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "osvetleni": 414.00
+        },
+        "saldo": -414.00
+      },
+      {
+        "houseId": "C",
+        "houseName": "RD C",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "osvetleni": 414.00
+        },
+        "saldo": -414.00
+      },
+      {
+        "houseId": "D",
+        "houseName": "RD D",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "osvetleni": 414.00
+        },
+        "saldo": -414.00
+      },
+      {
+        "houseId": "E",
+        "houseName": "RD E",
+        "opening": 0,
+        "payments": 0,
+        "costs": {
+          "osvetleni": 184.00
+        },
+        "saldo": -184.00
+      },
+      {
+        "houseId": "F",
+        "houseName": "RD F",
+        "opening": 0,
+        "payments": 0,
+        "costs": {},
+        "saldo": 0
+      }
+    ]
+  }
+}

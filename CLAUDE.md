@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Community portal for a small neighborhood association ("Oáza Zadní Kopanina") in Prague. 8 households, up to 15 users. Primary function: shared water supply management — monthly meter readings, billing settlements, advance payments. Secondary: shared document storage and basic financial overview.
+Community portal for a small neighborhood association ("Oáza Zadní Kopanina") in Prague. 8 households, up to 15 users. Primary function: shared water supply management — monthly meter readings, cost allocation and house saldo, advance payments. Secondary: shared document storage and basic financial overview.
 
 **Domain:** `oaza.cendelinovi.cz`
 **Operator:** Single-person ops (Rosťa Čendelín)
@@ -22,49 +22,48 @@ Azure Table Storage + Azure Blob Storage (LRS)
 
 ## Repository structure
 
-Monorepo with two main directories:
+Monorepo with two main directories. Human-facing docs live in `README.md` and `docs/` (Czech) — keep them in sync when behaviour changes (see "Documentation" below).
 
 ```
-oaza/
+OazaZK/
+├── README.md                     # Project overview, quickstart, doc index
 ├── CLAUDE.md                     # This file
-├── .github/
-│   └── workflows/
-│       └── deploy.yml            # GitHub Actions: build + deploy Functions + SWA
+├── .github/workflows/
+│   ├── deploy-dev.yml            # develop    → DEV
+│   ├── deploy-test.yml           # release/** → TEST
+│   └── deploy.yml                # master     → PROD
 ├── api/                          # .NET 8 backend
-│   ├── Oaza.sln
+│   ├── Oaza.sln                  # use this (Oaza.slnx is stale)
+│   ├── global.json               # pins .NET 8 SDK
 │   ├── src/
-│   │   ├── Oaza.Domain/          # Entities, value objects, interfaces, enums
+│   │   ├── Oaza.Domain/          # Entities, enums, constants, repository interfaces
 │   │   ├── Oaza.Application/     # Use cases, DTOs, validators, mapping
-│   │   ├── Oaza.Infrastructure/  # Table Storage repos, Blob Storage, ACS Email, JWT
-│   │   └── Oaza.Functions/       # HTTP triggers, DI setup, middleware, auth
+│   │   ├── Oaza.Infrastructure/  # Table Storage repos, Blob Storage, ACS Email, JWT, Entra
+│   │   └── Oaza.Functions/       # HTTP triggers, timer, DI setup, middleware, auth
+│   │       └── local.settings.json.example
 │   └── tests/
 │       ├── Oaza.Domain.Tests/
 │       ├── Oaza.Application.Tests/
-│       └── Oaza.Functions.Tests/
-└── web/                          # React 19 frontend
-    ├── package.json
-    ├── vite.config.ts
-    ├── tailwind.config.ts
-    ├── src/
-    │   ├── main.tsx
-    │   ├── App.tsx
-    │   ├── api/                  # API client, typed fetch wrappers
-    │   ├── auth/                 # AuthContext, MSAL config, magic link flow
-    │   ├── components/           # Shared UI components (Layout, Sidebar, MetricCard…)
-    │   ├── pages/                # Route-level page components
-    │   │   ├── LoginPage.tsx
-    │   │   ├── DashboardPage.tsx
-    │   │   ├── ReadingsImportPage.tsx
-    │   │   ├── ReadingsOverviewPage.tsx
-    │   │   ├── BillingPage.tsx
-    │   │   ├── DocumentsPage.tsx      # Phase 2
-    │   │   ├── FinancePage.tsx         # Phase 2
-    │   │   └── admin/
-    │   │       ├── HousesPage.tsx
-    │   │       └── UsersPage.tsx
-    │   ├── hooks/                # Custom React hooks
-    │   └── types/                # Shared TypeScript interfaces mirroring API DTOs
-    └── staticwebapp.config.json  # SWA routing, auth config
+│       ├── Oaza.Functions.Tests/
+│       └── Oaza.Infrastructure.Tests/   # Azurite integration tests
+├── web/                          # React 19 frontend (Vite 8, Tailwind 4 — CSS-configured, no tailwind.config)
+│   └── src/
+│       ├── api/                  # apiClient + one typed module per resource
+│       ├── auth/                 # AuthContext, MSAL config, magic link flow
+│       ├── components/           # Layout, ProtectedRoute, MetricCard, help/…
+│       ├── content/help.ts       # single source of in-app help texts + glossary
+│       ├── hooks/                # useApi
+│       ├── pages/                # Route-level pages; pages/admin/ = Houses, Users, Meters
+│       ├── types/                # TS interfaces mirroring API DTOs
+│       └── utils/                # parseCzechNumber, Prague calendar days (date.ts)
+└── docs/
+    ├── ARCHITEKTURA.md           # layers, data model, auth, roles, frontend, CI/CD
+    ├── VYUCTOVANI.md             # settlement / advances / saldo / fund / import — as implemented
+    ├── API.md                    # full endpoint reference (generated from code)
+    ├── LOKALNI-VYVOJ.md          # local dev setup, config keys, troubleshooting
+    ├── DEPLOYMENT-DEV.md, DEPLOYMENT-TEST-PROD.md
+    ├── ANALYZA-ADRESARE.md       # June 2026 code audit
+    └── superpowers/              # specs + plans per feature
 ```
 
 ## Tech stack — backend
@@ -107,29 +106,12 @@ oaza/
 - **TailwindCSS** for styling
 - **React Router v7** for routing
 - **MSAL.js** (@azure/msal-browser) for Entra ID auth
-- **Recharts** for charts (Phase 2)
+- **Recharts** for charts
 - No state management library — React Context + hooks sufficient for 15 users
 
 ### npm packages
 
-```json
-{
-  "dependencies": {
-    "react": "^19",
-    "react-dom": "^19",
-    "react-router-dom": "^7",
-    "@azure/msal-browser": "^4",
-    "@azure/msal-react": "^3",
-    "recharts": "^2"
-  },
-  "devDependencies": {
-    "typescript": "^5.5",
-    "vite": "^6",
-    "tailwindcss": "^4",
-    "@types/react": "^19"
-  }
-}
-```
+See `web/package.json` for exact versions. Currently: React 19.2, React Router 7, Vite 8 (rolldown), Tailwind CSS 4 (`@tailwindcss/vite`, CSS-configured), TypeScript 5.9, MSAL browser 4 / react 3, Recharts 3, lucide-react icons, ESLint 9 with `eslint-plugin-react-hooks` 7 (React Compiler rules).
 
 ## Data model — Azure Table Storage
 
@@ -143,10 +125,7 @@ All entities use Azure Table Storage. No relational DB, no JOINs — all aggrega
 | House | `HOUSE` | GUID | All houses in one partition |
 | WaterMeter | `METER` | GUID | All meters in one partition |
 | MeterReading | meter GUID | inverted timestamp (`DateTime.MaxValue.Ticks - readingDate.Ticks`) | Query latest readings per meter efficiently, newest first |
-| BillingPeriod | `PERIOD` | GUID | All periods in one partition |
-| SupplierInvoice | `INVOICE` | GUID | All invoices in one partition, filter by date in app layer |
-| AdvancePayment | house GUID | `YYYY-MM` (e.g. `2026-03`) | Query all payments for a house, filter by date range for billing |
-| Settlement | period GUID | house GUID | All settlements for a period in one partition |
+| AdvancePayment | house GUID | `YYYY-MM` (e.g. `2026-03`) | Query all payments for a house, filter by date range |
 | Document | category string (e.g. `stanovy`, `zapisy`) | GUID | Query by category |
 | FinancialRecord | `YYYY` (year) | GUID | Query by year |
 
@@ -204,31 +183,6 @@ public class MeterReading
     public string ImportedBy { get; set; }     // FK to User
 }
 
-// Oaza.Domain/Entities/BillingPeriod.cs
-public class BillingPeriod
-{
-    public string Id { get; set; }
-    public string Name { get; set; }           // e.g. "2. pololetí 2025"
-    public DateTime DateFrom { get; set; }
-    public DateTime DateTo { get; set; }
-    public BillingPeriodStatus Status { get; set; } // Open, Closed
-    // Total invoice amount is NOT stored — computed as SUM(SupplierInvoice.Amount) for this period
-}
-
-// Oaza.Domain/Entities/SupplierInvoice.cs
-public class SupplierInvoice
-{
-    public string Id { get; set; }
-    public int Year { get; set; }
-    public int Month { get; set; }             // Invoice period (YYYY-MM)
-    public string InvoiceNumber { get; set; }
-    public DateTime IssuedDate { get; set; }
-    public DateTime DueDate { get; set; }
-    public decimal Amount { get; set; }        // CZK
-    public decimal ConsumptionM3 { get; set; } // m³ per invoice
-    public string? AttachmentBlobName { get; set; }
-}
-
 // Oaza.Domain/Entities/AdvancePayment.cs
 public class AdvancePayment
 {
@@ -237,19 +191,6 @@ public class AdvancePayment
     public int Month { get; set; }             // YYYY-MM
     public decimal Amount { get; set; }        // CZK
     public DateTime PaymentDate { get; set; }
-}
-
-// Oaza.Domain/Entities/Settlement.cs
-public class Settlement
-{
-    public string PeriodId { get; set; }       // FK to BillingPeriod
-    public string HouseId { get; set; }        // FK to House
-    public decimal ConsumptionM3 { get; set; }
-    public decimal SharePercent { get; set; }
-    public decimal CalculatedAmount { get; set; }  // CZK
-    public decimal TotalAdvances { get; set; }     // CZK
-    public decimal Balance { get; set; }           // Negative = overpayment, positive = underpayment
-    public decimal LossAllocatedM3 { get; set; }   // Loss allocated to this house
 }
 
 // Oaza.Domain/Entities/Document.cs
@@ -286,9 +227,7 @@ public enum UserRole { Admin, Member, Accountant }
 public enum AuthMethod { EntraId, MagicLink }
 public enum MeterType { Main, Individual }
 public enum ReadingSource { Import, Manual }
-public enum BillingPeriodStatus { Open, Closed }
 public enum FinancialRecordType { Income, Expense }
-public enum LossAllocationMethod { Equal, ProportionalToConsumption }
 ```
 
 ### Implementation additions (beyond the initial spec)
@@ -296,142 +235,42 @@ public enum LossAllocationMethod { Equal, ProportionalToConsumption }
 The code has grown past this document; the following exist in the implementation but were not in the original data model / endpoint tables:
 
 - **`DocumentVersion`** entity + `DocumentVersions` table + repository — per-document version history (keeps the last 10 versions). PartitionKey = documentId, RowKey = zero-padded version number. Endpoints: `POST/GET /documents/{id}/versions`, `GET /documents/{id}/versions/{version}/download`.
-- **`AdvanceSettings`** singleton entity (PartitionKey `SETTINGS`, RowKey `advances`, table `AdvanceSettings`) — advance-payment pricing: water price/validity, monthly electricity cost + per-house coefficients, common base fee, per-house overrides, and a `LossAllocationMethod`. Endpoints: `GET/PUT /advance-settings`, `GET /advance-settings/calculate` (admins/accountants see all houses; members see only their own). Loaded via `IAdvanceSettingsRepository`.
-- **Component-split payments + per-house saldo.** `AdvancePayment` carries a 3-way split `WaterAmount`/`ElectricityAmount`/`CommonAmount` (+ `Amount`=sum), a `PaymentType` and a `Note`. `PaymentType` = `Advance`/`Doplatek` (component-split, fed into the water settlement) + `Payout`/`OpeningBalance` (net-level, NEVER seen by settlement — `GetByHouseAndPeriodAsync` filters to Advance+Doplatek). A **doplatek** is ad-hoc/repeatable (RowKey `D-{invertedTicks}-{guid}`); a regular advance is one-per-house-per-month (`YYYY-MM`); **payout** (`V-…`, refund of přeplatek, `Amount`>0) and **opening balance** (`O-…`, one-time seed, SIGNED `Amount`: +=nedoplatek, −=přeplatek) are net-level. `Settlement` extended with `ElectricityCharge`/`ElectricityAdvances`/`CommonCharge`/`CommonAdvances`; `TotalAdvances` is now WATER advances only.
-  - **Saldo: one net balance per house is the spine** (`TotalSaldo = ComponentSaldo + NetAdjustments`; +=nedoplatek, −=přeplatek); per-component voda/elektřina/společný is an analytical breakdown (money is fungible). Period-based: charges locked per period (closed=snapshot, open=live preview), paid recomputed live (post-close doplatky/payouts count); payments outside any period = "Nezařazené platby". `House.DissolveOverpayment` flag + "vystačí ~N měsíců" = |přeplatek| ÷ prescribed monthly (override sum). Endpoints: `POST /advances/doplatek`|`/payout`|`/opening-balance`, `DELETE /advances/{houseId}/{rowKey}`, `GET /advances/saldo`, `GET /finance/fund` (admin/accountant: Σ common contributions − Σ expenses mimo voda/elektro, via `GetFundBalanceUseCase`). UI: `web/src/pages/SaldoPage.tsx` (`/saldo`). See `CalculateHouseSaldoUseCase`.
-- **Fund draw + water-price carry-forward at settlement close.** `POST /billing-periods/{id}/close` optionally accepts `fundDrawAmount` (drawn from the common fund, split evenly across active houses as one auto-generated doplatek each — `AdvancePayment.IsFundTransfer=true`, deterministic `RowKey = "FUND-{periodId}"` so a retry overwrites instead of duplicating — plus one `FinancialRecord` expense, category `fond-voda`, deterministic `Id = "fund-{periodId}"`) and `applyNewWaterPrice`/`newWaterPriceValidFrom` (carries the period's realized invoice price/m³, incl. loss, forward into `AdvanceSettings.WaterPricePerM3`/`WaterPriceValidFrom`). Both are computed live in the frontend preview from data the existing `/calculate` + `/finance/fund` + `/advance-settings` endpoints already return — no new preview endpoint. See `CloseBillingPeriodUseCase.ApplyFundDrawAsync`/`ApplyNewWaterPriceAsync` and `docs/superpowers/specs/2026-07-18-vodni-fond-a-cena-design.md`.
-- **Received-invoices overview + FinancialRecord attachments.** A read-only unified view of all received invoices — water `SupplierInvoice` **plus** expense `FinancialRecord`s — via `GET /invoices/all?year=&category=` (Admin/Accountant), backed by `GetReceivedInvoicesUseCase` which joins both tables into `ReceivedInvoiceResponse` (`Source` `voda`/`ostatni`, `CountsTowardWaterSettlement`, `AttachmentDownloadPath`). The two entities stay **structurally separate** — the join is read-only and never feeds settlement, keeping the "BillingPeriod total = SUM(SupplierInvoice.Amount)" rule intact. `FinancialRecord` now supports PDF attachments: `POST`/`GET /finance/{id}/attachment` (blob container `finance`). Invoice/overview year filtering matches on **`IssuedDate.Year`** (document date), and both the overview and the "Faktury za vodu" list derive their year options from real data, so a multi-year invoice is always findable (`SupplierInvoiceRepository.GetByYearAsync` filters by `IssuedDate.Year`; settlement is unaffected — it matches per line-item `DateFrom`). UI: `web/src/pages/InvoicesOverviewPage.tsx` (`/prehled-faktur`, Admin/Accountant). See `docs/superpowers/specs/2026-07-18-prehled-faktur-design.md`.
+- **Old billing model removed (X2, 27. 9. 2026).** `BillingPeriod`, `Settlement` (+ PDFs), `SupplierInvoice`, the received-invoices overview, `CalculateHouseSaldoUseCase` (`GET /advances/saldo`) and the advance pricing (water price, electricity + coefficients, common base fee, loss method) are gone — replaced by the new model below. Payments stay. Old storage tables are no longer read; nothing is migrated.
+- **`AdvanceSettings`** singleton entity (PartitionKey `SETTINGS`, RowKey `advances`, table `AdvanceSettings`) — only per-house `HouseOverrides` now. `CalculatePrescribedAdvancesUseCase`: recommended advance = house's costs from `LedgerCostCollector` over `[today − 12 months, today − 1]` ÷ 12 (water + losses → water, component code prefix `ELEKTRINA` → electricity, rest → common; credits excluded; whole Kč, ≥ 0); actual = override or recommended. Endpoints: `GET/PUT /advance-settings`, `GET /advance-settings/calculate` (members only their own house).
+- **Component-split payments.** `AdvancePayment` carries a 3-way split `WaterAmount`/`ElectricityAmount`/`CommonAmount` (+ `Amount`=sum), a `PaymentType` and a `Note`. `PaymentType` = `Advance` (one per house per month, RowKey `YYYY-MM`) / `Doplatek` (RowKey `D-{invertedTicks}-{guid}`) / `Payout` (`V-…`, refund, `Amount`>0) / `OpeningBalance` (`O-…`, legacy — ignored by the ledger, replaced by FundShare; UI no longer offers it). Endpoints: `POST /advances/doplatek`|`/payout`|`/opening-balance`, `DELETE /advances/{houseId}/{rowKey}`, `GET /finance/fund` (admin/accountant: Σ common contributions − Σ expenses mimo voda/elektro, via `GetFundBalanceUseCase`). UI: `web/src/pages/SaldoPage.tsx` („Platby“, `/saldo`). `FinancialRecord` supports PDF attachments: `POST`/`GET /finance/{id}/attachment` (blob container `finance`).
+- **Bank statement import (Fio CSV).** `POST /bank-import/preview` (raw CSV body, ≤1 MB, saves nothing) + **stateless** `POST /bank-import/confirm` (client sends final per-row decisions; server re-validates — deliberately no `IImportSessionCache`), Admin only. `FioCsvParser` reads columns **by index** (the export has two `Poznámka` columns), UTF-8/cp1250, checks Σ against „Suma příjmů/výdajů". **Houses are matched only by counter-account**: `BankAccountMapping` (table `BankAccountMappings`, PK `MAP`, RK normalized account `{prefix-}{number}_{bank}` via `BankAccountNumber`; many accounts → one house), managed in Správa domácností (`GET/POST/DELETE /bank-accounts`) and learned on confirm. Processed movements go to `BankTransaction` (table `BankTransactions`, PK own account key, RK Fio „ID operace", `Imported`/`Ignored`) → re-uploads never duplicate. Suggestion: prescribed amount for a month without an advance → `Advance` (RowKey `YYYY-MM`), „doplat" in the message or anything else → `Doplatek`; split = prescribed or proportional (water takes the rounding remainder). Imported payments carry `BankOwnAccountKey`/`BankTransactionId` (`AdvanceResponse.IsFromBank` → „Z banky" badge); deleting such a payment also deletes its `BankTransaction`. Prescribed advances now come from `CalculatePrescribedAdvancesUseCase` (shared with `GET /advance-settings/calculate`). UI: `web/src/pages/BankImportPage.tsx` (`/advances/import`). See `docs/superpowers/specs/2026-09-27-import-bankovniho-vypisu-design.md`.
+- **Reading estimates (T04).** `MeterReading.IsEstimate` + `EstimateNote` (additive; old rows = physical readings). `Oaza.Domain.Services.ReadingEstimator` — exact / linear interpolation by whole days / nearest-before / nearest-after / none, 3 decimals. `GET /readings/estimate` (Admin), UI mark `EstimateMark` (≈). Estimates are always saved with a note. Export with the flag: `GET /readings/export` (`ReadingsExportUseCase`, reuses `LedgerExport.Table`; `CubicMetres` cells = 3 decimals), button on `/readings/list`.
+- **Audit log (X4). `AuditLogEntry` in table `AuditLog` (PK = UTC month `yyyy-MM`, RK = inverted ticks + id, append-only via `AddEntity`); old/new values are JSON snapshots. Every new-model use case (T02, T03, T05, T08, T09, T10) must call `IAuditLogger.LogAsync(entityType, entityId, AuditActions.*, old, new, actor, reason)` after a successful write — `Correction` requires a reason. Read: `GET /audit-log` (Admin), UI `/admin/audit`.
+- **Cost components (T02).** `CostComponent` (table `CostComponents`, PK `COMPONENT`, RK guid), effective-dated `ComponentAllocationRule` and `Participation` (tables `ComponentAllocationRules`, `Participations`, PK = component id, RK guid); days stored as `yyyy-MM-dd` strings (`TableEntityMapper.ToIsoDay/GetIsoDay`). Pure logic in `Oaza.Domain/Services/AllocationSegments.cs` (segments) and `ComponentValidation.cs` (overlap, PERCENT = 100 %, closed period); orchestration + audit in `CostComponentsUseCase`; `IClosingBoundary` = last closed day (`NoClosingBoundary` until T08). Endpoints `/cost-components…` in `docs/API.md`; UI `/admin/cost-components` (`CostComponentsPage.tsx`: list, timeline, method change, participation, segments). `ApiError.details` carries every reason of a 400 `{ error, errors[] }`.
+- **Opening balances (T03).** `OwnershipPeriod` (table `OwnershipPeriods`, PK house id, RK valid-from day, id `{houseId}|{yyyy-MM-dd}`) and `OpeningBalance` (table `OpeningBalances`, PK `OPENING`, RK natural key `{Type}|{target}|{periodId or -}` = uniqueness). `FundShare` sign follows X1 (positive = přeplatek) — the old `PaymentType.OpeningBalance` on the Saldo page keeps the opposite sign until T07 replaces it; don't align one to the other. A `MeterReading` opening value is also written as a `MeterReading` on that day (estimate + note). After an interim closing a change needs a reason and is audited as `Correction`. `SegmentAllocation.Split` (Domain/Services) splits an amount within one segment (EQUAL/PERCENT/static RATIO) — used by the credit preview, reuse it in T06/T07. `OpeningBalancesUseCase`, endpoints in `docs/API.md`; UI wizard `/admin/opening-balances` (`OpeningBalancesPage.tsx`, „Navrhnout z odečtů“ = T04 `GET /readings/estimate`).
+- **Cost entries (T06).** `CostEntry` (table `CostEntries`, PK component id, RK guid): Advance/Settlement/OneOff, `PaidFrom` is evidence only (R6). `CostEntryAllocation.Allocate` (Domain/Services) = segments (T02) + optional cuts (`MonthStarts`) → amount pro-rata by days → `SegmentAllocation` per segment; Σ shares = amount. `RecurringAdvance.Periods` builds advance series. Metered components (water PVK): entries are invoices with `QuantityM3` (price per m³ = Σ amount ÷ Σ m³, T05), not allocated directly. New-model endpoints share `Endpoints/ModelEndpoint.cs` (JSON, errors, actor). `CostEntriesUseCase`, endpoints in `docs/API.md`; UI `/naklady` (`CostsPage.tsx`, Hospodaření → Náklady; drill-down „Rozpad na domy“).
+- **Water & losses (T05).** `CostComponent.WaterRole` marks the water PVK (`Consumption`) and losses (`Losses`) components (metered, one each). `WaterSettlementCalculator` (Domain/Services): intervals between main meter readings → house consumption (boundary readings interpolated via `ReadingEstimator`, estimate flag), loss = main − Σ houses, price = PVK invoices Σ Kč ÷ Σ m³ pro-rata by days, water cost by consumption, loss cost by the losses rule per segment (EQUAL, or RATIO by consumption when `RatioSource` set); negative loss not allocated. `WaterSettlementUseCase`, `GET /water-settlement`, UI `/voda` (`WaterPage.tsx`, Hospodaření → Voda a ztráty).
+- **House ledger (T07).** `Oaza.Application/Ledger/`: `LedgerCostCollector` gathers all houses' costs in a range (cost entries cut by segment, month and range bounds — only segments inside the range count; component credits; water & losses per interval starting in the range) plus a per-component control (allocated vs Σ houses, warnings). `HouseLedgerUseCase`: house ledger (FundShare opening + payments + costs, running saldo with X1 sign, ownership period default = current owner, member only own house → 403) and overview. Old `PaymentType.OpeningBalance` is ignored (replaced by FundShare). Endpoints `/ledger/...` (any signed-in user) incl. XLSX/CSV export (`LedgerExport`, `ModelEndpoint.HandleFileAsync`); UI `/saldo-domu` (`LedgerPage.tsx`).
+- **Interim closings (T08).** `InterimClosing` (table `InterimClosings`, PK `CLOSING`, RK `{date}|{scope}|{house or -}`) with a JSON saldo snapshot from `HouseLedgerUseCase`. `InterimClosingBoundary` implements `IClosingBoundary.GetLastClosedDayAsync(houseId?)` (null = any closing; house = All + that house). A cost entry reaching into a closed period becomes a correction: `PostingDate` = first open day, reason required, split by the original segments; the ledger books it whole on `PostingDate`. `CostEntry.LockDate` = posting day or period start. Only the latest closing can be deleted (reason, audit). `InterimClosingsUseCase` (incl. `ExportAsync` — annual closing export for the accountant), endpoints `/interim-closings`, UI `/mezizaverky` (`InterimClosingsPage.tsx`). Contextual help sections `interimClosing` and `openingBalances` in `content/help.ts`. T12: glossary terms for every wizard step (`startUctovani`, `stavVodomeru`, `podilFondu`, `kreditSlozky`, `prevodDomu`, `mezizaverka`) shown as `HelpTerm` „?“; „Jak to funguje“ guides for the new model, the current losses method is live for Admin/Accountant (`CurrentLossMethod` in `JakToFungujePage`).
+- **House transfer (T03 part C).** `HouseTransferUseCase`: preview (old owner's closing saldo via the ledger, meter suggestion via `ReadingEstimator`, blockers) and transfer = house interim closing at D−1 (`InterimClosingsUseCase`), end the old `OwnershipPeriod`, new period from D, opening FundShare (default 0) and meter reading via `OpeningBalancesUseCase`, optionally the house contact. Endpoints `/houses/{id}/transfer…`, UI section in `/admin/opening-balances` (`HouseTransferSection.tsx`).
+- **Cash book (T09).** `CashBookEntry` (table `CashBook`, PK `CASH`): Deposit/Expense/Correction, amount always > 0, never edited or deleted — storno = Correction reversing its original (`CorrectionOf`). `Domain/Services/CashBook`: effects, running balance in date order, `FirstNegative` (no negative balance on any day, also back-dated). An expense with `ComponentId` creates a OneOff `CostEntry` paid from cash; its storno a negative correcting cost entry. `CashBookUseCase` (XLSX via ClosedXML, PDF via PdfSharpCore), endpoints `/cash-book` (members read; Admin + Accountant write/export); UI `/pokladna` (`CashBookPage.tsx`).
+- **Invoices from documents (T11).** Documents category `faktury` (PDF/JPG/PNG only, ≤ 20 MB — `Application/Documents/DocumentUploadRules`), `Document.ComponentId` (optional link to a cost component, `?componentId=` on upload). Bulk upload in Documents (`BulkInvoiceUpload.tsx`), „Vytvořit náklad“ links to `/naklady?component=&document=` (CostsPage prefills), `GET /documents/unaccounted` (`UnaccountedDocumentsUseCase`: `faktury` documents no CostEntry.DocumentId refers to) shown on Costs as „Dokumenty bez zaúčtování“.
+- **Admin guide (T12).** Page „Návod pro správce“ `/navod` (`AdminGuidePage.tsx`, Admin + Accountant, sidebar next to „Jak to funguje“); content = `web/src/content/adminGuide.ts` (`adminProcedures`: steps with exact UI labels in „…“, optional `screenshot` file in `web/public/navod/`). `e2e/adminGuide.spec.ts` walks every procedure through the UI against the mocked API, asserts the request bodies and checks it took exactly the screenshots the content lists; `GUIDE_SCREENSHOTS=1` also writes the PNGs (regenerate after UI changes: `npm run build && GUIDE_SCREENSHOTS=1 npx playwright test e2e/adminGuide.spec.ts`). Changing a step → change the spec too.
+- **Off-book fund (T10, O4).** Feature flag `OFF_BOOK_FUND_ENABLED` (app setting, default off → every `/off-book-funds` endpoint 404s, `/features` tells the frontend; `FeatureFlags` built in `Program.cs`). Tables `OffBookFunds` (PK `FUND`) and `OffBookFundRecords` (PK fund id; `FundRecord.Kind` = Call/Contribution/Expense/Settlement). **Isolation:** only `Oaza.Application.OffBookFunds.OffBookFundUseCase` may depend on `IOffBookFundRepository` (a reflection test enforces it) — never read the fund from the ledger, closings, cash book or exports. UI `/fond` (`OffBookFundPage.tsx`) with a permanent warning; menu item only when the flag is on. Old-model writes respect closings too: readings (`ReadingFunctions`, `ImportReadingsUseCase` validation) are rejected up to the cut; payments (`AdvanceFunctions`, `ImportBankStatementUseCase`) use `Domain/Helpers/ClosedPeriodPayments` — edits/deletes of closed payments → 409, new late payments are booked on the first open day (an advance for a closed month becomes a doplatek) with the original date in the note.
+- **Seed import (T13).** `Oaza.Application/Seed/`: CSV templates `seed/templates/` (columns: `SeedFiles`, Czech guide `seed/README.md`), fictitious S2/S3 samples `seed/samples/` (used by `SeedImportUseCaseTests`). `SeedImportUseCase` always dry-runs first over an in-memory copy (`InMemoryRepositories.cs` — the `Memory*` repos, `CopyOnAccess`; the tests use them too) through the real use cases, then reports files/issues/salda (`HouseLedgerUseCase` overview to today); apply only without errors/conflicts. Natural keys per file (house name, meter number, component code, `CostEntry.ExternalRef` = `ref`, …); an existing record with different values = conflict, never overwritten. Participations of one component go in one `CostComponentsUseCase.AddParticipationsAsync` (PERCENT sums). Endpoints `/seed-import/dry-run|report|apply` (Admin, every environment); report MD/XLSX `SeedReportExport`. UI `/admin/seed-import` (`SeedImportPage.tsx`, CSV read as UTF-8 with Windows-1250 fallback in `api/seedImport.ts`), help section `seedImport`.
+- **Environment isolation (T01).** `Application/Deployment/StorageIsolation` — with `Environment` set, `AddInfrastructure` throws on another environment's storage account (prod ≠ `…dev`/`…test`/emulator; dev/test only own suffix or emulator). `EnvironmentIsolationIntegrationTests` (two Azurites; CI service `azurite2` on 2000x + env `AZURE_STORAGE_CONNECTION_2`). Provisioning: `infra/provision.sh <env> [--dry-run] [--yes]`.
+- **Release (T14).** `docs/release-checklist.md` is the release procedure. Storage backup/restore of the whole account: `Oaza.Infrastructure/Backup/StorageBackup` (typed JSONL per table + blob files; restore replaces and deletes extras) + CLI `api/tools/Oaza.StorageBackup` (connection string only from env `OAZA_STORAGE_CONNECTION`, restore needs `--yes <account>`), round-trip test against Azurite. Training data `seed/demo/` (imported cleanly — `SeedImportUseCaseTests.DemoData_…`).
+- **Golden fixtures (T14).** `api/tests/Oaza.Functions.Tests/Golden/GoldenFixturesTests.cs` builds the ZADANI §4 scenarios S1–S8 through the real use cases (in-memory `Memory*` repos, stepping fixed clock, `GoldenWorld` wiring), asserts the golden numbers and serializes the endpoint results with `ModelEndpoint.JsonOptions` (indented; GUIDs → `id-N`) into `web/e2e/golden/S<n>-*.json`; without `UPDATE_GOLDEN=1` a missing/different file fails. `web/e2e/golden.spec.ts` serves those files as the mocked API and drives `/voda`, `/saldo-domu`, `/admin/opening-balances`, `/pokladna`, `/fond`, `/naklady`. Changing a calculation or DTO → `UPDATE_GOLDEN=1 dotnet test Oaza.sln --filter FullyQualifiedName~Golden` and commit the JSON. `InternalsVisibleTo("Oaza.Functions.Tests")` is in `Oaza.Functions/AssemblyInfo.cs`.
+- **`useApi(fetcher, deps)`** re-runs only when `deps` change — a memoized fetcher alone is not enough; pass the same array as the `useCallback` (range filters were silently not refetching before T14).
 - **`User`** stores the magic-link token **hashed** (`MagicLinkTokenHash`, SHA-256) plus rate-limit/lockout counters (see above).
 - **`WaterMeter.Name`** — optional display label.
-- **Extra endpoints:** `DELETE /users/{id}`, `GET /readings/all`, `GET /finance/balance`, `GET /invoices/all`, `POST`/`GET /finance/{id}/attachment`, `POST /seed` (gated by `ENABLE_SEED`).
+- **Extra endpoints:** `DELETE /users/{id}`, `GET /readings/all`, `GET /finance/balance`, `POST`/`GET /finance/{id}/attachment`, `POST /seed` (gated by `ENABLE_SEED`).
 - **Email** is Azure Communication Services (not SendGrid).
 
 ## API endpoints
 
-All endpoints are Azure Functions HTTP triggers. Base path: `/api/`.
+All endpoints are Azure Functions HTTP triggers under `/api/`, all with `AuthorizationLevel.Anonymous` — access is enforced by `AuthenticationMiddleware` + `AuthorizationMiddleware` via `[AllowAnonymous]` / `[RequireRole(...)]` (no attribute = any authenticated user). Member "own house only" scoping is done inside each endpoint.
 
-### Authentication
+**The authoritative endpoint list is `docs/API.md`** (method, route, role, scoping, body shape). Update it whenever you add or change an endpoint.
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/auth/magic-link` | Public | Request magic link — validates email, generates token (GUID), stores in User entity with 15min expiry, sends via Azure Communication Services |
-| POST | `/auth/magic-link/verify` | Public | Verify magic link token — validates token + expiry + one-time use, returns JWT |
-| GET | `/auth/me` | Authenticated | Returns current user profile (from JWT claims + User entity) |
+Advance recommendation, payments, fund formulas plus import validation rules are documented **as implemented** in `docs/VYUCTOVANI.md` — read it before touching `CalculateSettlementUseCase`, `CloseBillingPeriodUseCase`, `CalculateHouseSaldoUseCase` or `ImportReadingsUseCase`. Its §8 lists known inconsistencies (e.g. invoice line-item vs header-month rule, `Equal` default for loss method in calculate/close).
 
-Magic link rate limit: max 3 requests per email per hour.
-
-JWT includes claims: `sub` (user ID), `email`, `role`, `houseId`, `authMethod`.
-
-Entra ID auth is handled by Static Web Apps built-in integration — the Functions receive a validated JWT from SWA proxy with Entra claims mapped to our User entity.
-
-### Houses & meters (Admin only for write)
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/houses` | Authenticated | List all houses |
-| GET | `/houses/{id}` | Authenticated | Get house detail |
-| POST | `/houses` | Admin | Create house |
-| PUT | `/houses/{id}` | Admin | Update house |
-| GET | `/meters` | Authenticated | List all meters |
-| POST | `/meters` | Admin | Create meter |
-| PUT | `/meters/{id}` | Admin | Update meter |
-
-### Users (Admin only)
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/users` | Admin | List all users |
-| POST | `/users` | Admin | Create user (invite) |
-| PUT | `/users/{id}` | Admin | Update user (role, house assignment) |
-
-### Meter readings
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/readings/import` | Admin | Upload .xlsx, parse & validate, return preview + warnings (does NOT save yet) |
-| POST | `/readings/import/confirm` | Admin | Confirm import — saves validated readings to Table Storage |
-| GET | `/readings?year=&month=` | Authenticated | Get readings for month — admin sees all, member sees own house |
-| POST | `/readings` | Admin | Manual single reading entry |
-| PUT | `/readings/{meterId}/{date}` | Admin | Correct a reading |
-| GET | `/readings/chart?houseId=&from=&to=` | Authenticated | Chart data — monthly consumption over time (Phase 2) |
-
-#### Excel import validation rules
-
-1. **Duplicate check:** reading already exists for same meter + same month → error
-2. **Negative consumption:** new reading value < previous reading value → error
-3. **Completeness:** all configured meters must have a value → warning if missing
-4. **Anomaly detection:** consumption > 2× rolling average → warning (not blocking)
-5. **Czech number format:** comma as decimal separator must be handled
-
-### Supplier invoices
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/invoices?year=` | Admin, Accountant | List invoices |
-| POST | `/invoices` | Admin | Create invoice (with optional attachment upload to Blob) |
-| PUT | `/invoices/{id}` | Admin | Update invoice |
-| DELETE | `/invoices/{id}` | Admin | Delete invoice |
-
-### Advance payments
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/advances?houseId=&year=` | Authenticated | List advances — member sees own house only |
-| POST | `/advances` | Admin | Record advance payment |
-| PUT | `/advances/{houseId}/{yearMonth}` | Admin | Update advance |
-
-### Billing periods & settlements
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/billing-periods` | Authenticated | List all periods |
-| POST | `/billing-periods` | Admin | Create new period (dateFrom, dateTo) |
-| GET | `/billing-periods/{id}/calculate` | Admin | Calculate settlement — returns preview (does NOT save) |
-| POST | `/billing-periods/{id}/close` | Admin | Close period — saves Settlement entities, locks period |
-| GET | `/billing-periods/{id}/settlements` | Authenticated | Get settlements for period — member sees own house only |
-| GET | `/billing-periods/{id}/settlements/{houseId}/pdf` | Authenticated | Download PDF settlement sheet for one house |
-| GET | `/billing-periods/{id}/pdf` | Admin | Download ZIP with all PDF sheets |
-
-#### Settlement calculation logic
-
-```
-1. Main meter consumption = endReading - startReading (for period date range)
-2. For each house: houseConsumption = endReading - startReading (per house meter)
-3. Loss = mainMeterConsumption - SUM(allHouseConsumptions)
-4. Loss allocation (configurable):
-   a) Equal: loss / numberOfHouses
-   b) Proportional: loss × (houseConsumption / totalHouseConsumption)
-5. Each house's share = (houseConsumption + allocatedLoss) / (totalHouseConsumption + totalLoss)
-6. Each house's amount = share × SUM(SupplierInvoice.Amount for period)
-7. Each house's advances = SUM(AdvancePayment.Amount for house within period dates)
-8. Balance = amount - advances (positive = underpayment/doplatek, negative = overpayment/přeplatek)
-```
-
-### Documents (Phase 2)
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/documents?category=` | Authenticated | List documents, filter by category |
-| POST | `/documents` | Admin | Upload document (multipart: file + metadata) |
-| GET | `/documents/{id}/download` | Authenticated | Get SAS URL for download |
-| DELETE | `/documents/{id}` | Admin | Delete document |
-
-### Financial records (Phase 2)
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/finance?year=&category=` | Authenticated | List records |
-| GET | `/finance/summary?year=` | Authenticated | Aggregated summary by category |
-| POST | `/finance` | Admin | Create record |
-| PUT | `/finance/{id}` | Admin | Update record |
-| GET | `/finance/export/pdf?year=` | Admin, Accountant | Export annual PDF report |
-| GET | `/finance/export/xlsx?year=` | Admin, Accountant | Export annual Excel report |
-
-### Notifications (Phase 2)
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/notifications/send` | Admin | Manual notification send |
+Magic link: 15 min expiry, max 3 requests per email per hour, 5 failed verifications → token invalidated. JWT claims: `sub`, `email`, `role`, `houseId`, `authMethod`; 24h expiry.
 
 Timer trigger (CRON `0 0 8 1 * *`): sends reading reminder on 1st of each month.
 
@@ -440,16 +279,16 @@ Timer trigger (CRON `0 0 8 1 * *`): sends reading reminder on 1st of each month.
 ### Entra ID (primary)
 
 1. React SPA uses MSAL.js to redirect to Entra ID login
-2. After successful auth, MSAL returns an access token
-3. Token is sent as `Authorization: Bearer {token}` to API
+2. After successful auth, the SPA acquires tokens silently (sessionStorage cache)
+3. The **ID token** (not an access token; audience = `EntraId__ClientId`) is sent as `Authorization: Bearer {token}` to API
 4. Azure Functions middleware validates the token against Entra ID OIDC metadata
-5. Middleware looks up the User entity by Entra Object ID, extracts role and houseId
+5. Middleware looks up the User entity by Entra Object ID (`oid`), falling back to email, extracts role and houseId
 6. If no User entity exists → 403 (must be pre-registered by admin)
 
 ### Magic link (fallback)
 
 1. User enters email on login page → POST `/auth/magic-link`
-2. API validates email exists in User table, generates GUID token, stores with 15min expiry
+2. API validates email exists in User table, generates GUID token, stores only its SHA-256 hash with 15min expiry
 3. Azure Communication Services sends email with link: `https://oaza.cendelinovi.cz/auth/verify?token={token}&email={email}`
 4. User clicks link → frontend calls POST `/auth/magic-link/verify`
 5. API validates token, marks as used, returns JWT (signed with app secret, 24h expiry)
@@ -466,19 +305,7 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 
 ## Frontend routing
 
-```typescript
-// React Router v7 routes
-/login                    → LoginPage (public)
-/auth/verify              → MagicLinkVerifyPage (public)
-/dashboard                → DashboardPage (role-dependent view)
-/readings                 → ReadingsOverviewPage (admin: all, member: own house)
-/readings/import          → ReadingsImportPage (admin only)
-/billing                  → BillingPage (admin: manage, member: view own)
-/documents                → DocumentsPage (Phase 2)
-/finance                  → FinancePage (Phase 2)
-/admin/houses             → HousesPage (admin only)
-/admin/users              → UsersPage (admin only)
-```
+Routes are defined in `web/src/App.tsx`; `ProtectedRoute requiredRole="X"` admits role X **or Admin**. Full route table with guards: `docs/ARCHITEKTURA.md` §6. Sidebar navigation (Czech labels, role filtering) is in `web/src/components/Layout.tsx`.
 
 ### Layout
 
@@ -494,12 +321,13 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 - **Naming:** PascalCase for public members, camelCase for private fields with underscore prefix (`_tableClient`)
 - **Async everywhere:** All I/O operations are async, suffix with `Async`
 - **Repository pattern:** `IRepository<T>` in Domain, `TableStorageRepository<T>` in Infrastructure
-- **Use cases:** One class per use case in Application layer (e.g. `ImportReadingsUseCase`, `CalculateSettlementUseCase`)
+- **Use cases:** One class per use case in Application layer (e.g. `ImportReadingsUseCase`, `CostEntriesUseCase`)
 - **DTOs:** Separate Request/Response DTOs, never expose domain entities in API
 - **Validation:** FluentValidation validators per request DTO
-- **Error handling:** Custom `AppException` with HTTP status codes, global exception handler in Functions middleware
+- **Error handling:** Throw `AppException(message, statusCode)` / `NotFoundException`; each endpoint catches and writes `{ "error": … }` (validation: `{ error, errors: [{field, message}] }`). There is no global exception middleware.
 - **No magic strings:** Use constants for PartitionKey values, Blob container names, claim types
 - **Decimal for money:** Always use `decimal` for CZK amounts, never `double`
+- **Calendar days (X5):** an accounting day is a calendar day in `Europe/Prague`. New model (T02–T10): `DateOnly` + `DateRange` (closed interval `[From, To]`, `Oaza.Domain.Time`), stored as `yyyy-MM-dd` strings; instants stay UTC. "Today" only from `IClock.Today` (`PragueClock`, in DI) — never `DateTime.UtcNow.Date` for an accounting day. Old model keeps midnight-UTC `DateTime` (`PragueClock.AsUtcMidnight`).
 
 ### Frontend (React/TypeScript)
 
@@ -510,6 +338,7 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 - **API calls:** Typed fetch wrapper in `api/` directory, all errors handled
 - **Auth state:** React Context (`AuthContext`) wrapping the app, `useAuth()` hook
 - **Date formatting:** Use `Intl.DateTimeFormat('cs-CZ')` for Czech locale
+- **Today (X5):** `todayIso()` / `pragueIsoDate()` / `shiftIsoDate()` from `utils/date.ts` (Europe/Prague for every user). Never `new Date().toISOString().slice(0, 10)` — that is the UTC day.
 - **Number formatting:** Use `Intl.NumberFormat('cs-CZ')` — comma as decimal separator
 - **No console.log in production** — use proper error boundaries
 - **Lint je CI gate (přísná React Compiler pravidla):** `npm run lint` musí projít. Pozor na `react-hooks/preserve-manual-memoization` (deps `useMemo`/`useCallback` musí přesně sedět) a `set-state-in-effect`. Build = `tsc -b && vite build` (Vite v8/rolldown).
@@ -519,6 +348,7 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 - **Branch strategy:** `develop` → DEV (`deploy-dev.yml` → `func-oaza-dev`); `release/**` → TEST (`deploy-test.yml` → `func-oaza-test`); `master` → PROD (`deploy.yml` → `func-oaza-prod`). All three share the same Azure tenant/subscription (differ by resource group `rg-oaza-{dev,test,prod}`) and use the unified `Azure/login` + `AZURE_CREDENTIALS` + `az config-zip` deploy; the domain (`cendelinovi.cz`) and the ACS email service are shared. See `docs/DEPLOYMENT-TEST-PROD.md`.
 - **Commits:** Conventional commits in English (`feat:`, `fix:`, `chore:`, `docs:`)
 - **PR per implementation step** (each step = ~4h of work)
+- **CHANGELOG.md:** every PR that completes a task from `docs/ZADANI.md` (status: `docs/gap-analysis.md`) adds a line under `## [Nevydáno]` (Czech, user-facing wording)
 - **No force push to master**
 
 ## Azure resource naming
@@ -526,9 +356,13 @@ Role is stored in User entity in Table Storage and embedded in JWT claims.
 ```
 Resource Group:     rg-oaza-prod
 Storage Account:    stoaza (Table Storage + Blob Storage)
-  Table names:      Users, Houses, WaterMeters, MeterReadings, BillingPeriods,
-                    SupplierInvoices, AdvancePayments, Settlements, Documents, FinancialRecords
-  Blob containers:  documents, invoices, settlements
+  Table names:      Users, Houses, WaterMeters, MeterReadings, AdvancePayments, Documents,
+                    DocumentVersions, FinancialRecords, AdvanceSettings, AuditLog,
+                    CostComponents, ComponentAllocationRules, Participations,
+                    OwnershipPeriods, OpeningBalances, CostEntries, InterimClosings, CashBook,
+                    OffBookFunds, OffBookFundRecords,
+                    BankAccountMappings, BankTransactions
+  Blob containers:  documents, finance
 Functions App:      func-oaza-prod
 Static Web App:     swa-oaza-prod
 ```
@@ -538,10 +372,6 @@ Static Web App:     swa-oaza-prod
 ```
 documents/
   {category}/{documentId}/{filename}        # Uploaded association documents
-invoices/
-  {invoiceId}/{filename}                    # Supplier invoice attachments
-settlements/
-  {periodId}/{houseId}.pdf                  # Generated settlement PDFs
 finance/
   {recordId}/{filename}                     # Financial record attachments
 ```
@@ -560,19 +390,20 @@ AzureCommunicationServices__ConnectionString=<acs-connection-string>
 AzureCommunicationServices__FromEmail=DoNotReply@<acs-domain>
 AzureCommunicationServices__FromName=Oáza Zadní Kopanina
 AppUrl=https://oaza.cendelinovi.cz
+ENABLE_SEED=true            # only on DEV/local — enables anonymous POST /api/seed
 ```
 
 ## Key business rules
 
-1. **BillingPeriod total is computed, not stored.** Always SUM(SupplierInvoice.Amount) where invoice month falls within period dateFrom–dateTo. Never write a total into BillingPeriod entity.
+1. **Costs are allocated, not stored per house.** A house's share is always computed from cost entries, component rules and participations (T02, T06) — never write per-house totals.
 
-2. **Advance payments are per-month, not per-period.** AdvancePayment uses PartitionKey=houseId, RowKey=YYYY-MM. At settlement time, SUM all payments where YYYY-MM falls within the billing period.
+2. **Advance payments are per-month.** Regular advances use PartitionKey=houseId, RowKey=YYYY-MM (doplatek/payout/opening balance/fund use their own RowKey prefixes). The ledger books an advance on the 1st day of its month, other payments on their payment date.
 
-3. **Loss on water network.** Difference between main meter consumption and sum of individual meters. Must be allocated to houses — configurable method (equal split or proportional to consumption). Always show loss explicitly in UI.
+3. **Loss on water network.** Difference between main meter consumption and sum of individual meters per interval between main meter readings (T05). Allocated by the losses component rule. Always show loss explicitly in UI.
 
 4. **Excel import is two-step.** First call parses and validates (returns preview + warnings). Second call confirms and saves. Never auto-save on upload.
 
-5. **Closing a billing period is irreversible.** Once closed, Settlement entities are written and the period is locked. Readings and invoices within the period can no longer be modified.
+5. **Interim closings lock the past.** Up to the last closed day nothing may change (costs → corrections in the open period, readings/payments → 409 or booked after the cut, T08). Only the latest closing can be deleted.
 
 6. **One user = one house** (except Admin who can see all houses).
 
@@ -582,9 +413,11 @@ AppUrl=https://oaza.cendelinovi.cz
 
 - **Unit tests:** Domain logic (settlement calculation, loss allocation, validation rules) in `Oaza.Application.Tests`
 - **Integration tests:** Table Storage repository operations in `Oaza.Infrastructure.Tests` (use Azurite local emulator)
-- **No E2E automation** — manual E2E testing (15 users, not worth the investment)
+- **E2E smoke tests (Playwright)** in `web/e2e/` against `vite preview` with the API mocked via `page.route` (`e2e/mockApi.ts`); CI job `e2e`. Scenarios S1–S8 (T14): `e2e/golden.spec.ts` on backend-generated fixtures (see Golden fixtures above).
 - Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 8.0.x.
 - Integrační testy potřebují Azurite: `docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`. Používají `[SkippableFact]` (skip když chybí); CI běží Azurite jako service container.
+
+- **PR CI** (`.github/workflows/ci.yml`): warnings are errors (`api/Directory.Build.props`), coverage gate ≥ 90 % over files listed in `api/coverage-gate.txt` (add new calculation code there), web lint + build.
 
 ## Development workflow
 
@@ -600,6 +433,14 @@ On first deploy (or via a seed endpoint/script), create:
 - 1 admin user (Rosťa Čendelín)
 - 8 houses (Zadní Kopanina 142–149)
 - 9 water meters (1 main + 8 individual, each linked to a house)
+
+## Documentation
+
+- `README.md` (root) is the entry point; `docs/*.md` are Czech, human-facing, and describe the code **as implemented**.
+- Changing a calculation → update `docs/VYUCTOVANI.md` **and** the matching texts in `web/src/content/help.ts` (its header comment maps texts to use cases).
+- Adding/changing an endpoint → update `docs/API.md` (and `web/src/types/index.ts`).
+- New config key → add it to `api/src/Oaza.Functions/local.settings.json.example` and `docs/LOKALNI-VYVOJ.md`.
+- Never copy formulas from this file into user-facing docs — verify against code.
 
 ## Important constraints
 

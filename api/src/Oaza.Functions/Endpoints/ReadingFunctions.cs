@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
+using Oaza.Application.Interfaces;
 using Oaza.Application.UseCases;
 using Oaza.Application.Validators;
 using Oaza.Domain.Constants;
@@ -17,6 +18,7 @@ using Oaza.Domain.Enums;
 using Oaza.Domain.Helpers;
 using Oaza.Domain.Interfaces;
 using Oaza.Functions.Attributes;
+using Oaza.Domain.Time;
 
 namespace Oaza.Functions.Endpoints;
 
@@ -26,8 +28,10 @@ public class ReadingFunctions
     private readonly IMeterReadingRepository _readingRepository;
     private readonly IWaterMeterRepository _meterRepository;
     private readonly IHouseRepository _houseRepository;
-    private readonly IBillingPeriodRepository _billingPeriodRepository;
+    private readonly IClock _clock;
+    private readonly IClosingBoundary _closingBoundary;
     private readonly ILogger<ReadingFunctions> _logger;
+    private readonly Oaza.Application.Audit.IAuditLogger _audit;
 
     private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
 
@@ -42,14 +46,18 @@ public class ReadingFunctions
         IMeterReadingRepository readingRepository,
         IWaterMeterRepository meterRepository,
         IHouseRepository houseRepository,
-        IBillingPeriodRepository billingPeriodRepository,
+        IClock clock,
+        IClosingBoundary closingBoundary,
+        Oaza.Application.Audit.IAuditLogger audit,
         ILogger<ReadingFunctions> logger)
     {
+        _audit = audit ?? throw new ArgumentNullException(nameof(audit));
         _importUseCase = importUseCase ?? throw new ArgumentNullException(nameof(importUseCase));
         _readingRepository = readingRepository ?? throw new ArgumentNullException(nameof(readingRepository));
         _meterRepository = meterRepository ?? throw new ArgumentNullException(nameof(meterRepository));
         _houseRepository = houseRepository ?? throw new ArgumentNullException(nameof(houseRepository));
-        _billingPeriodRepository = billingPeriodRepository ?? throw new ArgumentNullException(nameof(billingPeriodRepository));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _closingBoundary = closingBoundary ?? throw new ArgumentNullException(nameof(closingBoundary));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -73,6 +81,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -104,13 +120,21 @@ public class ReadingFunctions
                 return await WriteValidationErrorResponseAsync(req, validationResult);
             }
 
-            var count = await _importUseCase.ConfirmImportAsync(request.ImportSessionId, user.Id);
+            var count = await _importUseCase.ConfirmImportAsync(request, user.Id);
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new { count, message = $"Successfully imported {count} readings." });
         }
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -146,6 +170,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -240,7 +272,9 @@ public class ReadingFunctions
                         Consumption = consumption,
                         Source = reading.Source.ToString(),
                         ImportedAt = reading.ImportedAt,
-                        ImportedBy = reading.ImportedBy
+                        ImportedBy = reading.ImportedBy,
+                        IsEstimate = reading.IsEstimate,
+                        EstimateNote = reading.EstimateNote
                     });
                 }
             }
@@ -257,6 +291,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -295,6 +337,11 @@ public class ReadingFunctions
                 throw new NotFoundException("WaterMeter", request.MeterId);
             }
 
+            if (await ClosedMessageAsync(meter, request.ReadingDate) is { } closedMessage)
+            {
+                return await WriteErrorResponseAsync(req, 409, closedMessage);
+            }
+
             var readingDate = DateTime.SpecifyKind(request.ReadingDate.Date, DateTimeKind.Utc);
 
             // Check for duplicate (same meter + same month)
@@ -316,7 +363,7 @@ public class ReadingFunctions
             if (previousReading is not null && request.Value < previousReading.Value)
             {
                 throw new AppException(
-                    $"Záporná spotřeba: nová hodnota {request.Value} je nižší než předchozí hodnota {previousReading.Value}.");
+                    $"Záporná spotřeba: nová hodnota {M3(request.Value)} je nižší než předchozí hodnota {M3(previousReading.Value)}.");
             }
 
             var reading = new MeterReading
@@ -326,10 +373,13 @@ public class ReadingFunctions
                 Value = request.Value,
                 Source = ReadingSource.Manual,
                 ImportedAt = DateTime.UtcNow,
-                ImportedBy = user.Id
+                ImportedBy = user.Id,
+                IsEstimate = request.IsEstimate,
+                EstimateNote = request.IsEstimate ? request.EstimateNote?.Trim() : null
             };
 
             await _readingRepository.UpsertAsync(reading);
+            await _audit.LogAsync(ReadingEntity, ReadingId(reading), AuditActions.Create, null, reading, ModelEndpoint.GetActor(context));
 
             _logger.LogInformation("Manual reading created for meter {MeterId} on {Date}.", request.MeterId, readingDate);
 
@@ -353,7 +403,9 @@ public class ReadingFunctions
                 Consumption = consumption,
                 Source = reading.Source.ToString(),
                 ImportedAt = reading.ImportedAt,
-                ImportedBy = reading.ImportedBy
+                ImportedBy = reading.ImportedBy,
+                IsEstimate = reading.IsEstimate,
+                EstimateNote = reading.EstimateNote
             };
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.Created, readingResponse);
@@ -361,6 +413,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -416,14 +476,11 @@ public class ReadingFunctions
                 throw new NotFoundException("MeterReading", $"{meterId}/{date}");
             }
 
-            // Check if reading falls in a closed billing period
-            var allPeriods = await _billingPeriodRepository.GetByPartitionKeyAsync(PartitionKeys.Period);
-            var inClosedPeriod = allPeriods.Any(p =>
-                p.Status == BillingPeriodStatus.Closed &&
-                readingDate >= p.DateFrom && readingDate <= p.DateTo);
-            if (inClosedPeriod)
+            var closedMessage = await ClosedMessageAsync(meter, readingDate)
+                ?? (request.NewDate is { } movedTo ? await ClosedMessageAsync(meter, movedTo) : null);
+            if (closedMessage is not null)
             {
-                return await WriteErrorResponseAsync(req, 409, "Odečet nelze upravit v uzavřeném zúčtovacím období.");
+                return await WriteErrorResponseAsync(req, 409, closedMessage);
             }
 
             // Check for negative consumption after correction
@@ -436,7 +493,7 @@ public class ReadingFunctions
             if (previousReading is not null && request.Value < previousReading.Value)
             {
                 throw new AppException(
-                    $"Záporná spotřeba: nová hodnota {request.Value} je nižší než předchozí hodnota {previousReading.Value}.");
+                    $"Záporná spotřeba: nová hodnota {M3(request.Value)} je nižší než předchozí hodnota {M3(previousReading.Value)}.");
             }
 
             // Also check that the next reading is not less than the new value
@@ -448,7 +505,7 @@ public class ReadingFunctions
             if (nextReading is not null && nextReading.Value < request.Value)
             {
                 throw new AppException(
-                    $"Záporná spotřeba: následující odečet {nextReading.Value} by byl nižší než opravená hodnota {request.Value}.");
+                    $"Záporná spotřeba: následující odečet {M3(nextReading.Value)} by byl nižší než opravená hodnota {M3(request.Value)}.");
             }
 
             // Check if date is being changed
@@ -469,8 +526,11 @@ public class ReadingFunctions
                         Source = existing.Source,
                         ImportedAt = DateTime.UtcNow,
                         ImportedBy = user.Id,
+                        IsEstimate = existing.IsEstimate,
+                        EstimateNote = existing.EstimateNote,
                     };
                     await _readingRepository.UpsertAsync(newReading);
+                    await _audit.LogAsync(ReadingEntity, ReadingId(newReading), AuditActions.Update, existing, newReading, ModelEndpoint.GetActor(context), "přesun data odečtu");
                     effectiveDate = newDate;
 
                     _logger.LogInformation("Reading moved for meter {MeterId} from {OldDate} to {NewDate}. Value: {Value}.",
@@ -481,11 +541,17 @@ public class ReadingFunctions
                 }
             }
 
+            var before = new MeterReading
+            {
+                MeterId = existing.MeterId, ReadingDate = existing.ReadingDate, Value = existing.Value, Source = existing.Source,
+                ImportedAt = existing.ImportedAt, ImportedBy = existing.ImportedBy, IsEstimate = existing.IsEstimate, EstimateNote = existing.EstimateNote,
+            };
             existing.Value = request.Value;
             existing.ImportedAt = DateTime.UtcNow;
             existing.ImportedBy = user.Id;
 
             await _readingRepository.UpsertAsync(existing);
+            await _audit.LogAsync(ReadingEntity, ReadingId(existing), AuditActions.Update, before, existing, ModelEndpoint.GetActor(context));
 
             _logger.LogInformation("Reading updated for meter {MeterId} on {Date}. New value: {Value}.",
                 meterId, date, request.Value);
@@ -519,7 +585,9 @@ public class ReadingFunctions
                 Consumption = consumption,
                 Source = updatedReading?.Source.ToString() ?? existing.Source.ToString(),
                 ImportedAt = DateTime.UtcNow,
-                ImportedBy = user.Id
+                ImportedBy = user.Id,
+                IsEstimate = updatedReading?.IsEstimate ?? existing.IsEstimate,
+                EstimateNote = updatedReading?.EstimateNote ?? existing.EstimateNote
             };
 
             return await WriteJsonResponseAsync(req, HttpStatusCode.OK, readingResponse);
@@ -527,6 +595,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -544,8 +620,69 @@ public class ReadingFunctions
     /// <summary>
     /// Returns all readings for all meters (admin only). Used for the editable readings list.
     /// </summary>
-    [Function("GetAllReadings")]
+    /// <summary>
+    /// GET /readings/estimate?meterId=&amp;date=yyyy-MM-dd — estimated meter state at a
+    /// date (T04): the exact reading, linear interpolation by days, or the nearest
+    /// reading when only one side exists. Nothing is saved.
+    /// </summary>
+    [Function("EstimateReading")]
     [RequireRole(UserRole.Admin)]
+    public async Task<HttpResponseData> EstimateReadingAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/estimate")] HttpRequestData req)
+    {
+        try
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var meterId = query["meterId"];
+            if (string.IsNullOrWhiteSpace(meterId) ||
+                !DateTime.TryParseExact(query["date"], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                return await WriteErrorResponseAsync(req, 400, "Zadejte meterId a date ve tvaru RRRR-MM-DD.");
+            }
+
+            var meter = await _meterRepository.GetAsync(PartitionKeys.Meter, meterId);
+            if (meter is null)
+            {
+                throw new NotFoundException("WaterMeter", meterId);
+            }
+
+            var estimate = Oaza.Domain.Services.ReadingEstimator.Estimate(
+                await _readingRepository.GetByMeterIdAsync(meterId), date);
+
+            return await WriteJsonResponseAsync(req, HttpStatusCode.OK, new ReadingEstimateResponse
+            {
+                MeterId = meterId,
+                TargetDate = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+                Value = estimate.Value,
+                IsEstimate = estimate.IsEstimate,
+                Method = estimate.Method.ToString(),
+                Note = estimate.Note,
+            });
+        }
+        catch (AppException ex)
+        {
+            return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error estimating a reading.");
+            return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
+        }
+    }
+
+    /// <summary>
+    /// GET /readings/all — every reading with consumption. Admin and Accountant see all meters; a Member only the main
+    /// meter and their own house's meters (the Přehled and Odečty pages of a member use it).
+    /// </summary>
+    [Function("GetAllReadings")]
     public async Task<HttpResponseData> GetAllReadingsAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "readings/all")] HttpRequestData req,
         FunctionContext context)
@@ -554,7 +691,9 @@ public class ReadingFunctions
         {
             var user = GetAuthenticatedUser(context);
 
-            var allMeters = await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter);
+            var allMeters = (await _meterRepository.GetByPartitionKeyAsync(PartitionKeys.Meter))
+                .Where(m => user.Role != UserRole.Member || m.Type == MeterType.Main || (m.HouseId is not null && m.HouseId == user.HouseId))
+                .ToList();
             var allHouses = await _houseRepository.GetByPartitionKeyAsync(PartitionKeys.House);
             var houseLookup = allHouses.ToDictionary(h => h.Id, h => h.Name);
 
@@ -590,6 +729,8 @@ public class ReadingFunctions
                         Source = reading.Source.ToString(),
                         ImportedAt = reading.ImportedAt,
                         ImportedBy = reading.ImportedBy,
+                        IsEstimate = reading.IsEstimate,
+                        EstimateNote = reading.EstimateNote,
                     });
 
                     previous = reading;
@@ -601,6 +742,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -632,7 +781,7 @@ public class ReadingFunctions
             }
             else
             {
-                dateTo = DateTime.UtcNow;
+                dateTo = PragueClock.AsUtcMidnight(_clock.Today);
             }
 
             if (!string.IsNullOrEmpty(fromParam) && DateTime.TryParse(fromParam, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedFrom))
@@ -750,6 +899,14 @@ public class ReadingFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception ex)
         {
@@ -930,4 +1087,21 @@ public class ReadingFunctions
         return await WriteJsonResponseAsync(req, HttpStatusCode.BadRequest,
             new { error = "Formulář obsahuje chyby.", errors });
     }
+
+    /// <summary>A volume for a Czech message: „57,116“.</summary>
+    private static string M3(decimal value) => value.ToString("0.###", System.Globalization.CultureInfo.GetCultureInfo("cs-CZ"));
+
+    /// <summary>Audit entity of a meter reading; id = <c>{meterId}|{yyyy-MM-dd}</c>.</summary>
+    public const string ReadingEntity = "MeterReading";
+
+    public static string ReadingId(MeterReading reading) => $"{reading.MeterId}|{reading.ReadingDate:yyyy-MM-dd}";
+
+    /// <summary>
+    /// Readings up to an interim closing are fixed (T08) — a house meter by closings of all houses and of its house,
+    /// the main meter by any closing. Returns the reason, or null when the day is open.
+    /// </summary>
+    private async Task<string?> ClosedMessageAsync(WaterMeter meter, DateTime readingDate) =>
+        await new MeterClosingDays(_closingBoundary).ForAsync(meter) is { } closed && DateOnly.FromDateTime(readingDate) <= closed
+            ? $"Odečet ke dni {readingDate:d.M.yyyy} spadá do období uzavřeného mezizávěrkou k {closed:d.M.yyyy}."
+            : null;
 }

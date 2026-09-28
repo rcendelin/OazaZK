@@ -1,76 +1,46 @@
 import { useCallback, useRef, useState } from 'react';
 import { useApi } from '../hooks/useApi';
 import { useAuth } from '../auth/AuthContext';
-import { getAdvanceSettings, updateAdvanceSettings, calculateAdvances } from '../api/advanceSettings';
-import { getHouses } from '../api/houses';
+import { calculateAdvances, deleteHouseAdvanceOverride, setHouseAdvanceOverride } from '../api/advanceSettings';
 import { Spinner } from '../components/Spinner';
-import { HelpDisclosure } from '../components/help/HelpDisclosure';
-import type { AdvanceSettingsData, AdvanceCalculation, HouseAdvanceOverride } from '../api/advanceSettings';
-import type { House } from '../types';
-import { parseCzechNumber } from '../utils/number';
+import type { AdvanceCalculation, AdvanceAmounts } from '../api/advanceSettings';
+import { invalidNumberMessage, parseCzechNumber } from '../utils/number';
+import { formatIsoDay } from '../utils/date';
 
 const fmt = (v: number | null | undefined) => {
   const n = typeof v === 'number' && !isNaN(v) ? v : 0;
   return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 };
-const fmtD = (v: number | null | undefined, d = 1) => {
-  const n = typeof v === 'number' && !isNaN(v) ? v : 0;
-  return new Intl.NumberFormat('cs-CZ', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
-};
-const fmtDate = (s: string | null | undefined) => {
-  if (!s || s.startsWith('0001')) return '—';
-  try { return new Intl.DateTimeFormat('cs-CZ').format(new Date(s)); } catch { return '—'; }
-};
-const lossMethodLabel = (m: string | null | undefined) =>
-  m === 'Equal' ? 'Rovnoměrně' : 'Dle spotřeby';
 
+const sum = (rows: AdvanceAmounts[], key: keyof AdvanceAmounts) => rows.reduce((s, r) => s + r[key], 0);
+
+/**
+ * Monthly advances per house. The recommendation is the house's share of costs from the ledger over the
+ * last 12 months ÷ 12; Admin can override it per house (each house is saved on its own, so two admins
+ * editing different houses don't overwrite each other).
+ */
 export function AdvancesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
 
-  const { data: settings, loading: sLoading, refetch: refetchSettings } = useApi<AdvanceSettingsData>(
-    useCallback(() => getAdvanceSettings(), []),
-  );
-  const { data: calc, loading: cLoading, refetch: refetchCalc } = useApi<AdvanceCalculation>(
+  const { data: calc, loading: cLoading, error: cError, refetch: refetchCalc } = useApi<AdvanceCalculation>(
     useCallback(() => calculateAdvances(), []),
   );
-  const { data: houses } = useApi<House[]>(useCallback(() => getHouses(), []));
 
-  // ── Settings edit ──
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<AdvanceSettingsData | null>(null);
-  const [coeffs, setCoeffs] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const savingRef = useRef(false);
 
-  // ── Per-house override edit ──
   const [editingHouse, setEditingHouse] = useState<string | null>(null);
   const [houseForm, setHouseForm] = useState<{ water: string; elec: string; common: string }>({ water: '', elec: '', common: '' });
 
-  const startEdit = () => {
-    if (!settings) return;
-    setForm({ ...settings });
-    const c: Record<string, string> = {};
-    for (const [k, v] of Object.entries(settings.electricityCoefficients)) c[k] = String(v).replace('.', ',');
-    setCoeffs(c);
-    setEditing(true);
-    setMsg(null);
-  };
-
-  const handleSave = async () => {
-    if (!form || savingRef.current) return;
+  const run = async (action: () => Promise<unknown>, okText: string) => {
+    if (savingRef.current) return;
     savingRef.current = true;
     setMsg(null);
-    const parsedCoeffs: Record<string, number> = {};
-    for (const [k, v] of Object.entries(coeffs)) {
-      const p = parseFloat(v.replace(/\s/g, '').replace(',', '.'));
-      if (!isNaN(p)) parsedCoeffs[k] = p;
-    }
     try {
-      await updateAdvanceSettings({ ...form, electricityCoefficients: parsedCoeffs });
-      setMsg({ type: 'ok', text: 'Nastavení uloženo.' });
-      setEditing(false);
-      refetchSettings();
+      await action();
+      setMsg({ type: 'ok', text: okText });
+      setEditingHouse(null);
       refetchCalc();
     } catch (err) {
       setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Uložení selhalo.' });
@@ -88,55 +58,51 @@ export function AdvancesPage() {
       common: String(h.actual.common),
     });
     setEditingHouse(houseId);
+    setMsg(null);
   };
 
-  const saveHouseOverride = async () => {
-    if (!settings || !editingHouse || savingRef.current) return;
-    savingRef.current = true;
-    const override: HouseAdvanceOverride = {
-      waterAdvance: parseFloat(houseForm.water) || 0,
-      electricityAdvance: parseFloat(houseForm.elec) || 0,
-      commonAdvance: parseFloat(houseForm.common) || 0,
-    };
-    const newOverrides = { ...settings.houseOverrides, [editingHouse]: override };
-    try {
-      await updateAdvanceSettings({ ...settings, houseOverrides: newOverrides });
-      setEditingHouse(null);
-      refetchSettings();
-      refetchCalc();
-    } catch (err) {
-      setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Uložení selhalo.' });
-    } finally {
-      savingRef.current = false;
+  const saveHouseOverride = () => {
+    if (!editingHouse) return;
+    const houseId = editingHouse;
+    const waterAdvance = parseCzechNumber(houseForm.water);
+    const electricityAdvance = parseCzechNumber(houseForm.elec);
+    const commonAdvance = parseCzechNumber(houseForm.common);
+    if (waterAdvance === null || electricityAdvance === null || commonAdvance === null) {
+      setMsg({
+        type: 'err',
+        text: [
+          waterAdvance === null ? invalidNumberMessage('Voda') : null,
+          electricityAdvance === null ? invalidNumberMessage('Elektřina') : null,
+          commonAdvance === null ? invalidNumberMessage('Společné') : null,
+        ].filter((m) => m !== null).join(' '),
+      });
+      return;
     }
-  };
-
-  const resetHouseOverride = async (houseId: string) => {
-    if (!settings || savingRef.current) return;
-    savingRef.current = true;
-    const newOverrides = { ...settings.houseOverrides };
-    delete newOverrides[houseId];
-    try {
-      await updateAdvanceSettings({ ...settings, houseOverrides: newOverrides });
-      refetchSettings();
-      refetchCalc();
-    } catch (err) {
-      setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Reset selhal.' });
-    } finally {
-      savingRef.current = false;
+    if (waterAdvance < 0 || electricityAdvance < 0 || commonAdvance < 0) {
+      setMsg({ type: 'err', text: 'Záloha nesmí být záporná.' });
+      return;
     }
+    void run(() => setHouseAdvanceOverride(houseId, { waterAdvance, electricityAdvance, commonAdvance }), 'Záloha domu uložena.');
   };
 
-  const coeffSum = Object.values(coeffs).reduce((s, v) => s + parseCzechNumber(v), 0);
-  const activeHouses = houses?.filter((h) => h.isActive) ?? [];
+  const resetHouseOverride = (houseId: string) => {
+    void run(() => deleteHouseAdvanceOverride(houseId), 'Záloha domu vrácena na doporučenou.');
+  };
 
-  if (sLoading || cLoading) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+  // Only the first load replaces the page; a refetch after saving keeps the table (and the message) in place.
+  if (cLoading && !calc) return <div className="flex justify-center p-12"><Spinner size="lg" /></div>;
+
+  const rows = calc?.houses ?? [];
+  const editInput = (value: string, onChange: (v: string) => void, label: string) => (
+    <input type="text" inputMode="decimal" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
+      className="w-20 border border-border rounded-lg px-1 py-0.5 text-right text-sm bg-surface-raised" />
+  );
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text-primary">Zálohy</h1>
-        <p className="mt-1 text-sm text-text-secondary">Měsíční zálohy pro jednotlivé domácnosti — oddělené složky</p>
+        <p className="mt-1 text-sm text-text-secondary">Měsíční zálohy pro jednotlivé domácnosti — voda, elektřina a společné náklady</p>
       </div>
 
       {msg && (
@@ -145,241 +111,123 @@ export function AdvancesPage() {
         </div>
       )}
 
-      {/* ═══ Global settings ═══ */}
-      <div className="bg-surface-raised border border-border rounded-2xl p-6 shadow-card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Nastavení</h2>
-          {isAdmin && !editing && (
-            <button onClick={startEdit} className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium">
-              Upravit
-            </button>
-          )}
-        </div>
+      {cError && <div className="rounded-xl bg-danger-light p-4 text-sm text-danger">{cError}</div>}
 
-        {!editing ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-3 bg-accent-light rounded-xl">
-              <p className="text-xs font-medium text-accent uppercase">Cena vody</p>
-              <p className="text-xl font-bold mt-1">{fmtD(settings?.waterPricePerM3, 2)} <span className="text-sm font-normal text-text-muted">Kč/m³</span></p>
-              <p className="text-xs text-text-muted mt-0.5">Platnost: {fmtDate(settings?.waterPriceValidFrom)} — {settings?.waterPriceValidTo ? fmtDate(settings.waterPriceValidTo) : '∞'}</p>
-            </div>
-            <div className="p-3 bg-warning-light rounded-xl">
-              <p className="text-xs font-medium text-warning uppercase">Elektřina vodárna</p>
-              <p className="text-xl font-bold mt-1">{fmt(settings?.monthlyElectricityCost)} <span className="text-sm font-normal text-text-muted">Kč/měsíc celkem</span></p>
-            </div>
-            <div className="p-3 bg-surface-sunken rounded-xl">
-              <p className="text-xs font-medium text-text-secondary uppercase">Společný základ</p>
-              <p className="text-xl font-bold mt-1">{fmt(settings?.monthlyCommonBaseFee)} <span className="text-sm font-normal text-text-muted">Kč/dům/měsíc</span></p>
-            </div>
-            <div className="p-3 bg-danger-light rounded-xl">
-              <p className="text-xs font-medium text-danger uppercase">Průměrná ztráta</p>
-              <p className="text-xl font-bold mt-1">{fmtD(calc?.monthlyLossM3)} <span className="text-sm font-normal text-text-muted">m³/měsíc</span></p>
-            </div>
-            <div className="p-3 bg-surface-sunken rounded-xl sm:col-span-2 lg:col-span-4">
-              <p className="text-xs font-medium text-text-secondary uppercase">Rozdělení ztráty na síti</p>
-              <p className="text-xl font-bold mt-1">{lossMethodLabel(settings?.lossAllocationMethod)}</p>
-              <p className="text-xs text-text-muted mt-0.5">Používá se pro vyúčtování i saldo domácností.</p>
-              <HelpDisclosure sectionId="lossMethod" />
-            </div>
-          </div>
-        ) : form && (
-          <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Cena vody (Kč/m³)</label>
-                <input type="number" step="0.01" value={form.waterPricePerM3}
-                  onChange={(e) => setForm({ ...form, waterPricePerM3: parseFloat(e.target.value) || 0 })}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Platnost od</label>
-                <input type="date" value={form.waterPriceValidFrom?.split('T')[0] ?? ''}
-                  onChange={(e) => setForm({ ...form, waterPriceValidFrom: e.target.value })}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Platnost do (prázdné = ∞)</label>
-                <input type="date" value={form.waterPriceValidTo?.split('T')[0] ?? ''}
-                  onChange={(e) => setForm({ ...form, waterPriceValidTo: e.target.value || null })}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Elektřina vodárna — celkem Kč/měsíc</label>
-                <input type="number" step="1" value={form.monthlyElectricityCost}
-                  onChange={(e) => setForm({ ...form, monthlyElectricityCost: parseFloat(e.target.value) || 0 })}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">Společný základ Kč/dům/měsíc</label>
-                <input type="number" step="1" value={form.monthlyCommonBaseFee}
-                  onChange={(e) => setForm({ ...form, monthlyCommonBaseFee: parseFloat(e.target.value) || 0 })}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              </div>
-            </div>
-
-            <div className="max-w-md">
-              <label htmlFor="loss-method" className="block text-sm font-medium text-text-secondary mb-1">Rozdělení ztráty na síti</label>
-              <select id="loss-method" value={form.lossAllocationMethod ?? 'ProportionalToConsumption'}
-                onChange={(e) => setForm({ ...form, lossAllocationMethod: e.target.value })}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20">
-                <option value="ProportionalToConsumption">Dle spotřeby</option>
-                <option value="Equal">Rovnoměrně</option>
-              </select>
-              <p className="text-xs text-text-muted mt-1">Výchozí metoda pro vyúčtování a saldo domácností.</p>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-text-secondary mb-2">Koeficienty elektřiny (součet = 100%)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {activeHouses.map((h) => (
-                  <div key={h.id}>
-                    <label className="block text-xs text-text-muted mb-0.5">{h.name}</label>
-                    <div className="flex items-center gap-1">
-                      <input type="text" inputMode="decimal" value={coeffs[h.id] ?? ''}
-                        onChange={(e) => setCoeffs({ ...coeffs, [h.id]: e.target.value })}
-                        placeholder="0" className="w-full border border-border rounded-xl px-2 py-1.5 text-sm text-right bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-                      <span className="text-xs text-text-muted">%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className={`text-xs mt-1 ${Math.abs(coeffSum - 100) > 0.1 ? 'text-danger font-medium' : 'text-success'}`}>
-                Součet: {fmtD(coeffSum)}% {Math.abs(coeffSum - 100) > 0.1 ? '(musí být 100%)' : '✓'}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={handleSave} className="bg-accent text-white px-4 py-2 rounded-xl hover:bg-accent-hover text-sm font-medium">Uložit</button>
-              <button onClick={() => setEditing(false)} className="bg-surface-sunken text-text-secondary px-4 py-2 rounded-xl hover:bg-surface-sunken text-sm">Zrušit</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ═══ Per-house advances table ═══ */}
       {calc && (
         <div className="bg-surface-raised border border-border rounded-2xl overflow-hidden shadow-card">
           <div className="px-6 py-4 border-b border-border">
             <h2 className="text-lg font-semibold">Přehled záloh za jednotlivé domy</h2>
-            <p className="text-xs text-text-muted mt-0.5">Doporučené zálohy se počítají z průměrné spotřeby za poslední 3 odečty. Klikněte na dům pro nastavení skutečné výše.</p>
+            <p className="text-sm text-text-secondary mt-1">
+              Období: {formatIsoDay(calc.from)} – {formatIsoDay(calc.to)} ({calc.months} měsíců)
+            </p>
+            <p className="text-xs text-text-muted mt-0.5">
+              Doporučená měsíční záloha = náklady, které saldo domu přiřadilo domu za posledních {calc.months} měsíců, děleno {calc.months},
+              zaokrouhleno na celé koruny. Voda zahrnuje i podíl na ztrátách, elektřina jsou složky elektřiny, společné je vše ostatní.
+              {isAdmin && ' U každého domu můžete doporučenou zálohu přepsat vlastní hodnotou.'}
+            </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Zálohy domů">
               <thead>
                 <tr className="bg-surface-sunken border-b border-border text-xs text-text-muted uppercase">
                   <th className="text-left px-4 py-3">Domácnost</th>
-                  <th className="text-right px-2 py-3">m³/měs</th>
-                  <th className="text-right px-2 py-3">Ztráta m³</th>
-                  <th className="text-right px-2 py-3">Podíl</th>
-                  <th className="text-center px-2 py-3 bg-accent-light border-l border-border" colSpan={2}>Voda Kč</th>
-                  <th className="text-center px-2 py-3 bg-warning-light border-l border-border" colSpan={2}>Elektřina Kč</th>
-                  <th className="text-center px-2 py-3 bg-surface-sunken border-l border-border" colSpan={2}>Společný Kč</th>
-                  <th className="text-right px-3 py-3 bg-success-light border-l border-border font-bold">Celkem Kč</th>
+                  <th className="text-center px-2 py-3 border-l border-border" colSpan={4}>Náklady za období Kč</th>
+                  <th className="text-right px-3 py-3 border-l border-border">Doporučeno Kč/měs.</th>
+                  <th className="text-center px-2 py-3 bg-success-light border-l border-border" colSpan={4}>Skutečná záloha Kč/měs.</th>
                   {isAdmin && <th className="px-2 py-3"></th>}
                 </tr>
                 <tr className="bg-surface-sunken border-b border-border text-[10px] text-text-muted">
-                  <th></th><th></th><th></th><th></th>
-                  <th className="px-2 py-1 bg-accent-light border-l border-border text-right">Dopor.</th>
-                  <th className="px-2 py-1 bg-accent-light text-right">Aktuální</th>
-                  <th className="px-2 py-1 bg-warning-light border-l border-border text-right">Dopor.</th>
-                  <th className="px-2 py-1 bg-warning-light text-right">Aktuální</th>
-                  <th className="px-2 py-1 bg-surface-sunken border-l border-border text-right">Dopor.</th>
-                  <th className="px-2 py-1 bg-surface-sunken text-right">Aktuální</th>
-                  <th className="px-2 py-1 bg-success-light border-l border-border"></th>
+                  <th></th>
+                  <th className="px-2 py-1 border-l border-border text-right">Voda</th>
+                  <th className="px-2 py-1 text-right">Elektřina</th>
+                  <th className="px-2 py-1 text-right">Společné</th>
+                  <th className="px-2 py-1 text-right">Celkem</th>
+                  <th className="px-3 py-1 border-l border-border text-right">Celkem</th>
+                  <th className="px-2 py-1 bg-success-light border-l border-border text-right">Voda</th>
+                  <th className="px-2 py-1 bg-success-light text-right">Elektřina</th>
+                  <th className="px-2 py-1 bg-success-light text-right">Společné</th>
+                  <th className="px-2 py-1 bg-success-light text-right">Celkem</th>
                   {isAdmin && <th></th>}
                 </tr>
               </thead>
               <tbody>
-                {calc.houses.map((h) => (
-                  <tr key={h.houseId} className="border-b border-border hover:bg-surface-sunken/50">
-                    <td className="px-4 py-3">
-                      <span className="font-medium">{h.houseName}</span>
-                      {h.hasOverride && <span className="ml-1 text-[10px] text-warning font-medium">upraven</span>}
-                    </td>
-                    <td className="px-2 py-3 text-right font-mono">{fmtD(h.avgMonthlyM3)}</td>
-                    <td className="px-2 py-3 text-right font-mono text-danger">{fmtD(h.lossShareM3)}</td>
-                    <td className="px-2 py-3 text-right font-mono text-text-muted">{fmtD(h.sharePercent)}%</td>
-
-                    <td className="px-2 py-3 text-right font-mono bg-accent-light/50 border-l border-border text-text-muted">{fmt(h.recommended.water)}</td>
-                    <td className="px-2 py-3 text-right font-mono bg-accent-light/50 font-semibold">
-                      {editingHouse === h.houseId
-                        ? <input type="number" value={houseForm.water} onChange={(e) => setHouseForm({ ...houseForm, water: e.target.value })}
-                            className="w-16 border border-border rounded-xl px-1 py-0.5 text-right text-sm bg-surface-raised" />
-                        : fmt(h.actual.water)}
-                    </td>
-
-                    <td className="px-2 py-3 text-right font-mono bg-warning-light/50 border-l border-border text-text-muted">{fmt(h.recommended.electricity)}</td>
-                    <td className="px-2 py-3 text-right font-mono bg-warning-light/50 font-semibold">
-                      {editingHouse === h.houseId
-                        ? <input type="number" value={houseForm.elec} onChange={(e) => setHouseForm({ ...houseForm, elec: e.target.value })}
-                            className="w-16 border border-border rounded-xl px-1 py-0.5 text-right text-sm bg-surface-raised" />
-                        : fmt(h.actual.electricity)}
-                    </td>
-
-                    <td className="px-2 py-3 text-right font-mono bg-surface-sunken border-l border-border text-text-muted">{fmt(h.recommended.common)}</td>
-                    <td className="px-2 py-3 text-right font-mono bg-surface-sunken font-semibold">
-                      {editingHouse === h.houseId
-                        ? <input type="number" value={houseForm.common} onChange={(e) => setHouseForm({ ...houseForm, common: e.target.value })}
-                            className="w-16 border border-border rounded-xl px-1 py-0.5 text-right text-sm bg-surface-raised" />
-                        : fmt(h.actual.common)}
-                    </td>
-
-                    <td className="px-3 py-3 text-right font-mono font-bold bg-success-light/50 border-l border-border text-success">{fmt(h.actual.total)}</td>
-
-                    {isAdmin && (
-                      <td className="px-2 py-3 text-right">
-                        {editingHouse === h.houseId ? (
-                          <div className="flex gap-1">
-                            <button onClick={saveHouseOverride} className="text-xs bg-accent text-white px-2 py-1 rounded-xl hover:bg-accent-hover">Uložit</button>
-                            <button onClick={() => setEditingHouse(null)} className="text-xs text-text-muted hover:text-text-secondary">×</button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1">
-                            <button onClick={() => startHouseEdit(h.houseId)} className="text-xs text-accent hover:text-accent-hover">Upravit</button>
-                            {h.hasOverride && (
-                              <button onClick={() => resetHouseOverride(h.houseId)} className="text-xs text-text-muted hover:text-danger">Reset</button>
-                            )}
-                          </div>
+                {rows.map((h) => {
+                  const editing = editingHouse === h.houseId;
+                  return (
+                    <tr key={h.houseId} className="border-b border-border hover:bg-surface-sunken/50">
+                      <td className="px-4 py-3">
+                        <span className="font-medium">{h.houseName}</span>
+                        {h.hasOverride && (
+                          <span className="ml-2 rounded bg-warning-light px-1.5 py-0.5 text-[10px] font-medium text-warning">upraveno</span>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-2 py-3 text-right font-mono border-l border-border">{fmt(h.costsInPeriod.water)}</td>
+                      <td className="px-2 py-3 text-right font-mono">{fmt(h.costsInPeriod.electricity)}</td>
+                      <td className="px-2 py-3 text-right font-mono">{fmt(h.costsInPeriod.common)}</td>
+                      <td className="px-2 py-3 text-right font-mono font-semibold">{fmt(h.costsInPeriod.total)}</td>
+                      <td
+                        className="px-3 py-3 text-right font-mono border-l border-border text-text-secondary"
+                        title={`Voda ${fmt(h.recommended.water)} + elektřina ${fmt(h.recommended.electricity)} + společné ${fmt(h.recommended.common)} Kč`}
+                      >
+                        {fmt(h.recommended.total)}
+                      </td>
+                      <td className="px-2 py-3 text-right font-mono bg-success-light/40 border-l border-border">
+                        {editing ? editInput(houseForm.water, (v) => setHouseForm({ ...houseForm, water: v }), `Voda ${h.houseName}`) : fmt(h.actual.water)}
+                      </td>
+                      <td className="px-2 py-3 text-right font-mono bg-success-light/40">
+                        {editing ? editInput(houseForm.elec, (v) => setHouseForm({ ...houseForm, elec: v }), `Elektřina ${h.houseName}`) : fmt(h.actual.electricity)}
+                      </td>
+                      <td className="px-2 py-3 text-right font-mono bg-success-light/40">
+                        {editing ? editInput(houseForm.common, (v) => setHouseForm({ ...houseForm, common: v }), `Společné ${h.houseName}`) : fmt(h.actual.common)}
+                      </td>
+                      <td className="px-2 py-3 text-right font-mono font-bold bg-success-light/40 text-success">{fmt(h.actual.total)}</td>
+                      {isAdmin && (
+                        <td className="px-2 py-3 text-right">
+                          {editing ? (
+                            <div className="flex gap-1">
+                              <button onClick={saveHouseOverride} className="text-xs bg-accent text-white px-2 py-1 rounded-lg hover:bg-accent-hover">Uložit</button>
+                              <button onClick={() => setEditingHouse(null)} className="text-xs text-text-muted hover:text-text-secondary">Zrušit</button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button onClick={() => startHouseEdit(h.houseId)} className="text-xs text-accent hover:text-accent-hover">Upravit</button>
+                              {h.hasOverride && (
+                                <button onClick={() => resetHouseOverride(h.houseId)} className="text-xs text-text-muted hover:text-danger">Zrušit úpravu</button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
 
-                {/* Totals */}
-                <tr className="bg-surface-sunken font-semibold border-t-2">
-                  <td className="px-4 py-3">Celkem</td>
-                  <td className="px-2 py-3 text-right font-mono">{fmtD(calc.houses.reduce((s, h) => s + h.avgMonthlyM3, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono text-danger">{fmtD(calc.houses.reduce((s, h) => s + h.lossShareM3, 0))}</td>
-                  <td className="px-2 py-3"></td>
-                  <td className="px-2 py-3 text-right font-mono bg-accent-light/50 border-l border-border text-text-muted">{fmt(calc.houses.reduce((s, h) => s + h.recommended.water, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-accent-light/50">{fmt(calc.houses.reduce((s, h) => s + h.actual.water, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-warning-light/50 border-l border-border text-text-muted">{fmt(calc.houses.reduce((s, h) => s + h.recommended.electricity, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-warning-light/50">{fmt(calc.houses.reduce((s, h) => s + h.actual.electricity, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-surface-sunken border-l border-border text-text-muted">{fmt(calc.houses.reduce((s, h) => s + h.recommended.common, 0))}</td>
-                  <td className="px-2 py-3 text-right font-mono bg-surface-sunken">{fmt(calc.houses.reduce((s, h) => s + h.actual.common, 0))}</td>
-                  <td className="px-3 py-3 text-right font-mono font-bold bg-success-light/50 border-l border-border text-success">
-                    {fmt(calc.houses.reduce((s, h) => s + h.actual.total, 0))}
-                  </td>
-                  {isAdmin && <td></td>}
-                </tr>
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={isAdmin ? 11 : 10} className="px-4 py-8 text-center text-text-muted">Žádné domy k zobrazení.</td>
+                  </tr>
+                )}
+
+                {rows.length > 1 && (
+                  <tr className="bg-surface-sunken font-semibold border-t-2">
+                    <td className="px-4 py-3">Celkem</td>
+                    <td className="px-2 py-3 text-right font-mono border-l border-border">{fmt(sum(rows.map((h) => h.costsInPeriod), 'water'))}</td>
+                    <td className="px-2 py-3 text-right font-mono">{fmt(sum(rows.map((h) => h.costsInPeriod), 'electricity'))}</td>
+                    <td className="px-2 py-3 text-right font-mono">{fmt(sum(rows.map((h) => h.costsInPeriod), 'common'))}</td>
+                    <td className="px-2 py-3 text-right font-mono">{fmt(sum(rows.map((h) => h.costsInPeriod), 'total'))}</td>
+                    <td className="px-3 py-3 text-right font-mono border-l border-border">{fmt(sum(rows.map((h) => h.recommended), 'total'))}</td>
+                    <td className="px-2 py-3 text-right font-mono bg-success-light/40 border-l border-border">{fmt(sum(rows.map((h) => h.actual), 'water'))}</td>
+                    <td className="px-2 py-3 text-right font-mono bg-success-light/40">{fmt(sum(rows.map((h) => h.actual), 'electricity'))}</td>
+                    <td className="px-2 py-3 text-right font-mono bg-success-light/40">{fmt(sum(rows.map((h) => h.actual), 'common'))}</td>
+                    <td className="px-2 py-3 text-right font-mono font-bold bg-success-light/40 text-success">{fmt(sum(rows.map((h) => h.actual), 'total'))}</td>
+                    {isAdmin && <td></td>}
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
-
-      <div className="bg-warning-light border border-warning/20 rounded-xl p-4 text-sm">
-        <p className="font-semibold text-warning mb-1">Jak se zálohy počítají</p>
-        <ul className="text-xs text-warning space-y-0.5 list-disc list-inside">
-          <li><strong>Voda:</strong> (průměrná spotřeba + poměrná ztráta) × cena za m³. Ztráta se rozděluje poměrně dle spotřeby.</li>
-          <li><strong>Elektřina vodárna:</strong> celkový náklad × koeficient domu (suma koeficientů = 100%).</li>
-          <li><strong>Společný základ:</strong> fixní částka za údržbu, pojištění, správu — stejná pro každý dům.</li>
-          <li>Admin může u každého domu přepsat doporučenou zálohu na vlastní hodnotu (tlačítko „Upravit").</li>
-        </ul>
-      </div>
     </div>
   );
 }

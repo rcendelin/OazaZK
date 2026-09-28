@@ -1,0 +1,6 @@
+meter_number;date;value;is_estimate;source;note
+H-900;2023-11-01;1 250,5;ne;odečet 1. 11. 2023, foto;
+V-901;2023-11-01;310,25;ne;odečet 1. 11. 2023, foto;
+V-902;2023-11-01;255;ne;odečet 1. 11. 2023, foto;
+V-903;2023-11-01;120,125;ano;interpolace mezi 15. 10. a 15. 11. 2023;odhad
+V-904;2023-11-01;98,5;ne;odečet 1. 11. 2023, foto;

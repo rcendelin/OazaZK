@@ -10,4 +10,7 @@ public class Document
     public string ContentType { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; }
     public string UploadedBy { get; set; } = string.Empty;
+
+    /// <summary>Invoices and settlements (T11): the cost component the document belongs to, if known.</summary>
+    public string? ComponentId { get; set; }
 }

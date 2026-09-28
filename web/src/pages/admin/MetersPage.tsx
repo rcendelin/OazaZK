@@ -127,7 +127,7 @@ export function MetersPage() {
                 onChange={(e) => setCreateForm({ ...createForm, meterNumber: e.target.value })}
                 placeholder="např. HV-001 nebo DV-001"
                 className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-surface-raised focus:border-accent focus:ring-2 focus:ring-accent/20" />
-              <p className="text-xs text-text-muted mt-1">Tento identifikátor se použije jako záhlaví sloupce v importním Excel souboru</p>
+              <p className="text-xs text-text-muted mt-1">Podle tohoto identifikátoru se vodoměr najde v importním Excel souboru (sloupec A)</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">Adresa (rádiová)</label>
@@ -280,8 +280,8 @@ export function MetersPage() {
       <div className="mt-6 p-4 bg-warning-light border border-warning/20 rounded-xl">
         <p className="text-sm text-warning font-medium">Jak funguje import odečtů</p>
         <p className="text-xs text-warning mt-1">
-          V importním Excel souboru použijte identifikátory vodoměrů jako záhlaví sloupců (řádek 1).
-          Sloupec A = datum odečtu, další sloupce = stavy jednotlivých vodoměrů.
+          V importním Excel souboru jsou vodoměry v řádcích: sloupec A = identifikátor vodoměru (od řádku 2),
+          řádek 1 = data odečtů (od sloupce B), v průsečících stavy vodoměrů v m³.
           Identifikátory se automaticky napárují na vodoměry v systému.
         </p>
       </div>

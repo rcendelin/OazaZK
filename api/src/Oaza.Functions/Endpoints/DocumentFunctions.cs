@@ -4,6 +4,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Oaza.Application.Auth;
+using Oaza.Application.Documents;
 using Oaza.Application.DTOs;
 using Oaza.Application.Exceptions;
 using Oaza.Application.Interfaces;
@@ -22,7 +23,10 @@ public class DocumentFunctions
     private readonly IDocumentRepository _documentRepository;
     private readonly IDocumentVersionRepository _documentVersionRepository;
     private readonly IBlobStorageService _blobStorageService;
+    private readonly ICostComponentRepository _componentRepository;
     private readonly ILogger<DocumentFunctions> _logger;
+    private readonly Oaza.Application.Audit.IAuditLogger _audit;
+    public const string DocumentEntity = "Document";
 
     private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
     private const int MaxVersions = 10;
@@ -36,7 +40,7 @@ public class DocumentFunctions
         "image/png"
     };
 
-    private static readonly string[] AllowedCategories = { "stanovy", "zapisy", "smlouvy", "ostatni" };
+    private static readonly string[] AllowedCategories = DocumentUploadRules.Categories;
 
     private static readonly HashSet<string> AllowedCategoriesSet =
         new(AllowedCategories, StringComparer.OrdinalIgnoreCase);
@@ -51,8 +55,12 @@ public class DocumentFunctions
         IDocumentRepository documentRepository,
         IDocumentVersionRepository documentVersionRepository,
         IBlobStorageService blobStorageService,
+        ICostComponentRepository componentRepository,
+        Oaza.Application.Audit.IAuditLogger audit,
         ILogger<DocumentFunctions> logger)
     {
+        _audit = audit ?? throw new ArgumentNullException(nameof(audit));
+        _componentRepository = componentRepository ?? throw new ArgumentNullException(nameof(componentRepository));
         _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
         _documentVersionRepository = documentVersionRepository ?? throw new ArgumentNullException(nameof(documentVersionRepository));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
@@ -97,6 +105,14 @@ public class DocumentFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -116,6 +132,7 @@ public class DocumentFunctions
             var queryParams = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
             var name = queryParams["name"];
             var category = queryParams["category"];
+            var componentId = string.IsNullOrWhiteSpace(queryParams["componentId"]) ? null : queryParams["componentId"];
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(category))
                 return await WriteErrorResponseAsync(req, 400, "Název a kategorie jsou povinné parametry.");
@@ -135,20 +152,13 @@ public class DocumentFunctions
             // Determine content type from Content-Type header
             var contentType = req.Headers.GetValues("Content-Type")?.FirstOrDefault() ?? "application/octet-stream";
 
-            // Validate content type
-            if (!AllowedContentTypes.Contains(contentType))
-                return await WriteErrorResponseAsync(req, 400, $"Typ souboru '{contentType}' není povolen.");
+            // Category, size and type rules (T11: invoices are PDF or images only)
+            if (DocumentUploadRules.Check(category, contentType, bodyBytes.Length) is { } problem)
+                return await WriteErrorResponseAsync(req, 400, problem);
+            if (componentId is not null && await _componentRepository.GetAsync(PartitionKeys.CostComponent, componentId) is null)
+                return await WriteErrorResponseAsync(req, 400, "Nákladová složka neexistuje.");
 
-            // Determine file extension from content type
-            var extension = contentType switch
-            {
-                "application/pdf" => ".pdf",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => ".docx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => ".xlsx",
-                "image/jpeg" => ".jpg",
-                "image/png" => ".png",
-                _ => ".bin"
-            };
+            var extension = DocumentUploadRules.Extension(contentType);
 
             var documentId = Guid.NewGuid().ToString();
             var fileName = Path.GetFileName(name) + extension; // Sanitize name
@@ -167,9 +177,11 @@ public class DocumentFunctions
                 ContentType = contentType,
                 UploadedAt = DateTime.UtcNow,
                 UploadedBy = user.Id,
+                ComponentId = componentId,
             };
 
             await _documentRepository.UpsertAsync(document);
+            await _audit.LogAsync(DocumentEntity, document.Id, AuditActions.Create, null, document, ModelEndpoint.GetActor(context));
 
             _logger.LogInformation("Document {DocumentId} uploaded: {Name} in category {Category} ({Size} bytes).",
                 documentId, name, category, bodyBytes.Length);
@@ -180,6 +192,14 @@ public class DocumentFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -212,15 +232,19 @@ public class DocumentFunctions
 
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", document.ContentType);
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{SanitizeFileName(document.Name)}\"");
-            response.Body = new MemoryStream(ms.ToArray());
-            return response;
+            return await FileResponse.WriteAsync(req, ms.ToArray(), document.ContentType, document.Name);
         }
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -232,7 +256,8 @@ public class DocumentFunctions
     [RequireRole(UserRole.Admin)]
     public async Task<HttpResponseData> DeleteDocumentAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "documents/{id}")] HttpRequestData req,
-        string id)
+        string id,
+        FunctionContext context)
     {
         try
         {
@@ -247,6 +272,7 @@ public class DocumentFunctions
 
             // Delete entity from Table Storage (PK = category, RK = id)
             await _documentRepository.DeleteAsync(document.Category, id);
+            await _audit.LogAsync(DocumentEntity, document.Id, AuditActions.Delete, document, null, ModelEndpoint.GetActor(context));
 
             _logger.LogInformation("Document {DocumentId} deleted.", id);
 
@@ -255,6 +281,14 @@ public class DocumentFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -286,9 +320,10 @@ public class DocumentFunctions
             if (!AllowedContentTypes.Contains(contentType))
                 return await WriteErrorResponseAsync(req, 400, $"Typ souboru '{contentType}' není povolen.");
 
-            // Get latest version number
-            var latestVersion = await _documentVersionRepository.GetLatestVersionAsync(id);
-            var newVersionNumber = (latestVersion?.VersionNumber ?? 0) + 1;
+            // Get latest version number. The first upload has no version row — keep the original file in the history
+            // as version 1 before it is replaced, otherwise it could not be downloaded any more.
+            var latestVersion = await Oaza.Application.Documents.DocumentVersioning.LatestKeepingOriginalAsync(_documentVersionRepository, document);
+            var newVersionNumber = latestVersion.VersionNumber + 1;
 
             // Determine file extension from content type
             var extension = contentType switch
@@ -327,6 +362,7 @@ public class DocumentFunctions
             document.UploadedAt = DateTime.UtcNow;
             document.UploadedBy = user.Id;
             await _documentRepository.UpsertAsync(document);
+            await _audit.LogAsync(DocumentEntity, document.Id, AuditActions.Update, null, new { document.Id, document.Name, NewVersion = true }, ModelEndpoint.GetActor(context), "nová verze");
 
             // If versions exceed max, delete the oldest
             var allVersions = await _documentVersionRepository.GetByDocumentIdAsync(id);
@@ -354,6 +390,14 @@ public class DocumentFunctions
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -389,6 +433,14 @@ public class DocumentFunctions
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
         }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
+        }
         catch (Exception)
         {
             return await WriteErrorResponseAsync(req, 500, "Nastala neočekávaná chyba.");
@@ -422,15 +474,19 @@ public class DocumentFunctions
 
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", versionEntity.ContentType);
-            response.Headers.Add("Content-Disposition", $"attachment; filename=\"{SanitizeFileName(document.Name)}\"");
-            response.Body = new MemoryStream(ms.ToArray());
-            return response;
+            return await FileResponse.WriteAsync(req, ms.ToArray(), versionEntity.ContentType, document.Name);
         }
         catch (AppException ex)
         {
             return await WriteErrorResponseAsync(req, ex.StatusCode, ex.Message);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Neplatné tělo požadavku.");
+        }
+        catch (Azure.RequestFailedException rfe) when (rfe.Status == 400)
+        {
+            return await WriteErrorResponseAsync(req, 400, "Hodnotu nelze uložit — je příliš dlouhá nebo neplatná.");
         }
         catch (Exception)
         {
@@ -470,15 +526,6 @@ public class DocumentFunctions
         return ms.ToArray();
     }
 
-    private static string SanitizeFileName(string name)
-    {
-        var fileName = Path.GetFileName(name);
-        return fileName
-            .Replace("\"", "")
-            .Replace("\r", "")
-            .Replace("\n", "")
-            .Replace(";", "");
-    }
 
     private static User GetAuthenticatedUser(FunctionContext context)
     {

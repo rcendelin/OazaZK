@@ -1,0 +1,41 @@
+ref;component;type;period_from;period_to;amount;quantity_m3;supplier;paid_from;note
+DEMO-EL-2023-11;ELEKTRINA_VODARNA;zaloha;2023-11-01;2023-11-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2023-12;ELEKTRINA_VODARNA;zaloha;2023-12-01;2023-12-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-01;ELEKTRINA_VODARNA;zaloha;2024-01-01;2024-01-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-02;ELEKTRINA_VODARNA;zaloha;2024-02-01;2024-02-29;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-03;ELEKTRINA_VODARNA;zaloha;2024-03-01;2024-03-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-04;ELEKTRINA_VODARNA;zaloha;2024-04-01;2024-04-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-05;ELEKTRINA_VODARNA;zaloha;2024-05-01;2024-05-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-06;ELEKTRINA_VODARNA;zaloha;2024-06-01;2024-06-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-07;ELEKTRINA_VODARNA;zaloha;2024-07-01;2024-07-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-08;ELEKTRINA_VODARNA;zaloha;2024-08-01;2024-08-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-09;ELEKTRINA_VODARNA;zaloha;2024-09-01;2024-09-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-10;ELEKTRINA_VODARNA;zaloha;2024-10-01;2024-10-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-11;ELEKTRINA_VODARNA;zaloha;2024-11-01;2024-11-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2024-12;ELEKTRINA_VODARNA;zaloha;2024-12-01;2024-12-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-01;ELEKTRINA_VODARNA;zaloha;2025-01-01;2025-01-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-02;ELEKTRINA_VODARNA;zaloha;2025-02-01;2025-02-28;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-03;ELEKTRINA_VODARNA;zaloha;2025-03-01;2025-03-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-04;ELEKTRINA_VODARNA;zaloha;2025-04-01;2025-04-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-05;ELEKTRINA_VODARNA;zaloha;2025-05-01;2025-05-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-06;ELEKTRINA_VODARNA;zaloha;2025-06-01;2025-06-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-07;ELEKTRINA_VODARNA;zaloha;2025-07-01;2025-07-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-08;ELEKTRINA_VODARNA;zaloha;2025-08-01;2025-08-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-09;ELEKTRINA_VODARNA;zaloha;2025-09-01;2025-09-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-10;ELEKTRINA_VODARNA;zaloha;2025-10-01;2025-10-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-11;ELEKTRINA_VODARNA;zaloha;2025-11-01;2025-11-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2025-12;ELEKTRINA_VODARNA;zaloha;2025-12-01;2025-12-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-01;ELEKTRINA_VODARNA;zaloha;2026-01-01;2026-01-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-02;ELEKTRINA_VODARNA;zaloha;2026-02-01;2026-02-28;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-03;ELEKTRINA_VODARNA;zaloha;2026-03-01;2026-03-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-04;ELEKTRINA_VODARNA;zaloha;2026-04-01;2026-04-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-05;ELEKTRINA_VODARNA;zaloha;2026-05-01;2026-05-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-06;ELEKTRINA_VODARNA;zaloha;2026-06-01;2026-06-30;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-07;ELEKTRINA_VODARNA;zaloha;2026-07-01;2026-07-31;500;;Ukázková energie a.s.;kredit;
+DEMO-EL-2026-08;ELEKTRINA_VODARNA;zaloha;2026-08-01;2026-08-31;500;;Ukázková energie a.s.;kredit;
+DEMO-OSV-2024;OSVETLENI;vyuctovani;2024-01-01;2024-12-31;1840;;Ukázková energie a.s.;banka;roční vyúčtování
+DEMO-POJ-2024;POJISTENI;jednorazovy;2024-01-01;2024-12-31;2400;;Vzorová pojišťovna;banka;
+DEMO-OSV-2025;OSVETLENI;vyuctovani;2025-01-01;2025-12-31;1840;;Ukázková energie a.s.;banka;roční vyúčtování
+DEMO-POJ-2025;POJISTENI;jednorazovy;2025-01-01;2025-12-31;2400;;Vzorová pojišťovna;banka;
+DEMO-UDR-2025-05;UDRZBA;jednorazovy;2025-05-01;2025-05-31;3200;;Zahradník Příkladný;banka;sekání a prořez
+DEMO-UDR-2026-04;UDRZBA;jednorazovy;2026-04-01;2026-04-30;2750;;Zahradník Příkladný;banka;jarní úklid

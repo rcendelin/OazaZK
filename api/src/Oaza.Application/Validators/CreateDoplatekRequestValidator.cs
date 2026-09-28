@@ -1,11 +1,16 @@
 using FluentValidation;
 using Oaza.Application.DTOs;
+using Oaza.Domain.Time;
 
 namespace Oaza.Application.Validators;
 
 public class CreateDoplatekRequestValidator : AbstractValidator<CreateDoplatekRequest>
 {
-    public CreateDoplatekRequestValidator()
+    public CreateDoplatekRequestValidator() : this(PragueClock.System)
+    {
+    }
+
+    public CreateDoplatekRequestValidator(IClock clock)
     {
         RuleFor(x => x.HouseId)
             .NotEmpty().WithMessage("ID domácnosti je povinné.")
@@ -20,7 +25,7 @@ public class CreateDoplatekRequestValidator : AbstractValidator<CreateDoplatekRe
             .WithMessage("Celková částka musí být větší než 0.");
 
         RuleFor(x => x.PaymentDate)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum platby nesmí být příliš v budoucnosti.");
+            .LessThanOrEqualTo(PragueClock.AsUtcMidnight(clock.Today).AddYears(1)).WithMessage("Datum platby nesmí být příliš v budoucnosti.");
 
         RuleFor(x => x.Note)
             .MaximumLength(500).WithMessage("Poznámka smí mít maximálně 500 znaků.");

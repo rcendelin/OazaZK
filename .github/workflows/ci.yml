@@ -1,0 +1,136 @@
+name: CI (pull requests)
+
+# Deploy workflows only run on push to develop / release/** / master. This one
+# checks every pull request before merge: backend build without warnings, tests,
+# coverage gate for the calculation logic, and frontend lint + build.
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '20.x'
+
+jobs:
+  api:
+    name: API — build, test, coverage
+    runs-on: ubuntu-latest
+    services:
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 10000:10000
+          - 10001:10001
+          - 10002:10002
+      # A second, separate storage emulator = "the other environment" for the T01 data-isolation test.
+      azurite2:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 20000:10000
+          - 20001:10001
+          - 20002:10002
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Oaza.sln
+
+      - name: Build (warnings are errors, see Directory.Build.props)
+        run: dotnet build Oaza.sln --configuration Release --no-restore
+
+      - name: Test with coverage
+        env:
+          # Azurite's publicly documented development account key (not a secret) — second emulator on ports 2000x.
+          AZURE_STORAGE_CONNECTION_2: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:20000/devstoreaccount1;TableEndpoint=http://127.0.0.1:20002/devstoreaccount1
+        run: >
+          dotnet test Oaza.sln --configuration Release --no-build
+          --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Coverage gate (calculation logic ≥ 90 %)
+        run: python3 tools/coverage_gate.py ./coverage --threshold 90
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: api/coverage
+          retention-days: 14
+
+  web:
+    name: Web — lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: Web — E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build (API is mocked by the tests)
+        run: npm run build
+        env:
+          # MSAL needs a syntactically valid client id to initialise; no real sign-in happens.
+          VITE_ENTRA_CLIENT_ID: 00000000-0000-0000-0000-000000000000
+
+      - name: Playwright
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 14

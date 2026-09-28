@@ -1,0 +1,10 @@
+{
+  "estimate": {
+    "meterId": "m1",
+    "targetDate": "2023-11-01T00:00:00Z",
+    "value": 260.855,
+    "isEstimate": true,
+    "method": "Interpolated",
+    "note": "Odhad lineární interpolací po dnech mezi odečty 22. 5. 2023 (100 m³) a 19. 1. 2025 (700 m³), den 163 z 608."
+  }
+}

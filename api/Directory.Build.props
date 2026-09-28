@@ -1,0 +1,10 @@
+<Project>
+  <!-- X6: the backend builds without warnings. Every warning fails the build,
+       except NuGet vulnerability advisories (NU1901–NU1904): they appear when a
+       new CVE is published, not when our code changes, and must not break an
+       unrelated PR — they stay visible as warnings and get fixed deliberately. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+</Project>

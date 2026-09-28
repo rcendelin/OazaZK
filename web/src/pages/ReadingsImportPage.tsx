@@ -7,6 +7,8 @@ import { useApi } from '../hooks/useApi.ts';
 import { HelpNote } from '../components/help/HelpNote';
 import { HelpTerm } from '../components/help/HelpTerm';
 import type { ImportPreviewResponse, ImportValidationMessage, WaterMeter } from '../types/index.ts';
+import { todayIso } from '../utils/date';
+import { parseCzechNumber } from '../utils/number';
 
 const czNumber = new Intl.NumberFormat('cs-CZ', {
   minimumFractionDigits: 1,
@@ -102,7 +104,7 @@ function ManualEntry() {
     useCallback(() => getMeters(), []),
   );
 
-  const [readingDate, setReadingDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [readingDate, setReadingDate] = useState(todayIso);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -137,8 +139,8 @@ function ManualEntry() {
     const errors: string[] = [];
 
     for (const [meterId, rawValue] of entries) {
-      const value = parseFloat(rawValue.replace(/\s/g, '').replace(',', '.'));
-      if (isNaN(value) || value < 0) {
+      const value = parseCzechNumber(rawValue);
+      if (value === null || value < 0) {
         const meter = meters?.find((m) => m.id === meterId);
         errors.push(`Neplatná hodnota pro ${meter?.name || meterId}: ${rawValue}`);
         continue;
@@ -269,7 +271,7 @@ export function ReadingsImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState<number | null>(null);
   const [clipText, setClipText] = useState('');
-  const [clipDate, setClipDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [clipDate, setClipDate] = useState(todayIso);
   const inFlight = useRef(false);
 
   const { data: meters } = useApi<WaterMeter[]>(useCallback(() => getMeters(), []));
@@ -330,7 +332,7 @@ export function ReadingsImportPage() {
     setState('confirming');
     setError(null);
     try {
-      const result = await confirmImport(preview.importSessionId);
+      const result = await confirmImport(preview);
       setSuccessCount(result.count);
       setState('success');
     } catch (err: unknown) {

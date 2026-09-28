@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Oaza.Application.Interfaces;
 using Oaza.Domain.Interfaces;
-using Oaza.Infrastructure.Caching;
 using Oaza.Infrastructure.Email;
 using Oaza.Infrastructure.Persistence;
 using Oaza.Infrastructure.Storage;
@@ -26,25 +25,41 @@ public static class DependencyInjection
             ?? configuration["AzureWebJobsStorage"]
             ?? throw new InvalidOperationException("Blob Storage connection string is not configured.");
 
-        services.AddSingleton(new TableServiceClient(storageConnectionString));
-        services.AddSingleton(new BlobServiceClient(blobConnectionString));
+        var tableClient = new TableServiceClient(storageConnectionString);
+        var blobClient = new BlobServiceClient(blobConnectionString);
+
+        // T01: test and prod never share data — refuse to start on another environment's storage account.
+        var environment = configuration[Oaza.Application.Deployment.DeploymentEnvironment.ConfigKey] ?? string.Empty;
+        var violation = Oaza.Application.Deployment.StorageIsolation.Violation(environment, tableClient.AccountName)
+            ?? Oaza.Application.Deployment.StorageIsolation.Violation(environment, blobClient.AccountName);
+        if (violation is not null)
+            throw new InvalidOperationException(violation);
+
+        services.AddSingleton(tableClient);
+        services.AddSingleton(blobClient);
 
         // Repository registrations
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IHouseRepository, HouseRepository>();
         services.AddSingleton<IWaterMeterRepository, WaterMeterRepository>();
         services.AddSingleton<IMeterReadingRepository, MeterReadingRepository>();
-        services.AddSingleton<IBillingPeriodRepository, BillingPeriodRepository>();
-        services.AddSingleton<ISupplierInvoiceRepository, SupplierInvoiceRepository>();
         services.AddSingleton<IAdvancePaymentRepository, AdvancePaymentRepository>();
         services.AddSingleton<IAdvanceSettingsRepository, AdvanceSettingsRepository>();
-        services.AddSingleton<ISettlementRepository, SettlementRepository>();
         services.AddSingleton<IDocumentRepository, DocumentRepository>();
         services.AddSingleton<IDocumentVersionRepository, DocumentVersionRepository>();
         services.AddSingleton<IFinancialRecordRepository, FinancialRecordRepository>();
-
-        // Import session cache
-        services.AddSingleton<IImportSessionCache, InMemoryImportSessionCache>();
+        services.AddSingleton<IBankAccountMappingRepository, BankAccountMappingRepository>();
+        services.AddSingleton<IBankTransactionRepository, BankTransactionRepository>();
+        services.AddSingleton<IAuditLogRepository, AuditLogRepository>();
+        services.AddSingleton<ICostComponentRepository, CostComponentRepository>();
+        services.AddSingleton<IComponentAllocationRuleRepository, ComponentAllocationRuleRepository>();
+        services.AddSingleton<IParticipationRepository, ParticipationRepository>();
+        services.AddSingleton<IOwnershipPeriodRepository, OwnershipPeriodRepository>();
+        services.AddSingleton<IOpeningBalanceRepository, OpeningBalanceRepository>();
+        services.AddSingleton<ICostEntryRepository, CostEntryRepository>();
+        services.AddSingleton<IInterimClosingRepository, InterimClosingRepository>();
+        services.AddSingleton<ICashBookRepository, CashBookRepository>();
+        services.AddSingleton<IOffBookFundRepository, OffBookFundRepository>();
 
         // Blob Storage service
         services.AddSingleton<IBlobStorageService, BlobStorageService>();

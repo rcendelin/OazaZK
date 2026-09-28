@@ -14,13 +14,17 @@ import { FileUploadZone } from '../components/FileUploadZone';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Spinner } from '../components/Spinner';
 import { HelpNote } from '../components/help/HelpNote';
+import { Link } from 'react-router-dom';
+import { BulkInvoiceUpload } from '../components/BulkInvoiceUpload';
 import type { DocumentResponse, DocumentVersionResponse } from '../types';
+import { ApiError } from '../api/client';
 
 const CATEGORIES = [
   { key: '', label: 'Vše' },
   { key: 'stanovy', label: 'Stanovy' },
   { key: 'zapisy', label: 'Zápisy' },
   { key: 'smlouvy', label: 'Smlouvy' },
+  { key: 'faktury', label: 'Faktury a vyúčtování' },
   { key: 'ostatni', label: 'Ostatní' },
 ] as const;
 
@@ -28,6 +32,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   stanovy: 'Stanovy',
   zapisy: 'Zápisy',
   smlouvy: 'Smlouvy',
+  faktury: 'Faktury a vyúčtování',
   ostatni: 'Ostatní',
 };
 
@@ -35,8 +40,24 @@ const CATEGORY_COLORS: Record<string, string> = {
   stanovy: 'bg-accent-light text-accent',
   zapisy: 'bg-success-light text-success',
   smlouvy: 'bg-purple-50 text-purple-600',
+  faktury: 'bg-warning-light text-warning',
   ostatni: 'bg-surface-sunken text-text-secondary',
 };
+
+/** Invoices (T11) take only PDFs and photos; the other categories also Word and Excel. */
+const INVOICE_ACCEPT = '.pdf,.jpg,.jpeg,.png';
+const DOCUMENT_ACCEPT = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png';
+
+/** The server's reason (wrong type, too big, …), not just „it failed“. */
+const uploadErrorMessage = (err: unknown, fallback: string): string =>
+  err instanceof ApiError && err.message ? `${fallback} ${err.message}` : fallback;
+
+/**
+ * A new version becomes the document's current file, so the highest version is the current one. A document
+ * without uploaded versions has only its original upload — the history then shows that as the current entry.
+ */
+const latestVersionNumber = (versions: DocumentVersionResponse[]): number | null =>
+  versions.length === 0 ? null : Math.max(...versions.map((v) => v.versionNumber));
 
 const formatDate = (dateStr: string): string =>
   new Intl.DateTimeFormat('cs-CZ').format(new Date(dateStr));
@@ -46,6 +67,17 @@ const formatFileSize = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+/** „Vytvořit náklad“ from an invoice (T11): opens Costs with the component and the document prefilled. */
+function CostLink({ doc }: { doc: DocumentResponse }) {
+  const params = new URLSearchParams({ document: doc.id });
+  if (doc.componentId) params.set('component', doc.componentId);
+  return (
+    <Link to={`/naklady?${params.toString()}`} className="text-sm font-medium text-accent hover:text-accent-hover">
+      Vytvořit náklad
+    </Link>
+  );
+}
 
 export function DocumentsPage() {
   const { user, getAccessToken } = useAuth();
@@ -136,6 +168,7 @@ export function DocumentsPage() {
         )}
       </div>
       <HelpNote sectionId="documentVersions" />
+      {isAdmin && <BulkInvoiceUpload getAccessToken={getAccessToken} onUploaded={refetch} />}
 
       {/* Category tabs */}
       <div className="mt-6 border-b border-border">
@@ -271,6 +304,7 @@ export function DocumentsPage() {
                   >
                     {expandedDocId === doc.id ? 'Skrýt verze' : 'Verze'}
                   </button>
+                  {isAdmin && doc.category === 'faktury' && <CostLink doc={doc} />}
                   {isAdmin && (
                     <>
                       <button
@@ -293,12 +327,22 @@ export function DocumentsPage() {
                   <div className="mt-3 border-t border-border pt-3">
                     {versionsLoading && <Spinner />}
                     {!versionsLoading && versions.length === 0 && (
-                      <p className="text-xs text-text-muted">Žádné verze</p>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-xs text-text-muted">
+                          aktuální - {formatDate(doc.uploadedAt)} - {formatFileSize(doc.fileSizeBytes)}
+                        </span>
+                        <button
+                          onClick={() => void handleDownload(doc)}
+                          className="text-xs font-medium text-accent hover:text-accent-hover"
+                        >
+                          Stáhnout
+                        </button>
+                      </div>
                     )}
-                    {!versionsLoading && versions.map((v) => (
+                    {!versionsLoading && [...versions].sort((a, b) => b.versionNumber - a.versionNumber).map((v) => (
                       <div key={v.versionNumber} className="flex items-center justify-between py-1">
                         <span className="text-xs text-text-muted">
-                          v{v.versionNumber} - {formatDate(v.uploadedAt)} - {formatFileSize(v.fileSizeBytes)}
+                          v{v.versionNumber}{v.versionNumber === latestVersionNumber(versions) ? ' (aktuální)' : ''} - {formatDate(v.uploadedAt)} - {formatFileSize(v.fileSizeBytes)}
                         </span>
                         <button
                           onClick={() => void handleDownloadVersion(doc, v.versionNumber)}
@@ -427,6 +471,7 @@ function DocumentRow({
           >
             Stáhnout
           </button>
+          {isAdmin && doc.category === 'faktury' && <span className="ml-4"><CostLink doc={doc} /></span>}
           {isAdmin && (
             <>
               <button
@@ -453,11 +498,8 @@ function DocumentRow({
                 <Spinner />
               </div>
             )}
-            {!versionsLoading && versions.length === 0 && (
-              <p className="text-sm text-text-muted">Žádné verze k zobrazení</p>
-            )}
-            {!versionsLoading && versions.length > 0 && (
-              <table className="w-full text-sm">
+            {!versionsLoading && (
+              <table className="w-full text-sm" aria-label={`Verze ${doc.name}`}>
                 <thead>
                   <tr className="text-xs text-text-muted">
                     <th className="pb-1 text-left font-medium">Verze</th>
@@ -467,9 +509,24 @@ function DocumentRow({
                   </tr>
                 </thead>
                 <tbody>
-                  {versions.map((v) => (
+                  {versions.length === 0 && (
+                  <tr className="border-t border-border">
+                    <td className="py-1.5 font-medium text-text-primary">aktuální</td>
+                    <td className="py-1.5 text-text-muted">{formatDate(doc.uploadedAt)}</td>
+                    <td className="py-1.5 text-text-muted">{formatFileSize(doc.fileSizeBytes)}</td>
+                    <td className="py-1.5 text-right">
+                      <button onClick={onDownload} className="font-medium text-accent hover:text-accent-hover">
+                        Stáhnout
+                      </button>
+                    </td>
+                  </tr>
+                  )}
+                  {[...versions].sort((a, b) => b.versionNumber - a.versionNumber).map((v) => (
                     <tr key={v.versionNumber} className="border-t border-border">
-                      <td className="py-1.5 text-text-secondary">v{v.versionNumber}</td>
+                      <td className="py-1.5 text-text-secondary">
+                        v{v.versionNumber}
+                        {v.versionNumber === latestVersionNumber(versions) && <span className="ml-1 font-medium text-text-primary">· aktuální</span>}
+                      </td>
                       <td className="py-1.5 text-text-muted">{formatDate(v.uploadedAt)}</td>
                       <td className="py-1.5 text-text-muted">{formatFileSize(v.fileSizeBytes)}</td>
                       <td className="py-1.5 text-right">
@@ -526,8 +583,8 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
     try {
       await uploadDocument(file, name.trim(), category, getAccessToken);
       onUploaded();
-    } catch {
-      setUploadError('Nahrávání se nezdařilo');
+    } catch (err) {
+      setUploadError(uploadErrorMessage(err, 'Nahrávání se nezdařilo.'));
     } finally {
       setUploading(false);
       submittingRef.current = false;
@@ -583,8 +640,12 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               <option value="stanovy">Stanovy</option>
               <option value="zapisy">Zápisy</option>
               <option value="smlouvy">Smlouvy</option>
+              <option value="faktury">Faktury a vyúčtování</option>
               <option value="ostatni">Ostatní</option>
             </select>
+            {category === 'faktury' && (
+              <p className="mt-1 text-xs text-text-muted">Faktury jen jako PDF, JPG nebo PNG.</p>
+            )}
           </div>
 
           {/* File upload */}
@@ -608,7 +669,7 @@ function UploadModal({ onClose, onUploaded, getAccessToken }: UploadModalProps) 
               ) : (
                 <FileUploadZone
                   onFileSelected={setFile}
-                  accept=".pdf,.docx,.xlsx,.jpg,.png"
+                  accept={category === 'faktury' ? INVOICE_ACCEPT : DOCUMENT_ACCEPT}
                   disabled={uploading}
                 />
               )}
@@ -677,8 +738,8 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
     try {
       await uploadDocumentVersion(doc.id, file, getAccessToken);
       onUploaded();
-    } catch {
-      setUploadError('Nahrávání verze se nezdařilo');
+    } catch (err) {
+      setUploadError(uploadErrorMessage(err, 'Nahrávání verze se nezdařilo.'));
     } finally {
       setUploading(false);
       submittingRef.current = false;
@@ -721,7 +782,7 @@ function VersionUploadModal({ doc, onClose, onUploaded, getAccessToken }: Versio
               ) : (
                 <FileUploadZone
                   onFileSelected={setFile}
-                  accept=".pdf,.docx,.xlsx,.jpg,.png"
+                  accept={doc.category === 'faktury' ? INVOICE_ACCEPT : DOCUMENT_ACCEPT}
                   disabled={uploading}
                 />
               )}

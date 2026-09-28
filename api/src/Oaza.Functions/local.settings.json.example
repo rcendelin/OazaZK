@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "TableStorageConnection": "UseDevelopmentStorage=true",
+    "BlobStorageConnection": "UseDevelopmentStorage=true",
+    "JwtSecret": "local-dev-secret-at-least-32-characters-long",
+    "JwtIssuer": "localhost",
+    "AppUrl": "http://localhost:5173",
+    "EntraId__TenantId": "",
+    "EntraId__ClientId": "",
+    "AzureCommunicationServices__ConnectionString": "",
+    "AzureCommunicationServices__FromEmail": "",
+    "AzureCommunicationServices__FromName": "Oáza Zadní Kopanina (local)",
+    "ENABLE_SEED": "true",
+    "OFF_BOOK_FUND_ENABLED": "false"
+  },
+  "Host": {
+    "CORS": "http://localhost:5173",
+    "CORSCredentials": false
+  }
+}

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Oaza.Application.DTOs;
+using Oaza.Domain.Time;
 
 namespace Oaza.Application.Validators;
 
@@ -8,7 +9,11 @@ public class CreateFinanceRequestValidator : AbstractValidator<CreateFinanceRequ
     private static readonly string[] AllowedTypes = { "Income", "Expense" };
     private static readonly string[] AllowedCategories = { "voda", "elektro", "udrzba", "pojisteni", "jine", "fond-voda" };
 
-    public CreateFinanceRequestValidator()
+    public CreateFinanceRequestValidator() : this(PragueClock.System)
+    {
+    }
+
+    public CreateFinanceRequestValidator(IClock clock)
     {
         RuleFor(x => x.Type)
             .NotEmpty().WithMessage("Typ je povinný.")
@@ -24,7 +29,7 @@ public class CreateFinanceRequestValidator : AbstractValidator<CreateFinanceRequ
             .GreaterThan(0).WithMessage("Částka musí být větší než 0.");
 
         RuleFor(x => x.Date)
-            .LessThanOrEqualTo(DateTime.UtcNow.AddYears(1)).WithMessage("Datum nesmí být příliš v budoucnosti.");
+            .LessThanOrEqualTo(PragueClock.AsUtcMidnight(clock.Today).AddYears(1)).WithMessage("Datum nesmí být příliš v budoucnosti.");
 
         RuleFor(x => x.Description)
             .NotEmpty().WithMessage("Popis je povinný.")

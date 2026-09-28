@@ -1,0 +1,19 @@
+# Výpočetní logika, jejíž pokrytí řádků musí být v CI ≥ 90 % (X6).
+# Glob vůči cestě od api/ (např. src/Oaza.Application/UseCases/X.cs). Nové výpočty (T02–T08) sem přidávat.
+src/Oaza.Domain/Services/*.cs
+src/Oaza.Domain/Time/*.cs
+src/Oaza.Application/UseCases/CostComponentsUseCase.cs
+src/Oaza.Application/UseCases/OpeningBalancesUseCase.cs
+src/Oaza.Application/UseCases/CostEntriesUseCase.cs
+src/Oaza.Application/UseCases/WaterSettlementUseCase.cs
+src/Oaza.Application/Ledger/*.cs
+src/Oaza.Application/UseCases/InterimClosingsUseCase.cs
+src/Oaza.Application/Interfaces/IClosingBoundary.cs
+src/Oaza.Application/UseCases/CashBookUseCase.cs
+src/Oaza.Application/UseCases/HouseTransferUseCase.cs
+src/Oaza.Application/OffBookFunds/OffBookFundUseCase.cs
+src/Oaza.Application/Documents/*.cs
+src/Oaza.Application/UseCases/Calculate*.cs
+src/Oaza.Application/UseCases/GetFundBalanceUseCase.cs
+src/Oaza.Application/Readings/*.cs
+src/Oaza.Application/Seed/*.cs

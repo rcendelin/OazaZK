@@ -1,0 +1,5 @@
+code;name;start_date;allocation_basis;water_role;method;ratio_source;note
+ELEKTRINA_VODARNA;Elektřina – vodárna;2023-11-01;naklady;;rovne;;S2
+OSVETLENI;Osvětlení;2023-11-01;naklady;;rovne;;S3
+VODA_PVK;Voda PVK;2023-11-01;odecty;spotreba;;;
+ZTRATY_VODY;Ztráty vody;2023-11-01;odecty;ztraty;pomer;VODA_PVK;S1
