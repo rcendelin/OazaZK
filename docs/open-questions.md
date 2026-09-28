@@ -27,6 +27,7 @@ Stav k 27. 9. 2026 (O1–O4 aktualizováno po dokončení T01–T14).
 | T02 `PERCENT` = 100 % v každém dni | Účastníci se uvnitř úseku nemění, kontrola proto běží po úsecích a hlásí první den úseku a skutečný součet. Úsek bez účastníků pod pravidlem `PERCENT` je chyba (součet 0 %). |
 | T02 změna vah u `PERCENT` | API mění účast po jednom záznamu a každý krok se validuje, takže přerozdělení procent k datu (např. přidání domu) jednotlivými kroky neprojde. Seed konfigurace `PERCENT` nepoužívá; pokud bude potřeba, doplní se hromadná operace „nové váhy od data“. |
 
+| Zaokrouhlení po měsících (#16) | Haléře se zaokrouhlují jednou za celý nákladový záznam (přesný podíl domu za celé období → největší zbytek), pak se podíl domu rozpadne do úseků a měsíců. Rozhodnuto 28. 9. 2026 (`CostEntryAllocation`). |
 | T13 podoba importu | Admin stránka v aplikaci (rozhodnuto 27. 9. 2026), ne CLI — přístup k produkčnímu storage nikdy neopouští Azure. `/seed-import` není za `ENABLE_SEED`. |
 | T13 existující záznamy | Řádek se stejným přirozeným klíčem a stejnými hodnotami se přeskočí; s jinými hodnotami je to konflikt, který zablokuje zápis celého importu (nic se nepřepisuje, oprava v CSV nebo v aplikaci). |
 | T13 soubory navíc | K šablonám ze zadání přibyl `allocation_rules.csv` (změny metody od data); první pravidlo složky je ve sloupcích `method`/`ratio_source` v `components.csv`. Náklady mají povinný sloupec `ref` (přirozený klíč, `CostEntry.ExternalRef`). |

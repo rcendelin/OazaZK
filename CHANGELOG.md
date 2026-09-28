@@ -143,6 +143,10 @@ se sekce přejmenuje na verzi s datem.
   ruční přepis zálohy zůstal.
 
 ### Opraveno
+- **Zaokrouhlení haléřů je spravedlivější.** Náklad rozdělený po měsících zaokrouhloval každý měsíc zvlášť, takže
+  zbytkové haléře dostávaly stále stejné domy (246,44 / 246,42 / 246,41 Kč u domů se stejnou účastí). Haléře se teď
+  zaokrouhlují jednou za celý náklad — domy se stejnou účastí platí stejně (rozdíl nejvýš 1 haléř).
+- **Historie verzí dokumentu** zachová i původní soubor: při první nové verzi se uloží jako verze 1 a dá se stáhnout.
 - **Čísla ve formulářích:** „−20 000“ (typografické mínus, jak radí nápověda) se přijme; nesmysl („abc“) se už tiše
   neuloží jako 0, formulář ukáže chybu.
 - **Počáteční stavy po převodu domu** ukazují a upravují hodnoty nového vlastníka; dřívější hodnoty jsou vidět jen pro
