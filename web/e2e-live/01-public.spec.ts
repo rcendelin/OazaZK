@@ -1,16 +1,16 @@
-import { API, APP, api, expect, test, token, users } from './live';
+import { API, APP, BANNER, ENV, api, expect, test, token, users } from './live';
 
 test.describe('veřejné části a zabezpečení (bez přihlášení)', () => {
-  test('API hlásí prostředí dev', async ({ playwright }) => {
+  test(`API hlásí prostředí ${ENV}`, async ({ playwright }) => {
     const r = await (await api(playwright)).get('environment');
     expect(r.status()).toBe(200);
-    expect(await r.json()).toEqual({ environment: 'dev' });
+    expect(await r.json()).toEqual({ environment: ENV });
   });
 
   test('přihlašovací stránka se načte s pruhem prostředí', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByText(/VÝVOJOVÉ PROSTŘEDÍ/i)).toBeVisible();
+    await expect(page.getByText(BANNER)).toBeVisible();
     await expect(page.getByRole('button', { name: /Microsoft/i })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Poslat přihlašovací odkaz' })).toBeVisible();
