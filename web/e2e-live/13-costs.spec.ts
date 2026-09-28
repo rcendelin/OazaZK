@@ -139,8 +139,9 @@ test.describe.serial('náklady (T06)', () => {
     await expect(totals.getByRole('row')).toHaveCount(n);
     await expect(totals.getByRole('row').filter({ hasText: late.houseName })).toContainText(/115,00\s?Kč/); // 920 / 8
     await section.getByText('Výpočet po úsecích').click();
-    // segments are cut by month: July … September among n−1 houses, October … December among n houses
-    await expect(section.getByText(new RegExp(`1\\. 7\\. 2025 – 31\\. 7\\. 2025 \\(31 dní z 184\\) = 310,00\\s?Kč, rovným dílem mezi ${n - 1} domy`))).toBeVisible();
+    // segments are cut by month: July … September among n−1 houses, October … December among n houses;
+    // haléře are rounded once per entry (#16), so a segment is Σ of its houses' shares (310 ± 0,05 Kč)
+    await expect(section.getByText(new RegExp(`1\\. 7\\. 2025 – 31\\. 7\\. 2025 \\(31 dní z 184\\) = 3(09,9\\d|10,0\\d)\\s?Kč, rovným dílem mezi ${n - 1} domy`))).toBeVisible();
     await expect(section.getByText(new RegExp(`1\\. 10\\. 2025 – 31\\. 10\\. 2025 \\(31 dní z 184\\) = 310,00\\s?Kč, rovným dílem mezi ${n} domy`))).toBeVisible();
     // houses with identical participation should end with (almost) identical totals
     const sums = (await totals.getByRole('row').allInnerTexts()).filter((t) => !t.includes(late.houseName))
