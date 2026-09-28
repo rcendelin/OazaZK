@@ -6,6 +6,10 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+### Změněno
+- **O1 rozhodnuto:** ztráty vody se rozpočítávají rovným dílem mezi domy napojené na vodovod (šablona složek
+  pro import obsahuje příklad).
+
 ## [0.9.1] – 2026-09-28
 
 ### Opraveno
