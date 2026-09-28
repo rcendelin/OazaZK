@@ -8,14 +8,14 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '22.x'
   AZURE_FUNCTIONAPP_NAME: func-oaza-prod
   AZURE_RESOURCE_GROUP: rg-oaza-prod
 
 jobs:
   build-api:
     name: Build & Test API
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       azurite:
         image: mcr.microsoft.com/azure-storage/azurite
@@ -27,10 +27,10 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload API artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-artifact
           path: api/publish
@@ -59,15 +59,15 @@ jobs:
 
   build-web:
     name: Build Frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -86,11 +86,11 @@ jobs:
     name: Deploy API (PROD)
     needs: [build-api, build-web]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     steps:
       - name: Download API artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: api-artifact
           path: api-artifact
@@ -99,7 +99,7 @@ jobs:
         run: cd api-artifact && zip -r ../deploy.zip . && cd ..
 
       - name: Azure Login
-        uses: Azure/login@v2
+        uses: Azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
@@ -114,14 +114,14 @@ jobs:
     name: Deploy Frontend (PROD)
     needs: [build-api, build-web]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Built here, not in build-web: environment-scoped secrets (PROD_*) are visible only to jobs with `environment:`.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm

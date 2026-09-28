@@ -6,6 +6,10 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+### Údržba
+- **CI/CD:** GitHub Actions na aktuálních verzích (běh na Node 24 — Node 20 v Actions končí), build na Node 22 LTS,
+  runner zafixovaný na `ubuntu-24.04` (`ubuntu-latest` přechází 19. 10. 2026 na Ubuntu 26).
+
 ### Změněno
 - **O1 rozhodnuto:** ztráty vody se rozpočítávají rovným dílem mezi domy napojené na vodovod (šablona složek
   pro import obsahuje příklad).
