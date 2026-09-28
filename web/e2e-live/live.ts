@@ -5,6 +5,10 @@ import type { APIRequestContext, Page, Request, Response } from '@playwright/tes
 export const API = process.env.OAZA_LIVE_API_URL ?? 'https://func-oaza-dev.azurewebsites.net/api';
 export const APP = process.env.OAZA_LIVE_APP_URL ?? 'https://oaza-dev.cendelinovi.cz';
 
+/** Which environment is tested: `dev` (default) or `test` — the banner and `/api/environment` must match. */
+export const ENV = process.env.OAZA_LIVE_ENV ?? 'dev';
+export const BANNER = ENV === 'test' ? /TESTOVACÍ PROSTŘEDÍ/i : /VÝVOJOVÉ PROSTŘEDÍ/i;
+
 export type Role = 'Admin' | 'Member' | 'Accountant';
 export interface LiveUser { id: string; email: string; role: Role; houseId?: string }
 
