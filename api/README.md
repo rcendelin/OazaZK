@@ -1,4 +1,4 @@
-# Oaza API — .NET 8 Azure Functions
+# Oaza API — .NET 10 Azure Functions
 
 Backend portálu Oáza Zadní Kopanina. Clean Architecture ve čtyřech projektech:
 
@@ -26,7 +26,7 @@ dotnet build Oaza.sln
 dotnet test Oaza.sln             # Oaza.Infrastructure.Tests potřebují Azurite, jinak se přeskočí
 ```
 
-Používej `Oaza.sln`, ne zastaralý `Oaza.slnx`. Verze NuGet balíčků jsou pinované a `global.json` drží SDK na .NET 8.
+Používej `Oaza.sln`, ne zastaralý `Oaza.slnx`. Verze NuGet balíčků jsou pinované a `global.json` drží SDK na .NET 10.
 
 ## Přidání endpointu
 

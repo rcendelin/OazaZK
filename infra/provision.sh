@@ -25,9 +25,9 @@ done
 
 LOCATION=westeurope
 case "$ENV" in
-  dev)  RG=rg-oaza-dev;  STORAGE=stoazadev;  FUNC=func-oaza-dev;  SWA=swa-oaza-dev;  DOMAIN=oaza-dev.cendelinovi.cz;  FROM_NAME="Oáza ZK DEV" ;;
-  test) RG=rg-oaza-test; STORAGE=stoazatest; FUNC=func-oaza-test; SWA=swa-oaza-test; DOMAIN=oaza-test.cendelinovi.cz; FROM_NAME="Oáza ZK TEST" ;;
-  prod) RG=rg-oaza-prod; STORAGE=stoaza;     FUNC=func-oaza-prod; SWA=swa-oaza-prod; DOMAIN=oaza.cendelinovi.cz;      FROM_NAME="Oáza Zadní Kopanina" ;;
+  dev)  RG=rg-oaza-dev;  STORAGE=stoazadev;  FUNC=func-oaza-dev-flex;  SWA=swa-oaza-dev;  DOMAIN=oaza-dev.cendelinovi.cz;  FROM_NAME="Oáza ZK DEV" ;;
+  test) RG=rg-oaza-test; STORAGE=stoazatest; FUNC=func-oaza-test-flex; SWA=swa-oaza-test; DOMAIN=oaza-test.cendelinovi.cz; FROM_NAME="Oáza ZK TEST" ;;
+  prod) RG=rg-oaza-prod; STORAGE=stoaza;     FUNC=func-oaza-prod-flex; SWA=swa-oaza-prod; DOMAIN=oaza.cendelinovi.cz;      FROM_NAME="Oáza Zadní Kopanina" ;;
   *) echo "Použití: infra/provision.sh <dev|test|prod> [--dry-run] [--yes]" >&2; exit 2 ;;
 esac
 
@@ -73,9 +73,11 @@ run az storage account blob-service-properties update --account-name "$STORAGE" 
 if exists az functionapp show --name "$FUNC" --resource-group "$RG"; then
   echo "functions $FUNC existuje"
 else
+  # Flex Consumption (.NET 10 does not run on Linux Consumption); 512 MB, no always-ready instances, max 10 instances.
   run az functionapp create --name "$FUNC" --resource-group "$RG" --storage-account "$STORAGE" \
-    --consumption-plan-location "$LOCATION" --runtime dotnet-isolated --runtime-version 8 --functions-version 4 \
-    --os-type Linux --tags "${TAGS[@]}" --output none
+    --flexconsumption-location "$LOCATION" --runtime dotnet-isolated --runtime-version 10 --instance-memory 512 \
+    --tags "${TAGS[@]}" --output none
+  run az functionapp scale config set --name "$FUNC" --resource-group "$RG" --maximum-instance-count 10 --output none
 fi
 
 if exists az staticwebapp show --name "$SWA" --resource-group "$RG"; then

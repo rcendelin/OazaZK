@@ -8,7 +8,7 @@ Návod, jak rozběhnout API i frontend na vlastním stroji proti lokálnímu emu
 
 | Nástroj | Verze | Poznámka |
 |---------|-------|----------|
-| .NET SDK | 8.0.x | `api/global.json` zamyká SDK na .NET 8 (`rollForward: latestFeature`) |
+| .NET SDK | 10.0.x | `api/global.json` zamyká SDK na .NET 10 (`rollForward: latestFeature`) |
 | Azure Functions Core Tools | v4 | příkaz `func` |
 | Node.js | 20.x | stejná verze jako v CI (`NODE_VERSION` ve workflow) |
 | Docker | libovolná | pro Azurite |

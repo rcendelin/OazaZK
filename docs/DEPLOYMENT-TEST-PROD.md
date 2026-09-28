@@ -4,6 +4,12 @@
 
 ---
 
+> **28. 9. 2026 — přechod na .NET 10 a Flex Consumption.** .NET 10 na Linux Consumption neběží (a ten plán Microsoft
+> 30. 9. 2028 ruší), proto má každé prostředí novou Function App **`func-oaza-{dev,test,prod}-flex`** (Flex Consumption,
+> 512 MB, bez předehřátých instancí, max. 10 instancí) na **stejném** storage — data se nemění. Adresa API je
+> `https://func-oaza-{env}-flex.azurewebsites.net/api` (secret `*_API_BASE_URL`). Staré `func-oaza-{env}` se po ověření
+> mažou. Nasazení zůstává `az functionapp deployment source config-zip`. Nová prostředí zakládá `infra/provision.sh`.
+
 ## Přehled prostředí
 
 | Prostředí | Branch | Resource Group | Storage | Functions | SWA | Doména | GitHub env | Workflow |
