@@ -5,14 +5,15 @@ on:
     branches: [develop]
 
 env:
-  DOTNET_VERSION: '8.0.x'
-  NODE_VERSION: '20.x'
-  AZURE_FUNCTIONAPP_NAME: func-oaza-dev
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22.x'
+  AZURE_FUNCTIONAPP_NAME: func-oaza-dev-flex
+  AZURE_RESOURCE_GROUP: rg-oaza-dev
 
 jobs:
   build-api:
     name: Build & Test API
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       azurite:
         image: mcr.microsoft.com/azure-storage/azurite
@@ -24,10 +25,10 @@ jobs:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -43,12 +44,12 @@ jobs:
       - name: Publish
         run: |
           dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
-          cp -r src/Oaza.Functions/bin/Release/net8.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
+          cp -r src/Oaza.Functions/bin/Release/net10.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
           ls -la ./publish/.azurefunctions/ 2>/dev/null || echo "No .azurefunctions found in bin, checking publish..."
           ls -la ./publish/
 
       - name: Upload API artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-artifact
           path: api/publish
@@ -56,15 +57,15 @@ jobs:
 
   build-web:
     name: Build Frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -85,7 +86,7 @@ jobs:
           VITE_ENVIRONMENT: dev
 
       - name: Upload web artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-artifact
           path: web/dist
@@ -93,11 +94,11 @@ jobs:
   deploy-api:
     name: Deploy API (DEV)
     needs: [build-api, build-web]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: dev
     steps:
       - name: Download API artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: api-artifact
           path: api-artifact
@@ -106,27 +107,27 @@ jobs:
         run: cd api-artifact && zip -r ../deploy.zip . && cd ..
 
       - name: Azure Login
-        uses: Azure/login@v2
+        uses: Azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Functions
         run: |
           az functionapp deployment source config-zip \
-            --name func-oaza-dev \
-            --resource-group rg-oaza-dev \
+            --name ${{ env.AZURE_FUNCTIONAPP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --src deploy.zip
 
   deploy-web:
     name: Deploy Frontend (DEV)
     needs: [build-api, build-web]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download web artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-artifact
           path: web/dist

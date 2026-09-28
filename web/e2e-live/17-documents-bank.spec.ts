@@ -104,10 +104,10 @@ test.describe.serial('dokumenty a faktury (T11)', () => {
     await expect(vmodal).toHaveCount(0);
     await row.getByRole('button', { name: 'Zobrazit' }).click();
     const versions = page.getByRole('row').filter({ hasText: /^v\d/ });
-    // the history lists the replaced (older) versions; the current file is the row's own download
-    await expect(versions).toHaveCount(1);
+    // the history keeps the original upload as v1 next to the new v2
+    await expect(versions).toHaveCount(2);
     const versionList = await json<{ versionNumber: number; fileSizeBytes: number }[]>(admin, `documents/${stored.id}/versions`);
-    expect(versionList.map((v) => v.versionNumber)).toEqual([1]);
+    expect(versionList.map((v) => v.versionNumber).sort()).toEqual([1, 2]);
     await download(page, () => row.getByRole('button', { name: 'Stáhnout' }).click(), /pdf/);
     const old = await admin.get(`documents/${stored.id}/versions/1/download`);
     expect(old.status()).toBe(200);

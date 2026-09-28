@@ -47,7 +47,7 @@ Stav k 27. 9. 2026 (O1–O4 aktualizováno po dokončení T01–T14).
 | **Neatomické zápisy do Table Storage** | Table Storage nemá transakce přes tabulky ani přes partition; víceřádkové operace (potvrzení importu, uzavření období) mohou skončit napůl. | Validovat vše před prvním zápisem, idempotentní klíče (deterministické RowKey), pořadí zápisů tak, aby opakování dokončilo zbytek (vzor: import bankovního výpisu). Nové entity navrhovat tak, aby jedna operace = jedna partition, kde to jde (batch transakce). |
 | ~~**In-memory session importu odečtů**~~ (vyřešeno X7) | `InMemoryImportSessionCache` na Consumption plánu nepřežije restart ani jinou instanci — potvrzení může selhat „relace vypršela“. | X7: bezstavové potvrzení (klient posílá výsledek náhledu, server znovu validuje), jako u importu z banky. |
 | **PROD nikdy neběžel** | Deploy z `master` zatím selhává (chybí hand-off: RBAC service principalu, secrety); nikdo neověřil konfiguraci ani výkon. | T01 hand-off, T14 release checklist a smoke test, app setting `Environment=prod`. |
-| **Build lokálně jen přes jiné SDK** | `global.json` pinuje .NET 8 SDK; vývojová stanice s jiným SDK buildí mimo pin. | CI na .NET 8 je směrodatné; X6 build bez warningů. |
+| ~~**Build lokálně jen přes jiné SDK**~~ | Vyřešeno 28. 9. 2026: přechod na .NET 10 (SDK na stanici i v CI stejné). | — |
 
 ## Otevřené otázky
 
@@ -55,7 +55,7 @@ Znění podle zadání (`docs/ZADANI.md` §2.2). Všechny se implementují jako 
 
 | Id | Otázka | Požadavek na implementaci | Default | Souvisí | Stav |
 |---|---|---|---|---|---|
-| O1 | Ztráty vody lineárně, nebo poměrově? Rozhodne hlasování. | Přepínač per složka, efektivně datovaný, s auditem. | `EQUAL` (návrh Jindry) | T02, T05 | připraveno — čeká na hlasování. Zadá se v Nákladové složky → Ztráty vody → „Změnit metodu“ (od data, s důvodem hlasování); aktuální metodu ukazuje Voda a ztráty i Jak to funguje. |
+| O1 | Ztráty vody lineárně, nebo poměrově? Rozhodne hlasování. | Přepínač per složka, efektivně datovaný, s auditem. | `EQUAL` (návrh Jindry) | T02, T05 | **rozhodnuto 28. 9. 2026: rovným dílem (`EQUAL`)** mezi domy napojené na vodovod. Nastaví se pravidlem složky „Ztráty vody“ (import: `components.csv` `method=rovne`); změnu lze později zadat v Nákladové složky → Ztráty vody → „Změnit metodu“ s důvodem. |
 | O2 | Jak rozdělit přeplatek za elektřinu vodárny (cca 20 tis. Kč)? | Kredit složky se zadá jako počáteční stav. Metodu i okruh domů lze nastavit. | 4 domy, `EQUAL` | T03 | připraveno — čeká na rozhodnutí. Kredit se zadá v Počáteční stavy → Kredit složky u dodavatele (záporně, s náhledem rozdělení); okruh domů = účast ve složce, metoda = pravidlo složky. |
 | O3 | Elektřina vodárny podle plateb, nebo podle elektroměru? | Složka podporuje obojí. Pro vodárnu se nastaví „podle nákladových záznamů“ (zálohy + vyúčtování). | podle záznamů | T02, T06 | připraveno — čeká na rozhodnutí. Složka „podle nákladových záznamů“ (zálohy a vyúčtování, výchozí), nebo „podle odečtů“ při elektroměru — volba při založení složky, změna metody od data. |
 | O4 | Oddělený fond: právní a daňové řešení | Feature flag, default vypnuto. | `OFF` | T10 | připraveno — čeká na právní a daňové posouzení. Zapíná se app settingem `OFF_BOOK_FUND_ENABLED=true` (výchozí vypnuto); fond je oddělený od salda, závěrek i exportů. |

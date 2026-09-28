@@ -1,1 +1,4 @@
 code;name;start_date;allocation_basis;water_role;method;ratio_source;note
+# příklad (O1 rozhodnuto: ztráty rovným dílem):
+# VODA_PVK;Voda PVK;2023-11-01;odecty;spotreba;;;
+# ZTRATY_VODY;Ztráty vody;2023-11-01;odecty;ztraty;rovne;;O1

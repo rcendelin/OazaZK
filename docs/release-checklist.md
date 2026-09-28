@@ -33,8 +33,7 @@ mezizávěrka po velké změně). Table Storage nemá obnovu k časovému bodu, 
 ```bash
 # connection string se čte z proměnné prostředí, nikdy ho nepište do příkazu ani do repa
 export OAZA_STORAGE_CONNECTION="$(az storage account show-connection-string -n stoaza -g rg-oaza-prod -o tsv)"
-cd /tmp   # mimo repo, globální SDK pin nevadí
-DOTNET_ROLL_FORWARD=Major dotnet run --project <repo>/api/tools/Oaza.StorageBackup -- backup ~/oaza-zalohy/prod-$(date +%Y%m%d-%H%M)
+dotnet run --project <repo>/api/tools/Oaza.StorageBackup -- backup ~/oaza-zalohy/prod-$(date +%Y%m%d-%H%M)
 unset OAZA_STORAGE_CONNECTION
 ```
 
@@ -106,7 +105,7 @@ Když smoke test neprojde nebo se objeví chyba v číslech:
    - obnovte zálohu z bodu 2:
      ```bash
      export OAZA_STORAGE_CONNECTION="…"   # viz bod 2
-     DOTNET_ROLL_FORWARD=Major dotnet run --project <repo>/api/tools/Oaza.StorageBackup -- restore ~/oaza-zalohy/prod-YYYYMMDD-HHMM --yes stoaza
+     dotnet run --project <repo>/api/tools/Oaza.StorageBackup -- restore ~/oaza-zalohy/prod-YYYYMMDD-HHMM --yes stoaza
      ```
      Obnova přepíše všechny zálohované tabulky a kontejnery do stavu zálohy a smaže, co v záloze nebylo. **Ztratí
      se i správné zápisy po záloze**, ty je potřeba zadat znovu (audit log ze zálohy ukazuje, co bylo předtím).

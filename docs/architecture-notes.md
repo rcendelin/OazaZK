@@ -8,7 +8,7 @@ a odkaz, kde hledat dál. Stav k 27. 9. 2026.
 | Vrstva | Technologie | Kde |
 |---|---|---|
 | Frontend | React 19 + TypeScript (strict), Vite, Tailwind 4, React Router 7, MSAL | `web/`, [ARCHITEKTURA §6](ARCHITEKTURA.md#6-frontend) |
-| Backend | .NET 8 Azure Functions (isolated worker, Consumption plan), Clean Architecture | `api/src/`, [ARCHITEKTURA §2](ARCHITEKTURA.md#2-vrstvy-backendu-clean-architecture) |
+| Backend | .NET 10 Azure Functions (isolated worker, Flex Consumption plan), Clean Architecture | `api/src/`, [ARCHITEKTURA §2](ARCHITEKTURA.md#2-vrstvy-backendu-clean-architecture) |
 | Data | Azure Table Storage (repozitáře nad `Azure.Data.Tables`, žádné EF ani JOINy) + Blob Storage (dokumenty, přílohy, PDF) | [ARCHITEKTURA §3](ARCHITEKTURA.md#3-datový-model) |
 | E-mail | Azure Communication Services (magic link, připomínky odečtů) | [ARCHITEKTURA §7](ARCHITEKTURA.md#7-e-maily-a-notifikace) |
 

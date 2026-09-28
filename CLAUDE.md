@@ -15,7 +15,7 @@ Three-layer Clean Architecture on Azure, cost-optimized for ~5–15 CZK/month:
 ```
 React 19 SPA (Azure Static Web Apps, Free)
     ↕ HTTPS / REST API
-.NET 8 Azure Functions (Consumption plan, Isolated Worker)
+.NET 10 Azure Functions (Flex Consumption plan, Isolated Worker)
     ↕ Azure.Data.Tables SDK
 Azure Table Storage + Azure Blob Storage (LRS)
 ```
@@ -32,9 +32,9 @@ OazaZK/
 │   ├── deploy-dev.yml            # develop    → DEV
 │   ├── deploy-test.yml           # release/** → TEST
 │   └── deploy.yml                # master     → PROD
-├── api/                          # .NET 8 backend
+├── api/                          # .NET 10 backend
 │   ├── Oaza.sln                  # use this (Oaza.slnx is stale)
-│   ├── global.json               # pins .NET 8 SDK
+│   ├── global.json               # pins .NET 10 SDK
 │   ├── src/
 │   │   ├── Oaza.Domain/          # Entities, enums, constants, repository interfaces
 │   │   ├── Oaza.Application/     # Use cases, DTOs, validators, mapping
@@ -68,7 +68,7 @@ OazaZK/
 
 ## Tech stack — backend
 
-- **.NET 8** with Azure Functions Isolated Worker model
+- **.NET 10** with Azure Functions Isolated Worker model on the **Flex Consumption** plan (`func-oaza-{env}-flex`; .NET 10 does not run on Linux Consumption)
 - **Azure.Data.Tables** SDK for Table Storage (NOT EF Core — no relational DB)
 - **ClosedXML** for Excel import/export (.xlsx parsing)
 - **PdfSharpCore** for PDF generation (settlement sheets)
@@ -78,7 +78,7 @@ OazaZK/
 
 ### NuGet packages
 
-**Verze pinuj explicitně — žádné floating wildcardy (`12.*`).** Floaty driftnou na `Azure.Core 1.55` (vyžaduje `Microsoft.Extensions.* >=10`) a rozbijou build proti pinům `8.*`. Verze jsou nyní pevné a `global.json` zamyká SDK na .NET 8 (`rollForward: latestFeature`).
+**Verze pinuj explicitně — žádné floating wildcardy (`12.*`).** Floaty driftnou na `Azure.Core 1.55` (vyžaduje `Microsoft.Extensions.* >=10`) a rozbijou build proti pinům `8.*`. Verze jsou nyní pevné a `global.json` zamyká SDK na .NET 10 (`rollForward: latestFeature`).
 
 ```xml
 <!-- Oaza.Infrastructure -->
@@ -414,7 +414,7 @@ ENABLE_SEED=true            # only on DEV/local — enables anonymous POST /api/
 - **Unit tests:** Domain logic (settlement calculation, loss allocation, validation rules) in `Oaza.Application.Tests`
 - **Integration tests:** Table Storage repository operations in `Oaza.Infrastructure.Tests` (use Azurite local emulator)
 - **E2E smoke tests (Playwright)** in `web/e2e/` against `vite preview` with the API mocked via `page.route` (`e2e/mockApi.ts`); CI job `e2e`. Scenarios S1–S8 (T14): `e2e/golden.spec.ts` on backend-generated fixtures (see Golden fixtures above).
-- Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 8.0.x.
+- Build/testy přes `Oaza.sln` (NE `Oaza.slnx` — zastaralý): `dotnet test Oaza.sln` z `api/`. CI staví `--configuration Release` na .NET 10.0.x.
 - Integrační testy potřebují Azurite: `docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite`. Používají `[SkippableFact]` (skip když chybí); CI běží Azurite jako service container.
 
 - **PR CI** (`.github/workflows/ci.yml`): warnings are errors (`api/Directory.Build.props`), coverage gate ≥ 90 % over files listed in `api/coverage-gate.txt` (add new calculation code there), web lint + build.

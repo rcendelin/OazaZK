@@ -12,7 +12,7 @@ flowchart TB
     subgraph SWA["Azure Static Web Apps (Free)"]
         spa["React 19 SPA<br/>web/"]
     end
-    subgraph FUNC["Azure Functions — Consumption, .NET 8 isolated"]
+    subgraph FUNC["Azure Functions — Flex Consumption, .NET 10 isolated"]
         mw["Middleware<br/>Authentication → Authorization"]
         ep["HTTP endpointy + timer"]
         app["Application<br/>use cases, validátory, DTO"]

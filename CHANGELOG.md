@@ -6,6 +6,26 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+## [0.10.0] – 2026-09-28
+
+### Opraveno
+- **Export přehledu hospodaření a pokladny do PDF na Flex Consumption** vracel chybu 500 — v prostředí Flex nejsou
+  systémová písma. PDF teď používá písmo DejaVu Sans vložené do aplikace (s českými znaky). Záloha storage vynechává
+  i balíčky nasazení Flex (`app-package-*`).
+
+### Údržba
+- **.NET 10 a Flex Consumption.** API běží na .NET 10 (podpora .NET 8 končí 10. 11. 2026) v plánu Flex Consumption —
+  .NET 10 na dosavadním Linux Consumption neběží a ten plán se ruší. Nové Function Apps `func-oaza-{env}-flex`,
+  data beze změny.
+- **Bezpečnost:** knihovna ImageSharp (přes PdfSharpCore) povýšena z 1.0.4 na 2.1.13 — opravuje 7 známých zranitelností
+  (3 vysoké).
+- **CI/CD:** GitHub Actions na aktuálních verzích (běh na Node 24 — Node 20 v Actions končí), build na Node 22 LTS,
+  runner zafixovaný na `ubuntu-24.04` (`ubuntu-latest` přechází 19. 10. 2026 na Ubuntu 26).
+
+### Změněno
+- **O1 rozhodnuto:** ztráty vody se rozpočítávají rovným dílem mezi domy napojené na vodovod (šablona složek
+  pro import obsahuje příklad).
+
 ## [0.9.1] – 2026-09-28
 
 ### Opraveno

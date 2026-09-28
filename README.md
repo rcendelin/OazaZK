@@ -27,7 +27,7 @@ Webový portál sdružení **Oáza Zadní Kopanina** (Praha, 8 domácností, ~15
 ```
 React 19 SPA ──────────── Azure Static Web Apps (Free)
      │ HTTPS /api + Bearer token
-.NET 8 Azure Functions ── Consumption plan, isolated worker
+.NET 10 Azure Functions ── Flex Consumption plan, isolated worker
      │ Azure.Data.Tables / Azure.Storage.Blobs
 Azure Table Storage + Blob Storage (LRS)      Entra ID · Azure Communication Services (e-mail)
 ```
@@ -43,9 +43,9 @@ OazaZK/
 ├── README.md                 # tento soubor
 ├── CLAUDE.md                 # pravidla a kontext pro AI asistenta (konvence, omezení)
 ├── .github/workflows/        # CI/CD: deploy-dev.yml, deploy-test.yml, deploy.yml (PROD)
-├── api/                      # .NET 8 backend
+├── api/                      # .NET 10 backend
 │   ├── Oaza.sln              # používej .sln (Oaza.slnx je zastaralý)
-│   ├── global.json           # zámek SDK na .NET 8
+│   ├── global.json           # zámek SDK na .NET 10
 │   ├── src/
 │   │   ├── Oaza.Domain/          # entity, enumy, konstanty, rozhraní repozitářů
 │   │   ├── Oaza.Application/     # use cases, DTO, validátory, mapování
