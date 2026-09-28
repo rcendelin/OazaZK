@@ -143,7 +143,7 @@ V `Settings → Environments` vytvoř (pokud ještě nejsou): **`dev`**, **`test
 >
 > **Tenant je sdílený** → `*_ENTRA_TENANT_ID` má ve všech prostředích stejnou hodnotu (drženo jako samostatné secrety kvůli konzistenci s DEV workflow). Entra **App registration** může být per-prostředí (vlastní redirect URI na příslušnou subdoménu), nebo jedna sdílená s více redirect URIs — pak `*_ENTRA_CLIENT_ID` bude všude stejné.
 >
-> Secrety lze uložit buď na úrovni repa, nebo na příslušný **Environment** (`test` / `production`) — environment-scoped je bezpečnější, protože je zpřístupní jen job běžící v daném prostředí.
+> Secrety lze uložit buď na úrovni repa, nebo na příslušný **Environment** (`test` / `production`) — environment-scoped je bezpečnější, protože je zpřístupní jen job běžící v daném prostředí. Frontend se proto builduje až v jobu `deploy-web` (má `environment:`); `build-web` je jen kontrola lintu a buildu. Prázdný `*_API_BASE_URL` build zastaví (dřív vznikl frontend volající `/api` na SWA → 404).
 
 ---
 
@@ -196,11 +196,11 @@ Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-
 
 ### Zbývá na uživatele
 
-1. **RBAC** — deploy service principal (objectId `7724f095-0799-4679-aab1-cc159136d465`, z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG. *(V sandboxu tohoto asistenta příkaz padal na CLI chybu „MissingSubscription" / blok klasifikátoru; ve vašem vlastním `az` shellu proběhne normálně.)*
+1. **RBAC** — deploy service principal `github-oaza-dev` (**appId** `7724f095-0799-4679-aab1-cc159136d465`, objectId SP `60bd38f2-497c-434d-b71f-3d5bacd1ae22`, z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG. *(V sandboxu tohoto asistenta příkaz padal na CLI chybu „MissingSubscription" / blok klasifikátoru; ve vašem vlastním `az` shellu proběhne normálně.)*
    ```bash
    SUB=ac40c613-8832-4e91-b6b5-75ef920d181d
    for rg in rg-oaza-test rg-oaza-prod; do
-     az role assignment create --assignee-object-id 7724f095-0799-4679-aab1-cc159136d465 \
+     az role assignment create --assignee-object-id 60bd38f2-497c-434d-b71f-3d5bacd1ae22 \
        --assignee-principal-type ServicePrincipal --role Contributor \
        --scope /subscriptions/$SUB/resourceGroups/$rg
    done
