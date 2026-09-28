@@ -22,8 +22,10 @@ fixture, která test shodí při chybě v konzoli, nezachycené výjimce, odpov�
 2. **Testovací uživatelé** v tabulce `Users` na DEV: `e2e-admin` (Admin), `e2e-member` (Member, s domem),
    `e2e-accountant` (Accountant), `e2e-member-nohouse` (Member bez domu). E-maily `…@example.invalid`,
    `AuthMethod=MagicLink`. Vložte je přímo do tabulky (`az storage entity insert`), ne přes `POST /users`, aby
-   nechodily pozvánky.
-3. **Proměnné prostředí** (hodnoty z app settings `func-oaza-dev`; nikdy je neukládejte do repa):
+   nechodily pozvánky. **Typy uveďte explicitně** — `az` jinak uloží text a API pak na čtení uživatelů vrací 500:
+   `NotificationsEnabled@odata.type=Edm.Boolean`, `MagicLinkRequestCount@odata.type=Edm.Int32`,
+   `MagicLinkFailedAttempts@odata.type=Edm.Int32`.
+3. **Proměnné prostředí** (hodnoty z app settings `func-oaza-dev-flex`; nikdy je neukládejte do repa):
    - `OAZA_LIVE_JWT_SECRET` = `JwtSecret`, `OAZA_LIVE_JWT_ISSUER` = `JwtIssuer` — pro podpis krátkodobých tokenů,
    - `OAZA_LIVE_MEMBER_HOUSE` = id domu člena,
    - volitelně `OAZA_LIVE_APP_URL`, `OAZA_LIVE_API_URL` a `OAZA_LIVE_ENV` (`dev` / `test` / `prod`; výchozí DEV).

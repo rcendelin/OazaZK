@@ -7,16 +7,17 @@
 > **28. 9. 2026 — přechod na .NET 10 a Flex Consumption.** .NET 10 na Linux Consumption neběží (a ten plán Microsoft
 > 30. 9. 2028 ruší), proto má každé prostředí novou Function App **`func-oaza-{dev,test,prod}-flex`** (Flex Consumption,
 > 512 MB, bez předehřátých instancí, max. 10 instancí) na **stejném** storage — data se nemění. Adresa API je
-> `https://func-oaza-{env}-flex.azurewebsites.net/api` (secret `*_API_BASE_URL`). Staré `func-oaza-{env}` se po ověření
+> `https://func-oaza-{env}-flex.azurewebsites.net/api` (secret `*_API_BASE_URL`). Od verze 0.10.0 běží všechna tři
+> prostředí na `-flex`; staré `func-oaza-{env}` jsou **zastavené** (kvůli časovači připomínky 1. v měsíci) a po ověření se
 > mažou. Nasazení zůstává `az functionapp deployment source config-zip`. Nová prostředí zakládá `infra/provision.sh`.
 
 ## Přehled prostředí
 
 | Prostředí | Branch | Resource Group | Storage | Functions | SWA | Doména | GitHub env | Workflow |
 |-----------|--------|----------------|---------|-----------|-----|--------|-----------|----------|
-| **DEV** | `develop` | `rg-oaza-dev` | `stoazadev` | `func-oaza-dev` | `swa-oaza-dev` | `oaza-dev.cendelinovi.cz` | `dev` | `deploy-dev.yml` |
-| **TEST** | `release/**` *(nebo ruční spuštění)* | `rg-oaza-test` | `stoazatest` | `func-oaza-test` | `swa-oaza-test` | `oaza-test.cendelinovi.cz` | `test` | `deploy-test.yml` |
-| **PROD** | `master` | `rg-oaza-prod` | `stoaza` | `func-oaza-prod` | `swa-oaza-prod` | `oaza.cendelinovi.cz` | `production` | `deploy.yml` |
+| **DEV** | `develop` | `rg-oaza-dev` | `stoazadev` | `func-oaza-dev-flex` | `swa-oaza-dev` | `oaza-dev.cendelinovi.cz` | `dev` | `deploy-dev.yml` |
+| **TEST** | `release/**` *(nebo ruční spuštění)* | `rg-oaza-test` | `stoazatest` | `func-oaza-test-flex` | `swa-oaza-test` | `oaza-test.cendelinovi.cz` | `test` | `deploy-test.yml` |
+| **PROD** | `master` | `rg-oaza-prod` | `stoaza` | `func-oaza-prod-flex` | `swa-oaza-prod` | `oaza.cendelinovi.cz` | `production` | `deploy.yml` |
 
 Všechny tři workflow používají **jednotný způsob nasazení** (stejný jako ověřený DEV): `Azure/login` se sdíleným service principalem (`AZURE_CREDENTIALS`) → `az functionapp deployment source config-zip` pro Functions a `Azure/static-web-apps-deploy` s per-prostředí SWA tokenem pro frontend. (PROD dřív používal `publish-profile` a selhával na „No credentials found" — teď je sjednocený.)
 
@@ -52,16 +53,16 @@ nejdřív `--dry-run`, pak `--yes`. DNS, GitHub secrety, Required reviewers a RB
 Ručně (ekvivalent skriptu) — pro **TEST** i **PROD** analogicky ke krokům 1–5 v `DEPLOYMENT-DEV.md`, jen s příslušnými názvy. Zkráceně:
 
 ```bash
-# ---- TEST (opakuj obdobně pro PROD: rg-oaza-prod / stoaza / func-oaza-prod / swa-oaza-prod) ----
+# ---- TEST (opakuj obdobně pro PROD: rg-oaza-prod / stoaza / func-oaza-prod-flex / swa-oaza-prod) ----
 az group create --name rg-oaza-test --location westeurope --tags environment=test project=oaza
 
 az storage account create --name stoazatest --resource-group rg-oaza-test \
   --location westeurope --sku Standard_LRS --kind StorageV2 \
   --min-tls-version TLS1_2 --allow-blob-public-access false
 
-az functionapp create --name func-oaza-test --resource-group rg-oaza-test \
-  --storage-account stoazatest --consumption-plan-location westeurope \
-  --runtime dotnet-isolated --runtime-version 8 --functions-version 4 --os-type Linux \
+az functionapp create --name func-oaza-test-flex --resource-group rg-oaza-test \
+  --storage-account stoazatest --flexconsumption-location westeurope \
+  --runtime dotnet-isolated --runtime-version 10 --instance-memory 512 \
   --tags environment=test project=oaza
 
 az staticwebapp create --name swa-oaza-test --resource-group rg-oaza-test \
@@ -75,7 +76,7 @@ az staticwebapp create --name swa-oaza-test --resource-group rg-oaza-test \
 STORAGE_CONN=$(az storage account show-connection-string --name stoazatest --resource-group rg-oaza-test --query connectionString -o tsv)
 JWT_SECRET=$(openssl rand -base64 32)   # každé prostředí má VLASTNÍ JWT secret
 
-az functionapp config appsettings set --name func-oaza-test --resource-group rg-oaza-test --settings \
+az functionapp config appsettings set --name func-oaza-test-flex --resource-group rg-oaza-test --settings \
   "TableStorageConnection=$STORAGE_CONN" \
   "BlobStorageConnection=$STORAGE_CONN" \
   "JwtSecret=$JWT_SECRET" \
@@ -96,7 +97,7 @@ az functionapp config appsettings set --name func-oaza-test --resource-group rg-
 ### CORS na Functions App (frontend volá API přímo)
 
 ```bash
-az functionapp cors add --name func-oaza-test --resource-group rg-oaza-test \
+az functionapp cors add --name func-oaza-test-flex --resource-group rg-oaza-test \
   --allowed-origins "https://oaza-test.cendelinovi.cz"
 # PROD: --allowed-origins "https://oaza.cendelinovi.cz"
 ```
@@ -138,11 +139,11 @@ V `Settings → Environments` vytvoř (pokud ještě nejsou): **`dev`**, **`test
 | `AZURE_CREDENTIALS` | **sdílený** (repo) | JSON service principalu (`az ad sp create-for-rbac --sdk-auth`) s Contributor na dev/test/prod RG |
 | `TEST_ENTRA_CLIENT_ID` | TEST | Application (client) ID Entra app registrace pro TEST |
 | `TEST_ENTRA_TENANT_ID` | TEST | Directory (tenant) ID — stejný tenant jako DEV/PROD |
-| `TEST_API_BASE_URL` | TEST | `https://func-oaza-test.azurewebsites.net/api` |
+| `TEST_API_BASE_URL` | TEST | `https://func-oaza-test-flex.azurewebsites.net/api` |
 | `TEST_SWA_API_TOKEN` | TEST | Deployment token `swa-oaza-test` (`az staticwebapp secrets list`) |
 | `PROD_ENTRA_CLIENT_ID` | PROD | Application (client) ID Entra app registrace pro PROD |
 | `PROD_ENTRA_TENANT_ID` | PROD | Directory (tenant) ID — stejný tenant |
-| `PROD_API_BASE_URL` | PROD | `https://func-oaza-prod.azurewebsites.net/api` |
+| `PROD_API_BASE_URL` | PROD | `https://func-oaza-prod-flex.azurewebsites.net/api` |
 | `PROD_SWA_API_TOKEN` | PROD | Deployment token `swa-oaza-prod` |
 
 > `GITHUB_TOKEN` (použitý jako `repo_token` u SWA deploye) **nenastavuješ** — GitHub Actions ho poskytuje automaticky.
@@ -182,13 +183,14 @@ V `Settings → Environments` vytvoř (pokud ještě nejsou): **`dev`**, **`test
 
 ## Skutečně naprovisionováno (2026-07-19)
 
-Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-4e91-b6b5-75ef920d181d` („Provozní", tenant `cendelinovi.cz`)**, stejné jako DEV, region westeurope. Mirror DEV: Storage `Standard_LRS`/`StorageV2`/`TLS1_2`, Functions Linux Consumption `dotnet-isolated 8`, SWA Free.
+Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-4e91-b6b5-75ef920d181d` („Provozní", tenant `cendelinovi.cz`)**, stejné jako DEV, region westeurope. Mirror DEV: Storage `Standard_LRS`/`StorageV2`/`TLS1_2`, Functions Flex Consumption `dotnet-isolated 10` (512 MB; do 0.9.1 Linux Consumption `dotnet-isolated 8`), SWA Free.
 
 | Resource | TEST | PROD |
 |----------|------|------|
 | Resource Group | `rg-oaza-test` | `rg-oaza-prod` |
 | Storage | `stoazatest` | `stoaza` |
-| Function App | `func-oaza-test` (`func-oaza-test.azurewebsites.net`) | `func-oaza-prod` (`func-oaza-prod.azurewebsites.net`) |
+| Function App | `func-oaza-test-flex` (Flex Consumption, .NET 10) | `func-oaza-prod-flex` (Flex Consumption, .NET 10) |
+| Stará Function App (zastavená) | `func-oaza-test` | `func-oaza-prod` |
 | SWA default host | `ambitious-mushroom-088260103.7.azurestaticapps.net` | `purple-ocean-088639603.7.azurestaticapps.net` |
 | App Insights | auto (`func-oaza-test`) | auto (`func-oaza-prod`) |
 
@@ -204,16 +206,18 @@ Azure resources pro TEST i PROD byly vytvořeny v subscription **`ac40c613-8832-
 
 | | TEST | PROD |
 |---|---|---|
-| RBAC deploy SP (`60bd38f2…`, Contributor) | ✔ | ☐ |
-| GitHub environment + secrety | ✔ `test` (4 secrety) | ☐ `production` (bez secretů, bez Required reviewers) |
+| RBAC deploy SP (`60bd38f2…`, Contributor) | ✔ | ✔ |
+| GitHub environment + secrety | ✔ `test` (4 secrety) | ✔ `production` (4 secrety, Required reviewers, jen `master`) |
 | DNS (Cloudflare, CNAME, *DNS only*) + doména na SWA | ✔ `oaza-test.cendelinovi.cz` (Ready, HTTPS) | ✔ `oaza.cendelinovi.cz` (Ready, HTTPS) |
-| App settings `Environment` / bez `ENABLE_SEED` | ✔ | ☐ |
-| Nasazeno | ✔ release 0.9.0 (`release/0.9`), demo data, admini z DEV | ☐ |
+| App settings `Environment` / bez `ENABLE_SEED` | ✔ | ✔ |
+| Data | demo data, admini z DEV | admini, domy a vodoměry z DEV |
+| Nasazeno | ✔ 0.10.0 (`release/0.10`) na `func-oaza-test-flex`, smoke 01–03 ✔ | ✔ 0.10.0 na `func-oaza-prod-flex`, smoke 01–03 ✔ |
+| Stará Function App | zastavená (smazat po ověření) | zastavená (smazat po ověření) |
 
 DNS domény `cendelinovi.cz` je v **Cloudflare**; záznamy pro SWA musí být **DNS only** (šedý mráček), jinak Azure doménu
 neověří. V zóně je wildcard — konkrétní CNAME má přednost.
 
-### Zbývá na uživatele
+### Postup předání (hotovo 28. 9. 2026)
 
 1. **RBAC** — deploy service principal `github-oaza-dev` (**appId** `7724f095-0799-4679-aab1-cc159136d465`, objectId SP `60bd38f2-497c-434d-b71f-3d5bacd1ae22`, z `AZURE_CREDENTIALS`) potřebuje Contributor na nové RG. *(V sandboxu tohoto asistenta příkaz padal na CLI chybu „MissingSubscription" / blok klasifikátoru; ve vašem vlastním `az` shellu proběhne normálně.)*
    ```bash
@@ -228,13 +232,13 @@ neověří. V zóně je wildcard — konkrétní CNAME má přednost.
    ```bash
    gh secret set TEST_SWA_API_TOKEN --env test --body "$(az staticwebapp secrets list -n swa-oaza-test -g rg-oaza-test --query properties.apiKey -o tsv)"
    gh secret set PROD_SWA_API_TOKEN --env production --body "$(az staticwebapp secrets list -n swa-oaza-prod -g rg-oaza-prod --query properties.apiKey -o tsv)"
-   gh secret set TEST_API_BASE_URL --env test --body "https://func-oaza-test.azurewebsites.net/api"
-   gh secret set PROD_API_BASE_URL --env production --body "https://func-oaza-prod.azurewebsites.net/api"
+   gh secret set TEST_API_BASE_URL --env test --body "https://func-oaza-test-flex.azurewebsites.net/api"
+   gh secret set PROD_API_BASE_URL --env production --body "https://func-oaza-prod-flex.azurewebsites.net/api"
    gh secret set TEST_ENTRA_TENANT_ID --env test --body "1161192b-7829-4c40-8920-31eb4bd5573f"
    gh secret set PROD_ENTRA_TENANT_ID --env production --body "1161192b-7829-4c40-8920-31eb4bd5573f"
    gh secret set TEST_ENTRA_CLIENT_ID --env test --body "5c765254-8107-4a3b-8ac6-84a05b22d109"
    gh secret set PROD_ENTRA_CLIENT_ID --env production --body "95e941d9-6a91-4c35-bdc4-c3321c05750d"
    ```
 3. **DNS** v `cendelinovi.cz` (externí registrátor — mimo Azure): `CNAME oaza-test → ambitious-mushroom-088260103.7.azurestaticapps.net`, `CNAME oaza → purple-ocean-088639603.7.azurestaticapps.net`; pak `az staticwebapp hostname set -n swa-oaza-test -g rg-oaza-test --hostname oaza-test.cendelinovi.cz` (obdobně prod).
-4. **Seed TEST** (po deployi): `curl -X POST https://func-oaza-test.azurewebsites.net/api/seed`, poté `az functionapp config appsettings delete -n func-oaza-test -g rg-oaza-test --setting-names ENABLE_SEED`.
+4. **Seed TEST** (po deployi): `curl -X POST https://func-oaza-test-flex.azurewebsites.net/api/seed`, poté `az functionapp config appsettings delete -n func-oaza-test-flex -g rg-oaza-test --setting-names ENABLE_SEED`.
 5. **Aktivace deploye**: TEST → větev `release/…`; PROD → merge `develop`→`master` (až budou body 1–2).

@@ -2,6 +2,10 @@
 
 > **Cíl:** Funkční DEV prostředí na Azure + GitHub Actions CI/CD, na kterém půjde celý portál ověřit před nasazením do TEST a PROD.
 
+> **Od 28. 9. 2026 běží DEV na `func-oaza-dev-flex`** (Flex Consumption, .NET 10) — viz `DEPLOYMENT-TEST-PROD.md`.
+> Níže popsané založení `func-oaza-dev` (Linux Consumption, .NET 8) je historický postup; ta aplikace je zastavená.
+> Nová prostředí zakládá `infra/provision.sh`.
+
 ---
 
 ## Přehled prostředí
@@ -284,7 +288,7 @@ Jdi na https://github.com/rcendelin/OazaZK/settings/secrets/actions a přidej:
 | `DEV_SWA_API_TOKEN` | Token z kroku 5.2 | |
 | `DEV_ENTRA_CLIENT_ID` | Application (client) ID z kroku 4.2 | |
 | `DEV_ENTRA_TENANT_ID` | Directory (tenant) ID z kroku 4.2 | |
-| `DEV_API_BASE_URL` | `https://func-oaza-dev.azurewebsites.net/api` | Functions App URL + /api |
+| `DEV_API_BASE_URL` | `https://func-oaza-dev-flex.azurewebsites.net/api` | Functions App URL + /api |
 
 ### 7.3 Vytvoř DEV workflow
 
@@ -580,8 +584,8 @@ Otevři v prohlížeči: **https://oaza-dev.cendelinovi.cz**
 ### Pokud něco nefunguje
 
 1. **Login nefunguje:** Zkontroluj Entra ID redirect URI (`https://oaza-dev.cendelinovi.cz`)
-2. **API vrací 500:** `az functionapp log tail --name func-oaza-dev --resource-group rg-oaza-dev`
-3. **API vrací 404:** Zkontroluj, že `DEV_API_BASE_URL` secret je správně nastavený (`https://func-oaza-dev.azurewebsites.net/api`)
+2. **API vrací 500:** `az functionapp log tail --name func-oaza-dev-flex --resource-group rg-oaza-dev`
+3. **API vrací 404:** Zkontroluj, že `DEV_API_BASE_URL` secret je správně nastavený (`https://func-oaza-dev-flex.azurewebsites.net/api`)
 4. **CORS error:** Ověř krok 5.3 (CORS na Functions App) — origin musí být `https://oaza-dev.cendelinovi.cz`
 5. **Seed selže:** Ověř, že `ENABLE_SEED=true` je v app settings
 6. **Network error v konzoli:** Otevři DevTools → Network tab, zkontroluj zda API volání jdou na správnou URL
@@ -595,7 +599,7 @@ rg-oaza-dev/
 ├── stoazadev                    # Storage Account (LRS)
 │   ├── Table Storage            # Users, Houses, WaterMeters, ...
 │   └── Blob Storage             # documents, invoices, settlements, finance
-├── func-oaza-dev                # Azure Functions (Consumption, Linux)
+├── func-oaza-dev-flex           # Azure Functions (Flex Consumption, .NET 10)
 │   └── App Settings             # Connection strings, JWT, Entra ID, ACS Email
 └── swa-oaza-dev                 # Static Web Apps (Free)
     └── Custom domain            # oaza-dev.cendelinovi.cz
@@ -649,9 +653,9 @@ Až bude DEV ověřený, vytvoříme analogicky:
 
 | Prostředí | Resource Group | Storage | Functions | SWA | Branch |
 |-----------|---------------|---------|-----------|-----|--------|
-| DEV | rg-oaza-dev | stoazadev | func-oaza-dev | swa-oaza-dev | develop |
-| TEST | rg-oaza-test | stoazatest | func-oaza-test | swa-oaza-test | release/* |
-| PROD | rg-oaza-prod | stoaza | func-oaza-prod | swa-oaza-prod | master |
+| DEV | rg-oaza-dev | stoazadev | func-oaza-dev-flex | swa-oaza-dev | develop |
+| TEST | rg-oaza-test | stoazatest | func-oaza-test-flex | swa-oaza-test | release/* |
+| PROD | rg-oaza-prod | stoaza | func-oaza-prod-flex | swa-oaza-prod | master |
 
 Každé prostředí bude mít:
 - Vlastní Resource Group
