@@ -6,6 +6,10 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+## [0.9.0] – 2026-09-28
+
+První verze na testovacím prostředí (TEST) — nový výpočetní model T02–T14, živě přetestováno na DEV.
+
 ### Přidáno
 - **Regresní E2E scénáře S1–S8 (T14).** Automatické testy procházejí v prohlížeči všech osm zkušebních scénářů
   ze zadání — ztráty vody, kredit vodárny, přistoupení domu, převod domu, pokladnu, oddělený fond, zaokrouhlení
