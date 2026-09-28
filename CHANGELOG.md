@@ -6,6 +6,8 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+## [0.10.0] – 2026-09-28
+
 ### Opraveno
 - **Export přehledu hospodaření a pokladny do PDF na Flex Consumption** vracel chybu 500 — v prostředí Flex nejsou
   systémová písma. PDF teď používá písmo DejaVu Sans vložené do aplikace (s českými znaky). Záloha storage vynechává
