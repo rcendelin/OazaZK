@@ -39,6 +39,7 @@ public sealed class StorageBackup
         name.StartsWith("azure-webjobs", StringComparison.OrdinalIgnoreCase)
         || name.StartsWith("AzureFunctions", StringComparison.OrdinalIgnoreCase)
         || name.StartsWith("AzureWebJobs", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("app-package-", StringComparison.OrdinalIgnoreCase) // Flex Consumption deployment packages
         || name.Equals("function-releases", StringComparison.OrdinalIgnoreCase)
         || name.Equals("scm-releases", StringComparison.OrdinalIgnoreCase);
 

@@ -259,11 +259,12 @@ public class CashBookUseCase
 
     private static byte[] Pdf(CashBookResponse book, string period)
     {
+        Oaza.Application.Pdf.PdfFonts.EnsureRegistered();
         var document = new PdfDocument();
         document.Info.Title = $"Pokladní kniha — {period}";
-        var fontTitle = new XFont("Arial", 14, XFontStyle.Bold);
-        var fontBold = new XFont("Arial", 8, XFontStyle.Bold);
-        var font = new XFont("Arial", 8, XFontStyle.Regular);
+        var fontTitle = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 14, XFontStyle.Bold);
+        var fontBold = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 8, XFontStyle.Bold);
+        var font = new XFont(Oaza.Application.Pdf.PdfFonts.Family, 8, XFontStyle.Regular);
         double[] widths = [50, 38, 60, 150, 80, 48, 50, 50, 55];
 
         PdfPage page = document.AddPage();
