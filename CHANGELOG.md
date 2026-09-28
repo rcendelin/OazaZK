@@ -6,6 +6,8 @@ se sekce přejmenuje na verzi s datem.
 
 ## [Nevydáno]
 
+## [0.9.1] – 2026-09-28
+
 ### Opraveno
 - **Neexistující adresa zobrazila prázdnou stránku** — teď přesměruje na přehled (nepřihlášeného na přihlášení).
   Nalezeno smoke testem po nasazení na PROD.
