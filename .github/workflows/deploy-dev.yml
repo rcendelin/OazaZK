@@ -5,9 +5,9 @@ on:
     branches: [develop]
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '22.x'
-  AZURE_FUNCTIONAPP_NAME: func-oaza-dev
+  AZURE_FUNCTIONAPP_NAME: func-oaza-dev-flex
 
 jobs:
   build-api:
@@ -43,7 +43,7 @@ jobs:
       - name: Publish
         run: |
           dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
-          cp -r src/Oaza.Functions/bin/Release/net8.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
+          cp -r src/Oaza.Functions/bin/Release/net10.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
           ls -la ./publish/.azurefunctions/ 2>/dev/null || echo "No .azurefunctions found in bin, checking publish..."
           ls -la ./publish/
 

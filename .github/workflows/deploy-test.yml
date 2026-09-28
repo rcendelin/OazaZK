@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '22.x'
-  AZURE_FUNCTIONAPP_NAME: func-oaza-test
+  AZURE_FUNCTIONAPP_NAME: func-oaza-test-flex
   AZURE_RESOURCE_GROUP: rg-oaza-test
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
       - name: Publish
         run: |
           dotnet publish src/Oaza.Functions/Oaza.Functions.csproj --configuration Release --output ./publish
-          cp -r src/Oaza.Functions/bin/Release/net8.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
+          cp -r src/Oaza.Functions/bin/Release/net10.0/.azurefunctions ./publish/.azurefunctions 2>/dev/null || true
 
       - name: Upload API artifact
         uses: actions/upload-artifact@v7
