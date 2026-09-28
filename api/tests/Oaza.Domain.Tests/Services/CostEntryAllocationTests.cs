@@ -19,6 +19,40 @@ public class CostEntryAllocationTests
         shares.GroupBy(s => s.HouseId).ToDictionary(g => g.Key, g => g.Sum(s => s.Amount));
 
     [Fact]
+    public void MonthCuts_DoNotFavourTheSameHouses_HalereAreRoundedOncePerEntry()
+    {
+        // Live E2E #16: 1 840 Kč for 7–12/2025, seven houses all the time, an eighth from 1. 10., cut per month.
+        // Rounding each month separately gave houses with the same participation 246,44 / 246,42 / 246,41 Kč.
+        var start = D(2023, 11, 1);
+        var houses = new[] { "A", "B", "C", "D", "E", "F", "G" };
+        var participations = houses.Select(h => P(h, start)).Append(P("H", D(2025, 10, 1))).ToArray();
+        var period = new DateRange(D(2025, 7, 1), D(2025, 12, 31));
+
+        var shares = CostEntryAllocation.Allocate(1_840m, period, [EqualFromStart], participations, CostEntryAllocation.MonthStarts(period));
+
+        var totals = Totals(shares);
+        totals.Values.Sum().Should().Be(1_840m);
+        var same = houses.Select(h => totals[h]).ToList();
+        (same.Max() - same.Min()).Should().BeLessThanOrEqualTo(0.01m);
+        shares.GroupBy(x => x.Segment).Should().OnlyContain(g => g.First().SegmentAmount == g.Sum(x => x.Amount));
+        shares.Select(x => x.Segment).Distinct().Should().HaveCount(6); // still one piece per month
+    }
+
+    [Fact]
+    public void NegativeAmount_AndZeroWeights_AreHandled()
+    {
+        var start = D(2023, 11, 1);
+        var credit = CostEntryAllocation.Allocate(-1_000m, new DateRange(D(2026, 1, 1), D(2026, 3, 31)), [EqualFromStart],
+            [P("A", start), P("B", start), P("C", start)], CostEntryAllocation.MonthStarts(new DateRange(D(2026, 1, 1), D(2026, 3, 31))));
+        Totals(credit).Values.Should().BeEquivalentTo([-333.34m, -333.33m, -333.33m]);
+
+        var ratio = new ComponentAllocationRule { ComponentId = "c", Method = AllocationMethod.Ratio, ValidFrom = start };
+        var zero = CostEntryAllocation.Allocate(100m, new DateRange(D(2026, 1, 1), D(2026, 1, 31)), [ratio],
+            [new Participation { ComponentId = "c", HouseId = "A", ValidFrom = start, Weight = 1m }, new Participation { ComponentId = "c", HouseId = "B", ValidFrom = start, Weight = 0m }]);
+        Totals(zero).Should().BeEquivalentTo(new Dictionary<string, decimal> { ["A"] = 100m, ["B"] = 0m });
+    }
+
+    [Fact]
     public void S3_SettlementSplitsIntoSegmentsByDays_AndTheJoiningHouseBearsOnlyTheSecond()
     {
         var start = D(2023, 11, 1);

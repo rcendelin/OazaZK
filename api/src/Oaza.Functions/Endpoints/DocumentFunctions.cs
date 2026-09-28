@@ -320,9 +320,10 @@ public class DocumentFunctions
             if (!AllowedContentTypes.Contains(contentType))
                 return await WriteErrorResponseAsync(req, 400, $"Typ souboru '{contentType}' není povolen.");
 
-            // Get latest version number
-            var latestVersion = await _documentVersionRepository.GetLatestVersionAsync(id);
-            var newVersionNumber = (latestVersion?.VersionNumber ?? 0) + 1;
+            // Get latest version number. The first upload has no version row — keep the original file in the history
+            // as version 1 before it is replaced, otherwise it could not be downloaded any more.
+            var latestVersion = await Oaza.Application.Documents.DocumentVersioning.LatestKeepingOriginalAsync(_documentVersionRepository, document);
+            var newVersionNumber = latestVersion.VersionNumber + 1;
 
             // Determine file extension from content type
             var extension = contentType switch
